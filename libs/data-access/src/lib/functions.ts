@@ -283,6 +283,10 @@ export type { PopularBrandsControllerTiles$Params as PopularBrandsControllerTile
 export { popularBrandsControllerTiles as popularBrandsControllerTiles } from './fn/brands/popular-brands-controller-tiles';
 export type { JobTypesControllerSearch$Params as JobTypesControllerSearch$Params } from './fn/catalogue/job-types-controller-search';
 export { jobTypesControllerSearch as jobTypesControllerSearch } from './fn/catalogue/job-types-controller-search';
+export type { CarModels3DControllerRead$Params as CarModels3DControllerRead$Params } from './fn/catalogue/car-models-3-d-controller-read';
+export { carModels3DControllerRead as carModels3DControllerRead } from './fn/catalogue/car-models-3-d-controller-read';
+export type { GetCarModel3DFile$Params as GetCarModel3DFile$Params } from './fn/catalogue/get-car-model-3-d-file';
+export { getCarModel3DFile as getCarModel3DFile } from './fn/catalogue/get-car-model-3-d-file';
 export type { PublicHolidaysControllerList$Params as PublicHolidaysControllerList$Params } from './fn/public-holidays/public-holidays-controller-list';
 export { publicHolidaysControllerList as publicHolidaysControllerList } from './fn/public-holidays/public-holidays-controller-list';
 export type { GarageSearchControllerForBrand$Params as GarageSearchControllerForBrand$Params } from './fn/search/garage-search-controller-for-brand';

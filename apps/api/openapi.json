@@ -4233,6 +4233,85 @@
         ]
       }
     },
+    "/api/v1/car-models-3d": {
+      "get": {
+        "operationId": "CarModels3dController_read",
+        "parameters": [
+          {
+            "name": "brand",
+            "required": true,
+            "in": "query",
+            "description": "The brand, by its catalogue key",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,40}$",
+              "example": "dacia",
+              "type": "string"
+            }
+          },
+          {
+            "name": "car",
+            "required": false,
+            "in": "query",
+            "description": "One of the signed-in driver's own cars of the brand; the answer is about that car alone",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The 3D car to show for the brand: the driver's own licensed car, else the brand's most popular licensed model, else its generic shape",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarModel3dDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: brand or car is missing, malformed or repeated"
+          },
+          "404": {
+            "description": "not_found: no active brand has this key, or car is not the caller's own"
+          }
+        },
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/car-models-3d/files/{key}": {
+      "get": {
+        "operationId": "getCarModel3dFile",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The GLB, cached for a year"
+          },
+          "404": {
+            "description": "not_found: the catalogue or the store has no such file"
+          },
+          "503": {
+            "description": "storage_unavailable: the object store did not answer"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
     "/api/v1/search/garages": {
       "get": {
         "operationId": "GarageSearchController_forBrand",
@@ -17619,6 +17698,119 @@
           "day",
           "nameRo",
           "nameEn"
+        ]
+      },
+      "CarModel3dBrandDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "dacia"
+          },
+          "name": {
+            "type": "string",
+            "example": "Dacia"
+          }
+        },
+        "required": [
+          "key",
+          "name"
+        ]
+      },
+      "CarModel3dSystemDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "engine"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Motor"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Engine"
+          },
+          "jobTypeIds": {
+            "description": "The approved catalogue jobs on this system, by Romanian name; empty when none",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn",
+          "jobTypeIds"
+        ]
+      },
+      "CarModel3dDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/CarModel3dBrandDto"
+          },
+          "source": {
+            "type": "string",
+            "description": "own_car: a model the driver owns; brand: the brand's most popular licensed model; generic: the brand's body shape",
+            "enum": [
+              "own_car",
+              "brand",
+              "generic"
+            ]
+          },
+          "model": {
+            "type": "string",
+            "description": "The licensed model; null for a generic shape",
+            "example": "Logan",
+            "nullable": true
+          },
+          "fuel": {
+            "type": "string",
+            "description": "The file's fuel, whose parts it holds; petrol for a generic shape",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "bodyStyle": {
+            "type": "string",
+            "enum": [
+              "saloon",
+              "hatchback",
+              "suv",
+              "crossover",
+              "estate",
+              "fastback"
+            ]
+          },
+          "fileUrl": {
+            "type": "string",
+            "description": "The GLB, an absolute URL or a path from the site root",
+            "example": "/api/v1/car-models-3d/files/dacia-logan.2099f2575d8f1377.glb"
+          },
+          "systems": {
+            "description": "The systems of the file's fuel, in position order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarModel3dSystemDto"
+            }
+          }
+        },
+        "required": [
+          "brand",
+          "source",
+          "model",
+          "fuel",
+          "bodyStyle",
+          "fileUrl",
+          "systems"
         ]
       },
       "BrandRefDto": {

@@ -94,11 +94,13 @@ export {
   BRANDS,
 } from './catalogue/brands/brands';
 export { type CarForBrand, carForBrand } from './catalogue/car-models';
+export { CarModels3dModule } from './catalogue/car-models-3d/car-models-3d.module';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
 export { CAR_MODELS } from './catalogue/models-3d/models-3d';
 export { Models3dLoader } from './catalogue/models-3d/models-3d.loader';
+export { Models3dStore } from './catalogue/models-3d/models-3d.store';
 export { EVENT_PORT, type EventPort, outbox } from './events/event.port';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';

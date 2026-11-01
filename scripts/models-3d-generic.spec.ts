@@ -264,7 +264,7 @@ describe('the generic body-shape files', () => {
       '@gltf-transform/extensions',
       'meshoptimizer',
     ]) {
-      expect(pkg.devDependencies[name]).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(pkg.dependencies[name]).toMatch(/^\d+\.\d+\.\d+$/);
     }
   });
 
