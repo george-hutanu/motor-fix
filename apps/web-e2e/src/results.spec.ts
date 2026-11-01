@@ -1171,7 +1171,25 @@ test.describe('the map beside the results @seeded', () => {
       .toBeGreaterThan(0);
   }
   // A point under one of the map's own controls (the zoom buttons sit top
-  // right) would press the control: the map first centres on such a point.
+  // right), the legend or the sheet would press that instead: the map first
+  // moves such a point to the middle of the longest uncovered run down the
+  // canvas's centre line, since a low sheet with a tall header (the filter
+  // chips) and the consent bar can cover the canvas's own centre.
+  // The longest run of true flags, as the indexes it starts and ends at.
+  function longestRun(flags: boolean[]) {
+    const runs: { from: number; to: number }[] = [];
+    flags.forEach((bare, i) => {
+      if (!bare) return;
+      const last = runs.at(-1);
+      if (last && last.to === i - 1) last.to = i;
+      else runs.push({ from: i, to: i });
+    });
+    return runs.reduce<{ from: number; to: number } | undefined>(
+      (best, run) =>
+        !best || run.to - run.from > best.to - best.from ? run : best,
+      undefined,
+    );
+  }
   async function clickAt(page: Page, at: readonly [number, number]) {
     const where = () =>
       page.evaluate(([lat, lng]) => {
@@ -1192,13 +1210,41 @@ test.describe('the map beside the results @seeded', () => {
       }, at);
     let spot = await where();
     if (!spot.bare) {
-      await page.evaluate(([lat, lng]) => {
-        (
+      const line = await page.evaluate(([lat, lng]) => {
+        const map = (
           window as unknown as {
-            __MF_MAP: { jumpTo(view: { center: [number, number] }): void };
+            __MF_MAP: {
+              getCanvas(): HTMLCanvasElement;
+              jumpTo(view: { center: [number, number] }): void;
+            };
           }
-        ).__MF_MAP.jumpTo({ center: [lng, lat] });
+        ).__MF_MAP;
+        map.jumpTo({ center: [lng, lat] });
+        const canvas = map.getCanvas();
+        const box = canvas.getBoundingClientRect();
+        const x = box.left + box.width / 2;
+        const top = Math.ceil(box.top);
+        const bare: boolean[] = [];
+        for (let y = top; y <= box.bottom; y += 4)
+          bare.push(document.elementFromPoint(x, y) === canvas);
+        return { bare, centre: box.top + box.height / 2, top };
       }, at);
+      const run = longestRun(line.bare);
+      if (run) {
+        const target = line.top + ((run.from + run.to) / 2) * 4;
+        await page.evaluate((dy) => {
+          (
+            window as unknown as {
+              __MF_MAP: {
+                panBy(
+                  offset: [number, number],
+                  options: { duration: number },
+                ): void;
+              };
+            }
+          ).__MF_MAP.panBy([0, dy], { duration: 0 });
+        }, line.centre - target);
+      }
       await mapSettled(page);
       spot = await where();
       expect(spot.bare).toBe(true);
