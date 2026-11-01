@@ -3,6 +3,7 @@
 // @traces 374-FR-009
 // @traces 374-FR-010
 // @traces 374-FR-012
+// @traces 151-FR-002 151-FR-003 151-FR-015
 import { randomUUID } from 'node:crypto';
 
 import { GarageScheduleService } from './garage-schedule.service';
@@ -665,5 +666,128 @@ describe('the blocked time on the schedule read', () => {
 
     expect(answer.entries).toHaveLength(60);
     expect(answer.blocks).toHaveLength(20);
+  });
+});
+
+describe('the schedule read’s lifts and opening hours', () => {
+  const HOURS = {
+    fri: [
+      ['08:30', '12:00'],
+      ['13:00', '17:15'],
+    ],
+    mon: [['08:00', '18:00']],
+    sat: [['09:00', '13:00']],
+    sun: [],
+    thu: [['08:00', '18:00']],
+    tue: [['08:00', '18:00']],
+    wed: [['08:00', '18:00']],
+  };
+
+  it('carries the lift count and the opening intervals of each day of the range', async () => {
+    const t = await team('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { hours: HOURS, liftCount: 3 },
+      where: { id: t.garage.id },
+    });
+
+    const answer = await list(
+      owner(t),
+      { from: '2026-10-09', to: '2026-10-11' },
+      NOW,
+    );
+
+    expect(answer).toMatchObject({ hoursSet: true, liftCount: 3, lifts: true });
+    expect(answer.days).toEqual([
+      {
+        day: '2026-10-09',
+        open: [
+          { from: '08:30', to: '12:00' },
+          { from: '13:00', to: '17:15' },
+        ],
+      },
+      { day: '2026-10-10', open: [{ from: '09:00', to: '13:00' }] },
+      { day: '2026-10-11', open: [] },
+    ]);
+  });
+
+  it('opens nothing on a closed day or a public holiday', async () => {
+    const t = await team('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { hours: HOURS, liftCount: 2 },
+      where: { id: t.garage.id },
+    });
+    await prisma.garageClosedDay.create({
+      data: { day: new Date('2026-11-27T00:00:00Z'), garageId: t.garage.id },
+    });
+    await prisma.publicHoliday.upsert({
+      create: {
+        day: new Date('2026-11-30T00:00:00Z'),
+        nameEn: 'St Andrew’s Day',
+        nameRo: 'Sfântul Andrei',
+      },
+      update: {},
+      where: { day: new Date('2026-11-30T00:00:00Z') },
+    });
+
+    const answer = await list(
+      owner(t),
+      { from: '2026-11-27', to: '2026-11-30' },
+      NOW,
+    );
+
+    expect(answer.days.map((d) => [d.day, d.open.length])).toEqual([
+      ['2026-11-27', 0],
+      ['2026-11-28', 1],
+      ['2026-11-29', 0],
+      ['2026-11-30', 0],
+    ]);
+  });
+
+  it('says the hours are unset and opens no day while the garage never sent them', async () => {
+    const t = await team('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { hours: {} },
+      where: { id: t.garage.id },
+    });
+
+    const answer = await list(owner(t), {}, NOW);
+
+    expect(answer.hoursSet).toBe(false);
+    expect(answer.days).toEqual([{ day: '2026-10-09', open: [] }]);
+  });
+
+  it('counts no lift while the garage schedules without lifts', async () => {
+    const t = await team('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { liftCount: 4 },
+      where: { id: t.garage.id },
+    });
+    await prisma.garageFeature.create({
+      data: { enabled: false, garageId: t.garage.id, key: 'lift_schedule' },
+    });
+
+    const answer = await list(owner(t), {}, NOW);
+
+    expect(answer).toMatchObject({ liftCount: 0, lifts: false });
+  });
+
+  it('gives a mechanic the same lifts and hours beside her own bookings only', async () => {
+    const t = await team('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { hours: HOURS, liftCount: 3 },
+      where: { id: t.garage.id },
+    });
+    const hers = await booked(t, '2026-10-09T06:00:00Z', 'confirmed', {
+      lift: 1,
+      mechanicId: t.answeringMechanic.id,
+    });
+    await booked(t, '2026-10-09T08:00:00Z', 'confirmed', { lift: 2 });
+    const mechanic = garageActor(t.answering, t.garage.id, 'mechanic');
+
+    const answer = await list(mechanic, {}, NOW);
+
+    expect(ids(answer)).toEqual([hers.id]);
+    expect(answer).toMatchObject({ hoursSet: true, liftCount: 3 });
+    expect(answer.days[0].open).toHaveLength(2);
   });
 });

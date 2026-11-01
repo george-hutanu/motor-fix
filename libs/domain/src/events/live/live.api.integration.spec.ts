@@ -562,10 +562,13 @@ describe('a copy whose Redis does not answer', () => {
 describe('the end of a stream', () => {
   it('says bye with reason expired when the access token expires', async () => {
     const driver = await account('Andrei', ['driver']);
+    // Lives 4 to 5 s (iat is floored to the second): long enough for a
+    // loaded runner to open the stream before the token expires, which would
+    // turn it into a 401 with no bye.
     const shortLived = signAccessToken(
       { accountId: driver, role: 'driver' },
       tokenSecret,
-      Date.now() - 15 * 60_000 + 1_000,
+      Date.now() - 15 * 60_000 + 5_000,
     );
 
     const live = await stream(app, `Bearer ${shortLived}`);

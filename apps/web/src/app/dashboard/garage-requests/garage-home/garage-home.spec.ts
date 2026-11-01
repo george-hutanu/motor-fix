@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { capabilitiesOf, type Role } from '@motor-fix/contracts/capabilities';
 import {
@@ -94,6 +94,7 @@ async function render(
   reviews = jest.fn(() => new Promise(() => undefined));
   const me = signal(account(capabilities, status, role, features));
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       provideRouter([]),
       GarageRequestsFeed,
@@ -117,6 +118,8 @@ async function render(
       {
         provide: GaragesService,
         useValue: {
+          // The lift schedule has its own spec; here it waits.
+          garageSchedule: () => new Promise(() => undefined),
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
           // The verification page has its own spec; here it waits.

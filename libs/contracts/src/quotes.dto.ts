@@ -335,6 +335,12 @@ export class DriverRowBookingDto extends RequestBookingDto {
   lateCancellation!: boolean;
 
   @ApiProperty({
+    description: 'When the garage recorded that the driver did not come',
+    ...NULLABLE_TIME,
+  })
+  noShowAt!: string | null;
+
+  @ApiProperty({
     description: 'The booking’s job exists and has left to do',
   })
   jobStarted!: boolean;
@@ -486,6 +492,14 @@ export class GarageBookingDto extends OmitType(BookingDto, [
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   confirmedBy!: string | null;
 
+  @ApiProperty({
+    description: 'The account that recorded the no-show',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
+  noShowRecordedBy!: string | null;
+
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   mechanicId!: string | null;
 
@@ -532,6 +546,24 @@ export class GarageRowBookingDto extends RequestBookingDto {
       "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else",
   })
   toReassign!: boolean;
+
+  @ApiProperty({
+    description: 'When the garage recorded that the driver did not come',
+    ...NULLABLE_TIME,
+  })
+  noShowAt!: string | null;
+
+  @ApiProperty({
+    description:
+      "The reader may record a no-show: a confirmed booking whose time has come and whose job has not started, read by the owner, the desk or the booking's own mechanic",
+  })
+  canRecordNoShow!: boolean;
+
+  @ApiProperty({
+    description:
+      'The reader may withdraw the no-show: recorded today, Bucharest time, by the same readers',
+  })
+  canWithdrawNoShow!: boolean;
 }
 
 export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
@@ -603,6 +635,7 @@ export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
 export class GarageRequestDto extends OmitType(GarageRequestSummaryDto, [
   'driver',
   'car',
+  'booking',
 ] as const) {
   @ApiProperty({ type: GarageDriverDto })
   driver!: GarageDriverDto;
@@ -616,8 +649,12 @@ export class GarageRequestDto extends OmitType(GarageRequestSummaryDto, [
   @ApiProperty({ nullable: true, type: String })
   description!: string | null;
 
-  @ApiProperty({ nullable: true, type: GarageBookingDto })
-  declare booking: GarageBookingDto | null;
+  @ApiProperty({
+    description: 'The booking the garage’s quote became',
+    nullable: true,
+    type: GarageBookingDto,
+  })
+  booking!: GarageBookingDto | null;
 }
 
 export class GarageRequestListDto {
@@ -880,6 +917,25 @@ export class GarageScheduleEntryDto {
   segments!: BookingSegmentDto[];
 }
 
+// One opening interval of a day, on the Bucharest wall clock.
+export class ScheduleIntervalDto {
+  @ApiProperty({ example: '08:30' })
+  from!: string;
+
+  @ApiProperty({ example: '17:00' })
+  to!: string;
+}
+
+// A day of the read's range and when the garage is open on it: none on a
+// closed day, a public holiday or while the garage has set no hours.
+export class ScheduleDayDto {
+  @ApiProperty({ example: '2026-10-09' })
+  day!: string;
+
+  @ApiProperty({ type: [ScheduleIntervalDto] })
+  open!: ScheduleIntervalDto[];
+}
+
 export class GarageScheduleDto {
   @ApiProperty({ type: [GarageScheduleEntryDto] })
   entries!: GarageScheduleEntryDto[];
@@ -897,6 +953,15 @@ export class GarageScheduleDto {
 
   @ApiProperty()
   lifts!: boolean;
+
+  @ApiProperty({ description: "The garage's lifts; 0 while lifts is false" })
+  liftCount!: number;
+
+  @ApiProperty({ description: 'Whether the garage has set opening hours' })
+  hoursSet!: boolean;
+
+  @ApiProperty({ type: [ScheduleDayDto] })
+  days!: ScheduleDayDto[];
 }
 
 // The driver's acceptance of a quote: whether the garage may read the car's

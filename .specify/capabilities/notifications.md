@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 194-email-sending
   - 195-message-templates
@@ -63,6 +63,9 @@ features:
   - 409-garage-corrects-repair
   - 1267-admin-corrects-repair
   - 1315-optimistic-toggles
+  - 1374-channel-fallback-hint
+  - 1259-no-show
+  - 1411-1315-qa-fixes
 ---
 
 # Capability: Notifications
@@ -199,13 +202,13 @@ _From 199-notification-bell._
 
 _From 1190-live-reconnects._
 
-### 199-FR-004 — `POST /api/v1/notifications/:id/read` MUST set `read_at` once (a second call keeps the first time) and return the item; a row that is not the caller's own `in_app` row answers 404.
+### 1407-FR-002 — `POST /api/v1/notifications/:id/read` MUST declare the same optional header as FR-001, unread and unvalidated; its answer MUST stay as 199-FR-004 gives it (`read_at` set once, a second call keeps the first time, 404 for a row not the caller's).
 
-_From 199-notification-bell._
+_From 1407-toggle-idempotency._
 
-### 199-FR-005 — `POST /api/v1/notifications/read-all` MUST set `read_at` on every unread `in_app` row of the caller and no one else's.
+### 1407-FR-003 — `POST /api/v1/notifications/read-all` MUST declare the same optional header as FR-001, unread and unvalidated; its answer MUST stay as 199-FR-005 gives it.
 
-_From 199-notification-bell._
+_From 1407-toggle-idempotency._
 
 ### 199-FR-006 — Marking read (one or all) MUST publish `notification.read` on `account:{accountId}`; a Redis failure is logged and does not fail the call.
 
@@ -383,9 +386,9 @@ _From 198-staff-notification-preferences._
 
 _From 198-staff-notification-preferences._
 
-### 198-FR-007 — `PUT /api/v1/notification-preferences` MUST accept staff choices as per-type choices of ST-197 that carry the garage (none for an admin type), the type, the channel and `enabled`, and MUST answer the preferences as FR-001 reads them after the save; a save MUST stay one transaction with one audit history entry per changed row (who, garage, type, channel, old and new value) and MUST publish `notification_preferences.updated` on `account:{accountId}` as ST-197 does.
+### 1407-FR-001 — `PUT /api/v1/notification-preferences` MUST declare an optional request header `Idempotency-Key` in the OpenAPI document: `in: header`, `required: false`, `schema: { type: string, minLength: 1, maxLength: 64 }`, with a one-line description saying the key is one per press and that the write is idempotent by value. The server MUST NOT read or validate it, and the operation's answer MUST stay as 198-FR-007 gives it, with or without the header and whatever its value.
 
-_From 198-staff-notification-preferences._
+_From 1407-toggle-idempotency._
 
 ### 198-FR-008 — A staff choice MUST be refused with 422, nothing changed, when: the type is not in the caller's list for that garage (or, with no garage, not in the admin list or the account is not an admin), code `type_not_in_list`; the channel is SMS, code `channel_not_allowed`; the channel is locked for the type and `enabled` is false, code `channel_locked`; the channel is WhatsApp, `enabled` is true, and WhatsApp cannot be chosen for that entry (FR-002), code `whatsapp_unavailable`; the type is DOCUMENT_DUE or DOCUMENT_OVERDUE and the save would leave every one of its channels off, code `last_channel`, judged on the state the whole save leaves (push on and e-mail off in one save is accepted). A channel the catalogue does not give the type stays 400 `channel_not_allowed`, as in ST-197. A garage the caller is not staff of MUST answer 404 as ST-197 does. The routes stay the caller's own: no call names another account, so another person's preferences cannot be changed (the brief's 403 case cannot arise).
 
@@ -411,9 +414,9 @@ _From 198-staff-notification-preferences._
 
 _From 198-staff-notification-preferences._
 
-### 1315-FR-001 — In `NotificationSettings.toggle`, a refused or failed save MUST re-read the lists (`load()`) instead of setting the switch to `!enabled`, so that after any number of failed saves of one switch the switch shows the server's row (modifies 198-FR-014's "revert the switch").
+### 1411-FR-001 — In `NotificationSettings.toggle`, when the save fails AND the re-read of the lists (`load()`) fails too, the switch MUST show the value the server last confirmed for that switch (the value before the first press still unanswered; a save that succeeded since updates it), applied only when this press is still the latest on that switch; the `shell.notifications.saveFailed` toast still shows once per failed save. When the re-read succeeds, 1315-FR-001's rule stands unchanged. `notification-settings.toggle.adversary.spec.ts` ("keeps the lists on screen and toasts once when the re-read fails too") MUST assert the last confirmed value, not the unsaved one (modifies 1315-FR-001).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 198-FR-015 — The panel MUST read the lists again, without a reload, on `notification_preferences.updated` for the caller's account and on `garage.features_changed` for any garage it shows.
 
@@ -551,9 +554,9 @@ _From 806-requeue-sweep-batched._
 
 _From 806-requeue-sweep-batched._
 
-### 142-FR-001 — Each group row of the driver's Notificări panel (the five of 138-FR-001) MUST gain a disclosure that opens the group's notification types under the switch (closed by default; `aria-expanded` and `aria-controls` on the control). Each type shows its name in the driver's language and one channel picker, a radio group offering only the channels the catalogue gives the type, in the order E-mail, Push, SMS, WhatsApp; a type whose catalogue entry has one channel (NEWS) shows that channel as fixed text and no picker; an always-sent type is marked "Se trimite mereu" and its picker works like any other. The types' order within a group is the catalogue's order.
+### 1374-FR-004 — The existing driver preferences read MUST carry on each driver type entry a nullable `fallback` of `{ from, to, reason, at }`; a type with no record has null. The caller's staff entries carry no such field. No new endpoint, counter or queue is added; the read stays under the existing guard and acts on the caller's own account only.
 
-_From 142-notification-channels._
+_From 1374-channel-fallback-hint._
 
 ### 138-FR-002 — Each switch MUST show the group's state as the preferences report it; with nothing saved, every group is on except Noutăți MotorFix.
 
@@ -1099,6 +1102,38 @@ _From 1315-optimistic-toggles._
 
 _From 1315-optimistic-toggles._
 
+### 1374-FR-001 — The system MUST keep, per account and notification type, the last send-time fallback: the channel the message was meant for (`from`), the channel it went by (`to`), the reason (one of `no_device`, `phone_not_verified`, `sms_cap_reached`, `send_failed`, exactly as 142-FR-008 labels the counter) and when it happened (`at`, the time the row on the other channel is written: the message's build time for a write-time substitution, the fallback row's creation for a send-time or bounce fallback). A new fallback for the same account and type replaces the previous one (last one wins); the records are removed with the account.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-002 — A record MUST be written at every point where a fallback is counted today, with the same `from`, `to` and `reason` the counter gets, and in the same transaction as the row it describes: the write-time substitutions of a built message (`build()`'s transaction), the send-time fallback of a failed row onto the next channel (`fallBack()`, whose row and record are written in one transaction), and the bounce handler's e-mail-to-push fallbacks (its transaction). A fallback that is not counted (no row written on another channel) writes no record, and neither does the fallback of a row that is itself a fallback (its `from` is not the driver's choice).
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-003 — A record MUST be written only for a message with an account (never a listing draft) and only for a driver's own choice (a type the driver's panel lists, with no garage); a staff type's fallback is counted as today and not recorded.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-005 — The read MUST return a record only while it explains the current choice: its `from` equals the type's chosen channel as the read gives it now (the saved row or the push-aware default of 142-FR-005) and its `at` is after the type's choice was last saved; with no saved row there is no save time and the `from` test alone decides. Otherwise the entry's `fallback` is null. The staleness rule MUST be a pure function with its own unit tests.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-006 — The account's data export MUST list the account's records in `notifications-and-preferences.json` under `fallbacks` (type, from, to, reason, at), beside the notifications, preferences and devices it lists today; account deletion MUST remove the records with the account.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-007 — Each reason being recorded and read back, last one wins, the drop after a new choice, the null for a type with no record, the staff entries without the field, the export and the deletion MUST each be an API integration test on real PostgreSQL (`*.integration.spec.ts`, CI's on-demand run); the staleness rule has unit tests. Every test file carries a `// @traces` line naming its `1374-FR-<n>` ids.
+
+_From 1374-channel-fallback-hint._
+
+### 1259-FR-007 — The notifications module MUST react to `booking.no_show_recorded` by sending NO_SHOW_RECORDED (already catalogued: event, e-mail, push and WhatsApp, group `bookings` "Programare", mutable, never held for quiet hours) to the booking's driver once per event, with Romanian and English texts from a template with example values: bell and push "Nu te-ai prezentat la <garage> · <day> <time>" / "You did not show up at <garage> · <day> <time>", e-mail and WhatsApp the same with a line that nothing is owed ("Nu se percepe nicio taxă" / "No fee is charged") and a link to the driver's requests; the bell entry links to Cererile mele as today. The driver's closed account or muted channels follow the existing rules.
+
+_From 1259-no-show._
+
+### 1259-FR-008 — The notifications module MUST add the kind NO_SHOW_WITHDRAWN (event, e-mail, push and WhatsApp, group `bookings`, mutable, never held for quiet hours), sent to the booking's driver once per `booking.no_show_withdrawn`, with texts: bell and push "<garage> a retras neprezentarea · programarea din <day> <time> rămâne valabilă" / "<garage> withdrew the no-show · your booking on <day> <time> stands", e-mail and WhatsApp the same with the link to the driver's requests; the bell entry links to Cererile mele. The kind joins the catalogue, the templates registry, the bell link map, the driver's channel preferences under Programare and the kinds the preferences screen lists.
+
+_From 1259-no-show._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -1129,3 +1164,8 @@ _From 1315-optimistic-toggles._
 - `428-FR-010` — superseded by `1258-FR-005` (2026-10-25)
 - `409-FR-014` — superseded by `1267-FR-012` (2026-10-30)
 - `198-FR-014` — superseded by `1315-FR-001` (2026-10-30)
+- `142-FR-001` — superseded by `1374-FR-004` (2026-10-31)
+- `1315-FR-001` — superseded by `1411-FR-001` (2026-10-30)
+- `198-FR-007` — superseded by `1407-FR-001` (2026-10-31)
+- `199-FR-004` — superseded by `1407-FR-002` (2026-10-31)
+- `199-FR-005` — superseded by `1407-FR-003` (2026-10-31)

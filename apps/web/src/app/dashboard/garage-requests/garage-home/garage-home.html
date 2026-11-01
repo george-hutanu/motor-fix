@@ -45,6 +45,24 @@
             <mf-garage-requests-panel data-section="req" [limit]="4" />
           }
         }
+        @case ('funnel') {
+          @defer (on idle) {
+            <mf-weekly-figures-panel data-section="funnel" [view]="section.view" />
+          } @placeholder {
+            <section class="panel" data-section="funnel">
+              <mf-section-title [heading]="section.title | t" [view]="section.view" />
+              <div class="chart-skeleton" data-chart-skeleton aria-hidden="true"></div>
+            </section>
+          } @error {
+            <section class="panel" data-section="funnel">
+              <mf-section-title [heading]="section.title | t" [view]="section.view" />
+              <p class="empty" role="alert">{{ 'garage.weekly.error' | t }}</p>
+            </section>
+          }
+        }
+        @case ('sched') {
+          <mf-lift-schedule data-section="sched" [view]="section.view" />
+        }
         @case ('reviews') {
           <mf-garage-reviews-panel data-section="reviews" [limit]="5" />
         }

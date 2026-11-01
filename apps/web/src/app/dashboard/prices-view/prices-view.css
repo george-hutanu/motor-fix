@@ -30,12 +30,28 @@ h2 {
   gap: var(--mf-space-2) var(--mf-space-3);
   min-width: 0;
 }
-.toggle,
 .edit,
 .actions button,
 .add button {
   min-height: var(--mf-tap);
   white-space: normal;
+}
+/* One line at 320 px: the head wraps it under the title instead. */
+.toggle {
+  min-height: var(--mf-tap);
+  white-space: nowrap;
+}
+/* Michroma at 16 px runs "MODIFICĂ PREȚURILE" past a 320 px phone: the narrower
+   body face keeps phone body size (16 px) and one line inside the 288 px column. */
+@media not all and (min-width: 400px) {
+  .toggle {
+    max-width: 100%;
+    padding-inline: var(--mf-space-3);
+    font-family: var(--mf-font-body);
+    font-size: var(--mf-size-body);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
 }
 /* Under the range on a phone, wrapping as the cells do. */
 .actions,

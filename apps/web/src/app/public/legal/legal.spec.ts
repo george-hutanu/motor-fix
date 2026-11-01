@@ -6,9 +6,9 @@ import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
 import { I18n } from '@motor-fix/i18n';
 
 import { Legal } from './legal';
-import { routes } from '../../app.routes';
 import * as legalTexts from '../legal-texts';
 import { LEGAL_TEXTS } from '../legal-texts';
+import { publicChildren } from '../routes';
 
 async function open(path: string, platform: 'browser' | 'server' = 'browser') {
   TestBed.configureTestingModule({
@@ -132,7 +132,7 @@ describe('the legal pages labels and titles', () => {
       const i18n = TestBed.inject(I18n);
       await i18n.enter('public');
       await i18n.use('en');
-      const title = routeOf(routes, kind)?.title;
+      const title = routeOf(publicChildren, kind)?.title;
 
       expect(typeof title).toBe('function');
       expect(

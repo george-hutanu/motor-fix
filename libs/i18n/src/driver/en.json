@@ -97,7 +97,8 @@
     "menu": {
       "edit": "Edit",
       "name": "Actions for {car}",
-      "remove": "Remove the car"
+      "remove": "Remove the car",
+      "sell": "I sold the car"
     },
     "oil": {
       "due": "Oil service due in {km} km",
@@ -133,6 +134,52 @@
       "missing": "Rovinietă: add the date",
       "today": "Rovinietă expires today",
       "valid": "Rovinietă valid until {month}"
+    },
+    "sale": {
+      "added": "Added by you",
+      "back": "Back",
+      "close": "Close",
+      "copied": "Copied",
+      "copy": "Copy the link",
+      "done": "Done",
+      "empty": "No repairs yet. The buyer takes the car over with no history.",
+      "failed": "We couldn't send the link by WhatsApp. Copy it and send it to the buyer yourself.",
+      "field": {
+        "invalid_phone": "Enter a valid phone number.",
+        "own_phone": "You can't send the link to your own number.",
+        "pattern": "Enter a valid phone number."
+      },
+      "keep": "Don't pass the history",
+      "link": "The buyer's link",
+      "loading": "Reading the car's repairs…",
+      "note": "Repairs done through MotorFix always pass on. Tick what you added yourself and want to pass. Invoices don't pass on.",
+      "pass": "Pass the history to the new owner",
+      "passes": "Passes on",
+      "phone": "The buyer's phone",
+      "phoneNote": "We send them a link on WhatsApp, valid 7 days.",
+      "problem": {
+        "open_request": "The car has a request under way. You can sell the car once it ends.",
+        "repair_not_tickable": "A ticked repair can no longer be passed on. Close and open again."
+      },
+      "question": "Do you pass the repair history to the new owner?",
+      "repairs": "The car's repairs",
+      "retry": "Try again",
+      "send": "Send",
+      "sent": "The link went by WhatsApp",
+      "title": "Sold your {car}?"
+    },
+    "transfer": {
+      "cancel": "Cancel the transfer",
+      "confirm": {
+        "back": "Back",
+        "confirm": "Cancel the transfer",
+        "problem": {
+          "not_sent": "The transfer is no longer active."
+        },
+        "text": "The link you sent will stop working.",
+        "title": "Cancel the transfer?"
+      },
+      "line": "Transfer sent · expires on {day}"
     }
   },
   "details": {

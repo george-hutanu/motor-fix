@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 252,
+    "count": 259,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -181,7 +181,7 @@
         "worker-jobs-failed",
         "profile-views-job-failed"
       ],
-      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile, then ranks every active brand by its searches over the 30 closed days and logs the ranked and changed counts, a failed ranking failing the attempt and leaving the previous ranks; profile-views has its own final-failure alert, since its counters expire two days after their day",
+      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile, then writes the brand_area rows (per brand and area, with their own marker, so the days written before them are back-filled once) and logs 'brand_area written n for days', then ranks every active brand by its searches over the 30 closed days and logs the ranked and changed counts, a failed ranking failing the attempt and leaving the previous ranks; profile-views has its own final-failure alert, since its counters expire two days after their day",
       "story": "ST-881"
     },
     {
@@ -245,6 +245,15 @@
       ],
       "reason": "counts every static map answer by outcome ok, invalid or tiles_failed, never a centre or an address, and times each render in motorfix_static_map_render_duration_seconds (0.25 to 5 s); tiles_failed above 5% of 20 renders in 10 minutes is folded into api-error-rate, keeping the alert count at 50",
       "story": "ST-1196"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_free_slots_answers_total",
+      "source": "libs/domain/src/workshop/free-slots/free-slots.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts every free-slot answer, cached ones included, by outcome slots or none_in_horizon, never a garage or a caller; the refusals are the route's 4xx and its FreeSlots warnings; no alert of its own, as a garage with no free time is a real answer",
+      "story": "ST-154"
     },
     {
       "kind": "product-counter",
@@ -666,9 +675,10 @@
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
-        "api-latency"
+        "api-latency",
+        "worker-jobs-failed"
       ],
-      "reason": "opens and closes a live input per live session and deletes the recordings of a live input on removal, purge or a discard at the stop (GET /stream/live_inputs/{id}/videos, then DELETE /stream/{uid} per video, a 404 counting as deleted), 5 s timeout, in a live-video.create_input, live-video.close_input or live-video.delete_recording span; the worker reads each live input's publisher state once a minute (GET /stream/live_inputs/{id}, a 404 counting as no publisher) in a live-video.input_status span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
+      "reason": "opens a live input per live session, closes it after a stop by disabling it (PUT /stream/live_inputs/{id} enabled false, the input and its recordings kept, a 404 counting as closed), deletes the input of a start that did not commit (DELETE /stream/live_inputs/{id}, a 404 counting as deleted), and deletes the recordings of a live input on removal, purge or a discard at the stop (GET /stream/live_inputs/{id}/videos, then DELETE /stream/{uid} per video, a 404 counting as deleted), 5 s timeout, in a live-video.create_input, live-video.close_input, live-video.delete_input or live-video.delete_recording span; the worker reads each live input's publisher state once a minute (GET /stream/live_inputs/{id}, a 404 counting as no publisher) in a live-video.input_status span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees; the worker closes the input from the live-inputs queue, and a close that fails its third try (a provider error, timeout, rejected or still_enabled) is a failed live-inputs job, which worker-jobs-failed sees",
       "story": "ST-1250"
     },
     {
@@ -1080,6 +1090,17 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_live_input_closes_total",
+      "source": "libs/domain/src/live-video/sessions/sessions.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts every live input the worker closed at the provider after a stop, by outcome (closed, or close_failed on the last of three tries), on the live panel beside the starts, recordings and idle stops; the last failed try is a failed live-inputs job, which worker-jobs-failed sees",
+      "story": "ST-1390"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_live_idle_stops_total",
       "source": "libs/domain/src/live-video/sessions/sessions.metrics.ts",
       "dashboard": "motorfix-api",
@@ -1179,6 +1200,19 @@
       ],
       "reason": "each changed day or the Saturday switch is audited (update, old and new value) and recorded as mechanic.updated with the fields in the same transaction; an unchanged save writes nothing; a 422 validation_failed (order, outside_opening, garage_closed_saturday) is the owner's input refused, not a failure",
       "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-free-slots-read",
+      "source": "libs/domain/src/workshop/free-slots/free-slots.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/free-slots",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of a garage's first free starts for a job, from Valkey for 60 seconds under a generation each schedule event advances (the relay also records garage.slots_changed), counted by motorfix_free_slots_answers_total{outcome} (slots or none_in_horizon); each 4xx logs one FreeSlots warning with the garage, code and role; a Valkey failure falls back to PostgreSQL and logs one FreeSlotsCache warning per outage",
+      "story": "ST-154"
     },
     {
       "kind": "endpoint",
@@ -1940,8 +1974,8 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days and radius, one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
-      "story": "ST-133, ST-1246"
+      "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days, radius and the facilities group (facilities, their note, courtesy-car terms, payment methods; 400 no_courtesy_car when the terms and the ticked car disagree), one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
+      "story": "ST-133, ST-1246, ST-1248"
     },
     {
       "kind": "endpoint",
@@ -2131,6 +2165,19 @@
       ],
       "reason": "the admin's demand read, counts only; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-103"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-demand-supply",
+      "source": "libs/domain/src/insights/demand/demand.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/demand/supply",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's demand against supply per brand and area, counts only; a failed read answers the standard error body and is the api-error-rate rule's, a slow one (the live days and the supply are counted at the read) the api-latency rule's; the areas it places points in are loaded at the API's start, which logs 'areas loaded: n changed' and stops the start on a bad file",
+      "story": "ST-106"
     },
     {
       "kind": "endpoint",
@@ -2983,6 +3030,19 @@
     },
     {
       "kind": "queue",
+      "name": "live-inputs",
+      "source": "libs/domain/src/live-video/inputs/inputs.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "consumes live.stopped (job id = event id, 3 tries a minute apart) for every stop reason: closes the session's input at the provider (a closed or missing input counting as closed), counted in motorfix_live_input_closes_total{outcome} (closed, or close_failed on the last try) on the live panel, one LiveInputs warning per failed try with the session and input ids and the reason token, never a URL; the provider call keeps its live-video.close_input span; the last failure is a failed job, which worker-jobs-failed sees",
+      "story": "ST-1390"
+    },
+    {
+      "kind": "queue",
       "name": "live-recordings",
       "source": "libs/domain/src/live-video/recordings/recordings.ts",
       "dashboard": "motorfix-queues",
@@ -3334,6 +3394,111 @@
       "alerts": "none",
       "reason": "counts each correction told to the driver by outcome (built, muted, skipped), with the fan-out log line naming the repair id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-409"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-no-show",
+      "source": "libs/domain/src/quotes/no-show/no-show.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/no-show",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "POST records a no-show; one NoShow log line per action naming the booking, request, garage and actor role, never the driver; refusals warn with the code; the count by action and outcome is the motorfix_no_shows_total entry",
+      "story": "ST-1259"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-no-show-withdraw",
+      "source": "libs/domain/src/quotes/no-show/no-show.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/no-show (DELETE)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "DELETE withdraws a no-show the same Bucharest day; the same NoShow log line and motorfix_no_shows_total count as the record",
+      "story": "ST-1259"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_no_shows_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts no-shows recorded and withdrawn by outcome (done, refused); a count of rule outcomes has nothing to alert on; api-error-rate covers failures",
+      "story": "ST-1259"
+    },
+    {
+      "kind": "queue",
+      "name": "no-show",
+      "source": "libs/domain/src/notifications/no-show/no-show.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one queue for a no-show recorded and withdrawn; one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-1259"
+    },
+    {
+      "kind": "queue",
+      "name": "repair-from-job",
+      "source": "libs/domain/src/cars/repair-from-job/repair-from-job.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's job.handed_over and job.final_price_corrected events; one RepairFromJob log line per event naming the job, the repair and the outcome, counted by motorfix_repairs_from_jobs_total; a failed job is retried (6 tries) and worker-jobs-failed fires on the last; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-61"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repairs_from_jobs_total",
+      "source": "libs/domain/src/cars/repair-from-job/repair-from-job.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each handover or price correction the worker applied by outcome (created, cost_updated, unchanged, job_missing), with no job, repair or account label; a count has no failure to alert on; worker-jobs-failed covers the queue",
+      "story": "ST-61"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repair_edit_refusals_total",
+      "source": "libs/domain/src/cars/repairs/repairs.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each refused edit or delete of a repair by code (motorfix_repair, not_implemented), with no repair or account label; a count has no failure to alert on",
+      "story": "ST-61"
+    },
+    {
+      "kind": "endpoint",
+      "name": "repairs",
+      "source": "libs/domain/src/cars/repairs/repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/repairs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver reads his repairs across his cars, 20 a page; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-61"
+    },
+    {
+      "kind": "endpoint",
+      "name": "repair-edit",
+      "source": "libs/domain/src/cars/repairs/repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/repairs/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "PATCH and DELETE change nothing yet: a MotorFix repair answers 409, a logged one 501, each counted by motorfix_repair_edit_refusals_total; no alert of its own",
+      "story": "ST-61"
     }
   ]
 }

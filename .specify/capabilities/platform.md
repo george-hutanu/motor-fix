@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -125,7 +125,10 @@ features:
   - 1349-cockpit-chart-settle
   - 1257-quote-reminders
   - 1315-optimistic-toggles
+  - 1411-1315-qa-fixes
   - 1379-provider-calls-worker
+  - 1407-toggle-idempotency
+  - 1406-integration-shards
 ---
 
 # Capability: Platform
@@ -1784,13 +1787,13 @@ _From 1159-mutation-shards._
 
 _From 1170-integration-on-demand._
 
-### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with the repository's own PostgreSQL 18 + PostGIS 3.6 image (`ghcr.io/george-hutanu/motor-fix-postgres:18`, `pg_stat_statements` preloaded by the image, no `ALTER SYSTEM` step) and Redis service containers and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
+### 1406-FR-001 — The `integration` job of `.github/workflows/ci.yml` MUST run as a matrix of shards: `N` shards for `libs/domain`, each running `domain:test` with `JEST_SUITE=integration` and Jest `--shard=i/N` (`i` = 1..`N`), and one shard for every other Nx project (`run-many`, `domain` excluded, `--passWithNoTests`), so that together the shards run every `*.integration.spec.ts` of the repository exactly once per run. The matrix MUST keep the job's trigger: `workflow_dispatch` or the `workflow_call` input `integration`, never `pull_request`.
 
-_From 1170-integration-on-demand._
+_From 1406-integration-shards._
 
-### 1170-FR-003 — `CI OK` needs the integration job and counts it skipped as passed, as it does the E2E job; the merge gate is unchanged (a skipped check is green; a later skip never hides an on-demand run's failure, as for E2E).
+### 1406-FR-005 — `ci-ok` MUST need the sharded job so that a failed or cancelled shard fails `CI OK` and a skipped matrix (a `pull_request` run) counts as passed; `release.yml`'s `checks` call (`integration: true`) MUST be unchanged and MUST keep `images`, `staging` and `production` waiting for every shard.
 
-_From 1170-integration-on-demand._
+_From 1406-integration-shards._
 
 ### 1170-FR-004 — A release (merge to `main`) runs the integration suite before anything is built or deployed: `release.yml`'s `checks` job calls `ci.yml` with `integration: true`, so `images`, `staging` and `production` wait for it and a failure stops the release.
 
@@ -2980,17 +2983,17 @@ _From 1349-cockpit-chart-settle._
 
 _From 1257-quote-reminders._
 
-### 1315-FR-008 — Each press on the three toggle surfaces (settings switch, bell read and read-all, price-list hide/show) MUST make exactly one write call, and the web MUST NOT resend a refused or failed one (the rollback ends it). The `Idempotency-Key` on these writes is the Split's second story; the brand ticks ride the draft keeper's whole-form save (idempotent by construction) and the listing's send already carries its key (`draft-keeper.ts` `submit`).
+### 1411-FR-007 — Each press on the three toggle surfaces (settings switch, bell read and read-all, price-list hide/show) MUST make at most one write call, and a mark-all press while a mark-all is on its way MUST make none (every row already shows read, nothing is left to send); the web MUST NOT resend a refused or failed call (modifies 1315-FR-008; `bell.spec.ts` asserts the guard).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 1315-FR-009 — Bookings and payments MUST stay non-optimistic: `accept-quote-dialog.ts`, `cancel-booking-dialog.ts`, `send-quote-dialog.ts`, `request-quote.ts`, `job-steps.ts` and `waiting.ts` keep waiting for the server's answer before the screen shows the outcome; a test asserts for the accept and cancel dialogs that the screen changes only after the answer (there is no payment write in the product today).
 
 _From 1315-optimistic-toggles._
 
-### 1315-FR-011 — An end-to-end spec in `apps/web-e2e` MUST, with Chromium's network emulated as Slow 3G (`Network.emulateNetworkConditions`: 400 ms latency, 500 kbit/s down, 500 kbit/s up), prove on each of the four surfaces that the screen changes within 100 ms of the tap (a `pointerdown` listener installed by `page.evaluate` stamps `performance.now()`, a `MutationObserver` stamps the change of the named node: the settings switch's `aria-checked`, the bell row's unread mark, the price row's state text, the brand tick's checked state; one measurement per surface, no retry; every Playwright project runs Chromium, so no project is skipped), and that a refused write (the route answered 500 by the test) rolls the screen back with the surface's message: the settings toast, the bell toast, the price-list row line; the brands step is proven for the 100 ms only (FR-010).
+### 1411-FR-003 — Every optimistic-state assertion, in the flows and in `apps/web-e2e/src/optimistic-toggles.spec.ts`, MUST observe the named attribute of the named node only (`attributeFilter`: `aria-checked` on the settings switch, `class` on the bell row, `aria-pressed` on the fuel tick; `characterData`/`childList` on the price row's state text node), never any subtree mutation; MUST assert the bell badge going from 3 to 2 before the read answers; MUST assert the price row reading "ascuns de tine" with its "Modifică", "Arată" and "Șterge" buttons disabled before the answer; and MUST assert each failure toast exactly once (the count of matching toasts is 1; the price row's refused write shows its alert line instead of a toast, and that line is counted once) (modifies 1315-FR-011).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 1315-FR-012 — Every change MUST live in code the initial download does not hold: the dashboard views and the listing form are lazy routes today (`app.routes.ts` `loadChildren` / `loadComponent`), and no new file joins the eager app shell; the production build's `initial` budget (1 MB error) MUST keep passing with the initial bundle no larger than before this story (the plan records the merge base's production `initial` total; the PR body states the figure after).
 
@@ -3007,6 +3010,48 @@ _From 1315-optimistic-toggles._
 ### 1315-FR-015 — Tests MUST come before the code (Principle II): `notification-settings.spec.ts` (two toggles, both saves failing, the switch ending on the server's row; the toast twice; the first scenario of 198-FR-014 kept), `bell.spec.ts` (the optimistic read and read-all, their rollbacks, the out-of-order first-page reloads keeping a row read), `prices-view.spec.ts` (the optimistic hide and show, the rollback with the row line, one write per press), a spec per FR-009 dialog, and the end-to-end spec of FR-011; each test file carries one whole-line `// @traces` comment naming its `1315-FR-<n>` ids.
 
 _From 1315-optimistic-toggles._
+
+### 1411-FR-002 — The PR tester's QA flows for this PR (`.specify/.cache/qa-flows-<pr>.mjs`, run on GitHub Actions by the PR QA workflow) MUST drive every acceptance scenario of 1315 US1-US4 in a browser, the three the #643 run skipped included: 1315 US1 s2 (one switch flipped twice, both saves fail, the switch ends on the server's row, two toasts), 1315 US2 s3 ("Marchează tot ca citit" refused: rows unread again, badge restored, one toast) and 1315 US4 s2 (the draft keeper's refused save keeps the ticks and shows "Ciorna nu a putut fi salvată pe server. Încearcă din nou."), plus this story's own scenarios; each flow pushes its findings into `findings` and waits on a visible element, `waitForText` or the stream's open state, never `networkidle`.
+
+_From 1411-1315-qa-fixes._
+
+### 1411-FR-008 — Tests MUST come before the code (Principle II): every changed or added test carries a whole-line `// @traces 1411-FR-<n>` comment; no new user-facing text (the existing `shell.notifications.saveFailed`, `shell.bell.readFailed`, `garage.prices.notSaved` and the draft keeper's note are reused); the change stays in `apps/web`, `libs/domain/src/seed*`, `apps/web-e2e` and the specs, with no API or contract change; `specs/1315-optimistic-toggles/tasks.md` T016 is corrected to name the fuel tick on a taken brand as the surface actually measured.
+
+_From 1411-1315-qa-fixes._
+
+### 1407-FR-005 — `apps/api/openapi.json` MUST be regenerated from the API and committed with the four declarations, and the regenerated document MUST differ from a regeneration of the branch's merge base only by the four header parameters: no other operation, schema or response changes (drift `main`'s own code brings is kept, never hand-pruned, and listed in the PR).
+
+### 1406-FR-002 — Every shard MUST have its own PostgreSQL (`ghcr.io/george-hutanu/motor-fix-postgres:18`) and Valkey service containers, its own compose object store, its own `prisma migrate deploy` and its own `scripts/clear-activity-log.ts` run before its tests, plus ffmpeg and the setup action, exactly as the single job has today; the `services` anchor the E2E job shares stays shared.
+
+_From 1406-integration-shards._
+
+### 1406-FR-003 — Every shard MUST keep the "Watch the database" sampler and the "Database waits" step (`if: always()`), each printing that shard's own samples.
+
+_From 1406-integration-shards._
+
+### 1406-FR-004 — The matrix job MUST have one `timeout-minutes` strictly lower than 90, written beside the measured duration it derives from (the slowest shard's job wall time, setup included, on a first dispatch, ÷ 0.7 and rounded up to 5 minutes), and on the proving run (a second dispatch on the final head, FR-009) the job time of every shard, the slowest included, MUST be at most 70 % of it (measured time plus at least 30 %, the rule of `1159-FR-005`). `N` MUST be chosen so that this holds for the slowest domain shard.
+
+_From 1406-integration-shards._
+
+### 1406-FR-006 — A dispatch with the `specs` input set MUST run each named `*.integration.spec.ts` file `repeat` times (`--runInBand`, the audit history cleared before each run, `repeat` validated as 1 or more) in exactly one job: with `specs` set the matrix holds that one entry ("named specs") and no suite shard runs at all. A `specs` input naming no integration file MUST leave every shard green with nothing run.
+
+_From 1406-integration-shards._
+
+### 1406-FR-007 — No spec file, Jest config, worker setting or test assertion MAY be changed, skipped or weakened by this change, and no shard's timeout MAY be the whole suite's 90 raised or kept: the change splits the work.
+
+_From 1406-integration-shards._
+
+### 1406-FR-008 — `scripts/ci-workflow.spec.ts` and `scripts/ci-workflow.adversary.spec.ts` MUST describe the new shape first (the matrix, the per-shard services, migration, audit clearing and Database waits, the timeout rule, `ci-ok`'s need, the named-specs path in one shard, never on `pull_request`) and fail against `main`'s `ci.yml`; the `merge-gate.spec.mjs` fixture row that names "Integration tests" MUST name the check a skipped matrix shows on a real PR run of the branch, and nothing else in the repository MAY still assume one integration job.
+
+_From 1406-integration-shards._
+
+### 1406-FR-009 — The change MUST be proved by an on-demand `workflow_dispatch` run of `ci.yml` on the PR branch with every shard green, and the PR body's Notes MUST list the run id and each shard's name and duration beside the single job's 38 to 60 minutes.
+
+_From 1406-integration-shards._
+
+### 1406-FR-010 — The `ci.yml` header, `.claude/skills/speckit-auto/lifecycle.md` ("CI, tests and release"), `docs/speed-and-cost-plan.md` (row 17) and the `platform` capability (through the Spec Delta) MUST say the integration suite runs as shards with a database per shard, and how a named-specs dispatch runs; no other in-repo document MAY be left saying the suite runs as one job (the specs repo's `docs/` say "on demand and before every release", which stays true).
+
+_From 1406-integration-shards._
 
 ### 1379-FR-001 — The four direct sends — the WhatsApp sign-in code (SIGN_IN_CODE), the phone change code (PHONE_CHANGE_CODE), the staff invite by e-mail and by WhatsApp (STAFF_INVITE), and the car transfer link by WhatsApp (CAR_TRANSFER_LINK) — MUST be handed to the provider by the worker process only. The API MUST add one job to a new BullMQ queue `direct-send` on the existing broker (one attempt, no retry) carrying the template, language, recipient and template values, and MUST await that job's result for at most a fixed cap of 8000 ms (one named constant) before answering the request.
 
@@ -3154,3 +3199,7 @@ _From 1379-provider-calls-worker._
 - `1360-FR-011` — superseded by `493-FR-002` (2026-10-24)
 - `432-FR-005` — superseded by `493-FR-003` (2026-10-24)
 - `703-FR-009` — superseded by `493-FR-004` (2026-10-24)
+- `1315-FR-011` — superseded by `1411-FR-003` (2026-10-30)
+- `1315-FR-008` — superseded by `1411-FR-007` (2026-10-30)
+- `1170-FR-002` — superseded by `1406-FR-001` (2026-10-30)
+- `1170-FR-003` — superseded by `1406-FR-005` (2026-10-30)

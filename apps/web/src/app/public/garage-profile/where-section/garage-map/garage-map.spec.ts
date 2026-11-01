@@ -4,10 +4,12 @@ import { join } from 'node:path';
 import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { STATIC_MAP_ZOOM } from '@motor-fix/contracts/map-view';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { GARAGE_MAP, GarageMap } from './garage-map';
+import { circleBounds, ring } from '../../../map-libre/map-libre';
 import type { MapFake } from '../../../place-step/place-step.testing';
 import { boundsOf, fitView, paddingOf } from '../../../static-map/fit-view';
 import { StaticMap } from '../../../static-map/static-map';
@@ -17,7 +19,11 @@ jest.mock('maplibre-gl', () =>
 );
 
 const POINT = { lat: 44.4352671, lng: 26.0123456 };
+const CENTRE = { lat: 46.9, lng: 23.68 };
 const BOX = { h: 200, w: 390 };
+// The room the circle keeps from the box's edge (garage-map.ts).
+const EDGE = 16;
+let box = BOX;
 
 let opened: (value: { destroy(): void }) => void;
 let refused: (error: unknown) => void;
@@ -28,6 +34,7 @@ const open = jest.fn(
     _pin: HTMLElement,
     _at: { lat: number; lng: number },
     _start: { center: [number, number]; zoom: number },
+    _km?: number,
   ) =>
     new Promise<{ destroy(): void }>((resolve, reject) => {
       opened = resolve;
@@ -43,7 +50,12 @@ const piece = () =>
   fixture.debugElement.query(By.directive(StaticMap))
     ?.componentInstance as StaticMap;
 
-async function render({ platform = 'browser', reduced = false } = {}) {
+async function render({
+  km = undefined as number | undefined,
+  platform = 'browser',
+  point = POINT as { lat: number; lng: number },
+  reduced = false,
+} = {}) {
   TestBed.configureTestingModule({
     providers: [
       { provide: GARAGE_MAP, useValue: open },
@@ -53,7 +65,8 @@ async function render({ platform = 'browser', reduced = false } = {}) {
   });
   await TestBed.inject(I18n).enter('public');
   fixture = TestBed.createComponent(GarageMap);
-  fixture.componentRef.setInput('point', POINT);
+  fixture.componentRef.setInput('point', point);
+  if (km !== undefined) fixture.componentRef.setInput('km', km);
   fixture.componentInstance.gone.subscribe(gone);
   fixture.detectChanges();
   await fixture.whenStable();
@@ -75,12 +88,13 @@ beforeEach(() => {
   open.mockClear();
   destroy.mockClear();
   gone.mockClear();
+  box = BOX;
   jest
     .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(BOX.w);
+    .mockImplementation(() => box.w);
   jest
     .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-    .mockReturnValue(BOX.h);
+    .mockImplementation(() => box.h);
 });
 
 afterEach(() => jest.restoreAllMocks());
@@ -123,6 +137,201 @@ describe('GarageMap, the static map of one garage', () => {
   });
 });
 
+// @traces 1383-FR-004
+// @traces 1383-FR-005
+// @traces 1383-FR-007
+describe('GarageMap, the area of a mobile mechanic', () => {
+  const circle = () => {
+    const area = element().querySelector<HTMLElement>('.overlay .area');
+    return {
+      r: Number.parseFloat(area?.style.getPropertyValue('--r') ?? ''),
+      x: Number.parseFloat(area?.style.left ?? ''),
+      y: Number.parseFloat(area?.style.top ?? ''),
+    };
+  };
+
+  it.each([
+    [CENTRE, 20, 320],
+    [CENTRE, 20, 1024],
+    [CENTRE, 5, 390],
+    [CENTRE, 100, 1280],
+    // Here the snapped centre would push the edge of the fitted zoom's
+    // circle off the strip at the widest image.
+    [{ lat: 44.94, lng: 26.01 }, 20, 1280],
+  ])(
+    'keeps the whole circle round %j of %i km inside a %i px strip',
+    async (at, km, w) => {
+      box = { h: 200, w };
+      await render({ km, point: at });
+      const { r, x, y } = circle();
+      const { zoom } = piece().view() as { zoom: number };
+      // The zoom is the box less its padding's fit or lower; the drawn
+      // circle keeps an edge's room in. At the lowest zoom the image service
+      // gives, the box itself is all that is left to hold it.
+      const margin = zoom > STATIC_MAP_ZOOM.min ? EDGE : 0;
+
+      expect(r).toBeGreaterThan(0);
+      expect(x - r).toBeGreaterThanOrEqual(margin);
+      expect(x + r).toBeLessThanOrEqual(w - margin);
+      expect(y - r).toBeGreaterThanOrEqual(margin);
+      expect(y + r).toBeLessThanOrEqual(200 - margin);
+      expect(zoom).toBeLessThanOrEqual(15);
+      expect(zoom).toBeGreaterThanOrEqual(STATIC_MAP_ZOOM.min);
+    },
+  );
+
+  // The static map's own control and credit sit inside the strip: at 320 px
+  // the control at the top right and the two-line credit along the bottom,
+  // wider up the stacked corner at the bottom right.
+  it.each([
+    [
+      320,
+      {
+        attribution: { h: 50, w: 296, x: 12, y: 138 },
+        button: { h: 52, w: 120, x: 188, y: 12 },
+      },
+    ],
+    [
+      1024,
+      {
+        attribution: { h: 26, w: 220, x: 792, y: 162 },
+        button: { h: 44, w: 150, x: 862, y: 114 },
+      },
+    ],
+    // The profile's narrow column at a 1440 px desktop: the credit wraps to
+    // two lines and lifts the control over the strip's middle, where the
+    // circle's centre falls, so no lower zoom alone can clear it.
+    [
+      360,
+      {
+        attribution: { h: 44, w: 300, x: 48, y: 144 },
+        button: { h: 44, w: 150, x: 198, y: 96 },
+      },
+    ],
+  ])(
+    'keeps the circle clear of the control and the credit in a %i px strip',
+    async (w, covers) => {
+      box = { h: 200, w };
+      const real = Element.prototype.getBoundingClientRect;
+      jest
+        .spyOn(Element.prototype, 'getBoundingClientRect')
+        .mockImplementation(function (this: Element) {
+          const at = this.matches('mf-static-map .attribution')
+            ? covers.attribution
+            : this.matches('mf-static-map button')
+              ? covers.button
+              : undefined;
+          return at ? new DOMRect(at.x, at.y, at.w, at.h) : real.call(this);
+        });
+      await render({ km: 20, point: CENTRE });
+      const { r, x, y } = circle();
+
+      expect(r).toBeGreaterThan(0);
+      for (const c of Object.values(covers)) {
+        const dx = Math.max(c.x - x, 0, x - (c.x + c.w));
+        const dy = Math.max(c.y - y, 0, y - (c.y + c.h));
+        expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(r);
+      }
+    },
+  );
+
+  // The profile's column at a 1440 px desktop as the QA run drew it: the
+  // control over the middle and the two-line credit along the bottom leave
+  // a room 93 px tall, which the image grid's snapped centre misses at the
+  // zoom that fits it; a neighbouring grid centre holds that zoom, so the
+  // circle is drawn no smaller than it can be, as near the middle as it can.
+  it('holds the zoom the room left by the covers fits, on a neighbouring grid centre', async () => {
+    box = { h: 200, w: 398 };
+    const covers = {
+      attribution: { h: 46, w: 374, x: 12, y: 141 },
+      button: { h: 44, w: 164, x: 222, y: 93 },
+    };
+    const real = Element.prototype.getBoundingClientRect;
+    jest
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: Element) {
+        const at = this.matches('mf-static-map .attribution')
+          ? covers.attribution
+          : this.matches('mf-static-map button')
+            ? covers.button
+            : undefined;
+        return at ? new DOMRect(at.x, at.y, at.w, at.h) : real.call(this);
+      });
+    await render({ km: 20, point: CENTRE });
+    const { r, x, y } = circle();
+
+    expect(r).toBeGreaterThanOrEqual(20);
+    expect(piece().view()?.zoom).toBeLessThanOrEqual(
+      fitView(
+        boundsOf(circleBounds(CENTRE, 20).map(([lng, lat]) => ({ lat, lng }))),
+        box,
+        paddingOf(),
+      ).zoom,
+    );
+    expect(x - r).toBeGreaterThanOrEqual(EDGE);
+    expect(y - r).toBeGreaterThanOrEqual(EDGE);
+    expect(x + r).toBeLessThanOrEqual(box.w - EDGE);
+    expect(y + r).toBeLessThanOrEqual(box.h - EDGE);
+    for (const c of Object.values(covers)) {
+      const dx = Math.max(c.x - x, 0, x - (c.x + c.w));
+      const dy = Math.max(c.y - y, 0, y - (c.y + c.h));
+      expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(r);
+    }
+  });
+
+  it('fits the view to the circle, not to its centre', async () => {
+    await render({ km: 20, point: CENTRE });
+
+    expect(piece().view()?.zoom).toBeLessThan(
+      fitView(boundsOf([CENTRE]), BOX, paddingOf()).zoom,
+    );
+  });
+
+  it('draws one plain circle, with no pin, no marker and no label', async () => {
+    await render({ km: 20, point: CENTRE });
+
+    expect(element().querySelectorAll('.overlay .area')).toHaveLength(1);
+    expect(element().querySelector('.overlay .area')?.textContent?.trim()).toBe(
+      '',
+    );
+    expect(
+      element().querySelector('.overlay .area.takes, .overlay .area.lit'),
+    ).toBeNull();
+    expect(element().querySelector('.overlay .here')).toBeNull();
+    expect(element().querySelector('.overlay .pin')).toBeNull();
+    expect(still()?.classList.contains('plain')).toBe(true);
+    expect(piece().place()).toBeUndefined();
+  });
+
+  it('marks a workshop as before, on an unplain map', async () => {
+    await render();
+
+    expect(still()?.classList.contains('plain')).toBe(false);
+    expect(element().querySelector('.overlay .area')).toBeNull();
+  });
+
+  it('gives a new view for a new radius or centre, the same one for the same', async () => {
+    await render({ km: 20, point: CENTRE });
+    const first = piece().view();
+    fixture.componentRef.setInput('km', 20);
+    fixture.componentRef.setInput('point', { ...CENTRE });
+    fixture.detectChanges();
+
+    expect(piece().view()).toEqual(first);
+
+    fixture.componentRef.setInput('km', 60);
+    fixture.detectChanges();
+    const wider = piece().view();
+
+    expect(wider?.zoom).toBeLessThan(first?.zoom ?? 0);
+
+    fixture.componentRef.setInput('point', { lat: 45.75, lng: 24.5 });
+    fixture.detectChanges();
+
+    expect(piece().view()?.center).not.toEqual(wider?.center);
+  });
+});
+
 // @traces 1366-FR-003
 describe('GarageMap, its box', () => {
   it('keeps the canvas and the pin away from assistive technology', async () => {
@@ -161,7 +370,39 @@ describe('GarageMap, the interactive map', () => {
       element().querySelector('.pin'),
       POINT,
       { center: [center.lng, center.lat], zoom },
+      undefined,
     );
+  });
+
+  // @traces 1383-FR-006
+  it('opens an area once, at its static view and with its radius', async () => {
+    await render({ km: 20, point: CENTRE });
+    const { center, zoom } = piece().view() as {
+      center: { lat: number; lng: number };
+      zoom: number;
+    };
+    tap();
+    tap();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(
+      element().querySelector('.canvas'),
+      element().querySelector('.pin'),
+      CENTRE,
+      { center: [center.lng, center.lat], zoom },
+      20,
+    );
+  });
+
+  // @traces 1383-FR-006
+  it('says an area is gone once when its interactive map fails to load', async () => {
+    await render({ km: 20, point: CENTRE });
+    tap();
+    refused(new Error('style'));
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    expect(gone).toHaveBeenCalledTimes(1);
   });
 
   it('opens it from a tap anywhere on the static map', async () => {
@@ -293,6 +534,60 @@ describe('GARAGE_MAP, the opener', () => {
     expect(at).toHaveBeenCalledWith([POINT.lng, POINT.lat]);
     map.destroy();
     expect(fake.map.remove).toHaveBeenCalled();
+    host.remove();
+  });
+
+  // @traces 1383-FR-006
+  // @traces 1383-FR-009
+  it('draws an area as the Results ring in the text colour, with no marker', async () => {
+    const host = document.createElement('div');
+    host.style.setProperty('--mf-text', 'rgb(20, 20, 20)');
+    document.body.append(host);
+    const { Map: Built, Marker } = jest.requireMock<{
+      Map: {
+        prototype: {
+          addLayer(layer: unknown): void;
+          addSource(id: string, source: unknown): void;
+        };
+      };
+      Marker: { prototype: { addTo(): unknown } };
+    }>('maplibre-gl');
+    const source = jest.spyOn(Built.prototype, 'addSource');
+    const layer = jest.spyOn(Built.prototype, 'addLayer');
+    const marker = jest.spyOn(Marker.prototype, 'addTo');
+
+    const map = await TestBed.inject(GARAGE_MAP)(
+      host,
+      document.createElement('div'),
+      CENTRE,
+      START,
+      20,
+    );
+
+    expect(source).toHaveBeenCalledWith('area', {
+      data: {
+        geometry: { coordinates: [ring(CENTRE, 20)], type: 'Polygon' },
+        properties: {},
+        type: 'Feature',
+      },
+      type: 'geojson',
+    });
+    expect(layer.mock.calls.map(([added]) => added)).toEqual([
+      {
+        id: 'areas-fill',
+        paint: { 'fill-color': 'rgb(20, 20, 20)', 'fill-opacity': 0.12 },
+        source: 'area',
+        type: 'fill',
+      },
+      {
+        id: 'areas-line',
+        paint: { 'line-color': 'rgb(20, 20, 20)', 'line-width': 1.5 },
+        source: 'area',
+        type: 'line',
+      },
+    ]);
+    expect(marker).not.toHaveBeenCalled();
+    map.destroy();
     host.remove();
   });
 

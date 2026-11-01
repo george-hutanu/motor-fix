@@ -37,8 +37,10 @@ const elena = (futureBookings: number): GarageMechanicDto => ({
   rating: null,
   reviewCount: 0,
   roleTitle: null,
+  shown: false,
   speciality: null,
   specialties: [],
+  takesDirectRequests: true,
   years: null,
 });
 

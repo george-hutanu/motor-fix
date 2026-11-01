@@ -7,6 +7,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import { shownOnProfile } from '../public-garages/public-garages';
 
 const { account, prisma } = fixtures();
 serialDatabase(databaseUrl);
@@ -248,5 +249,46 @@ describe("the migration's backfill of the owner's row", () => {
     await runBackfill();
 
     expect(await cardsOf(garage)).toHaveLength(1);
+  });
+});
+
+// @traces 059-FR-002 059-FR-019
+describe('the team-on-profile migration', () => {
+  const SWITCHES = join(
+    __dirname,
+    '../../../prisma/migrations/20261031120000_team_on_profile/migration.sql',
+  );
+
+  it('adds both switches on, so nothing changes for a garage already listed', () => {
+    const sql = readFileSync(SWITCHES, 'utf8');
+
+    expect(sql).toMatch(
+      /ALTER TABLE garage ADD COLUMN team_on_profile BOOLEAN NOT NULL DEFAULT true/,
+    );
+    expect(sql).toMatch(
+      /ALTER TABLE mechanic ADD COLUMN takes_direct_requests BOOLEAN NOT NULL DEFAULT true/,
+    );
+  });
+
+  it('reads an approved garage and its consented, joined card as shown and taking direct requests', async () => {
+    const { garage } = await garageOf('Mihai');
+    const mechanic = await account('Vlad', ['mechanic']);
+    await prisma.$executeRaw`UPDATE garage SET status = 'approved' WHERE id = ${garage}::uuid`;
+    await prisma.$executeRaw`
+      INSERT INTO mechanic (id, garage_id, account_id, name, on_profile)
+      VALUES (gen_random_uuid(), ${garage}::uuid, ${mechanic}::uuid, 'Tudor Vlad', true)`;
+
+    expect(
+      await prisma.garage.findUniqueOrThrow({
+        select: { teamOnProfile: true },
+        where: { id: garage },
+      }),
+    ).toEqual({ teamOnProfile: true });
+    expect(
+      await prisma.mechanic.findMany({
+        select: { takesDirectRequests: true },
+        where: { garageId: garage, ...shownOnProfile() },
+      }),
+    ).toEqual([{ takesDirectRequests: true }]);
   });
 });

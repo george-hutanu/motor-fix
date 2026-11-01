@@ -260,6 +260,7 @@ export class TimeBlocksService {
         await announced(
           this.events,
           tx,
+          // publishes time_block.created
           'time_block.created',
           garageId,
           block.id,
@@ -321,6 +322,7 @@ export class TimeBlocksService {
         await announced(
           this.events,
           tx,
+          // publishes time_block.updated
           'time_block.updated',
           garageId,
           blockId,
@@ -346,6 +348,7 @@ export class TimeBlocksService {
         await announced(
           this.events,
           tx,
+          // publishes time_block.deleted
           'time_block.deleted',
           garageId,
           blockId,
