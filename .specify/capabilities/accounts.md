@@ -65,6 +65,7 @@ features:
   - 1379-provider-calls-worker
   - 151-lift-timeline
   - 165-admin-roles
+  - 400-receptionist
 ---
 
 # Capability: Accounts
@@ -1429,6 +1430,10 @@ _From 102-garage-members._
 ### 102-FR-016 — When a call under the signed-in garage's own path answers 404, the garage dashboard MUST read the account again, once per such 404 and coalesced while a re-read is in flight, counting only calls under `/api/v1/garages/{garageId}/` of the signed-in garage; when `garageAccess` no longer holds that garage, the dashboard body MUST show "Nu mai ai acces la acest service" / "You no longer have access to this garage" with a link "Spre pagina principală" / "To the home page", and the garage menu MUST show no view. A 404 while the garage is still held changes nothing (a feature off, a resource that is gone).
 
 _From 102-garage-members._
+
+### 400-FR-003 — After the commit the removed account MUST lose the garage at once by the rules already on `main`, which this story's tests MUST prove for the removal: the live hub drops her connections from `garage:{garageId}` (254-FR-007), each API copy drops its cached staff for the garage (254-FR-006), her next call under `/api/v1/garages/{garageId}/` answers 404 `not_found` and her dashboard shows the lost-garage screen (102-FR-016). Her account MUST keep its `receptionist` role (as a removed mechanic keeps `mechanic`) and MAY accept a later invite, which makes a new membership row. Her past audit entries keep her name and role (390-FR-002).
+
+_From 400-receptionist._
 
 ### 423-FR-003 — Panou MUST show, above the own-jobs section, a link "Foaia mea de zi" / "My day sheet" to the Programări view (`/app/garage/schedule`) when the garage's `day_sheets` switch is on and the person's capabilities hold `garage.schedule`; absent otherwise. The view itself stays ST-263's: until it ships, the link opens the view's coming text.
 
