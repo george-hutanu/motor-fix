@@ -9,13 +9,12 @@ import {
   Inject,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 
 import { freeSlots } from './free-slots';
 import { FreeSlotsCache, type FreeSlotsKey } from './free-slots.cache';
 import { recordFreeSlots } from './free-slots.metrics';
-import { refusal } from '../../auth/http-refusal';
+import { notFound, refusal } from '../../auth/http-refusal';
 import { type Actor, forbidden } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { addDays, atLocal, localDay, localIso } from '../../bucharest';
@@ -47,34 +46,48 @@ export class FreeSlotsService {
     private readonly cache: FreeSlotsCache,
   ) {}
 
+  // Who may ask (FR-002), run by FreeSlotsGuard before the query is
+  // validated; freeSlots trusts it has passed.
+  async access(actor: Actor, garageId: string): Promise<void> {
+    try {
+      await this.assertCaller(actor, garageId);
+    } catch (error) {
+      this.refused(error, actor, garageId);
+      throw error;
+    }
+  }
+
   async freeSlots(
     actor: Actor,
     garageId: string,
     query: FreeSlotsQueryDto,
   ): Promise<FreeSlotsDto> {
     try {
-      await this.assertCaller(actor, garageId);
       const key = await this.normalized(actor, garageId, query);
       const answer = await this.cache.entry(key, () => this.read(key));
       recordFreeSlots(answer.reason ?? 'slots');
       return answer;
     } catch (error) {
-      if (error instanceof HttpException && error.getStatus() < 500) {
-        const body = error.getResponse() as { code?: string };
-        this.logger.warn({
-          code: body.code ?? error.getStatus(),
-          garageId,
-          role: actor.role,
-        });
-      }
+      this.refused(error, actor, garageId);
       throw error;
+    }
+  }
+
+  private refused(error: unknown, actor: Actor, garageId: string) {
+    if (error instanceof HttpException && error.getStatus() < 500) {
+      const body = error.getResponse() as { code?: string };
+      this.logger.warn({
+        code: body.code ?? error.getStatus(),
+        garageId,
+        role: actor.role,
+      });
     }
   }
 
   private async assertCaller(actor: Actor, garageId: string) {
     if (actor.role === 'driver') return this.assertDriver(actor, garageId);
     if (!STAFF.includes(actor.role) || actor.garageId !== garageId) {
-      throw new NotFoundException();
+      throw notFound();
     }
     const { canAnswerQuotes, canMoveBookings } = actor.permissions;
     if (actor.role === 'mechanic' && !canAnswerQuotes && !canMoveBookings) {
@@ -113,7 +126,7 @@ export class FreeSlotsService {
         },
       }),
     ]);
-    if (!booking && !quote) throw new NotFoundException();
+    if (!booking && !quote) throw notFound();
   }
 
   // The question after its defaults, the clamp and the rounding of the
