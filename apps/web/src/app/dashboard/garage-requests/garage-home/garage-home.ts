@@ -22,6 +22,7 @@ import { GarageLayout } from '../../garage-layout';
 import { GarageLegalCheck } from '../../garage-legal-check/garage-legal-check';
 import { GarageReviewsPanel } from '../../garage-reviews/garage-reviews-panel/garage-reviews-panel';
 import { homeSections, linksTo } from '../../garage-sections';
+import { LiftSchedule } from '../../lift-schedule/lift-schedule';
 import { SectionTitle } from '../../section-title/section-title';
 import { garageOf, Session } from '../../session';
 import { VerificationProgress } from '../../verification-progress/verification-progress';
@@ -57,6 +58,7 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
     GarageRequestsPanel,
     GarageReviewsPanel,
     HlmButton,
+    LiftSchedule,
     OwnJobsSection,
     RouterLink,
     SectionTitle,

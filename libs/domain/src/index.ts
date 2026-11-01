@@ -24,6 +24,7 @@ export {
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export {
+  ActorGuard,
   CurrentActor,
   OpenInMaintenance,
   Public,
