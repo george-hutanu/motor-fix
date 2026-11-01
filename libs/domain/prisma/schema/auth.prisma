@@ -73,6 +73,7 @@ model Account {
   carOwnerships           CarOwnership[]
   repairsUpdated          Repair[]                 @relation("RepairUpdater")
   savedGarages            SavedGarage[]
+  saveSuggestionDismissals SaveSuggestionDismissal[]
   consents                AccountConsent[]
   consentRecords          ConsentRecord[]
   assistantGrants         AssistantGrant[]

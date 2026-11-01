@@ -209,6 +209,9 @@ const NOT_CHANGES = new Set([
   'JobLockService.settle',
   'JobLockSweep.clearExpired',
   'JobLockSweep.remirror',
+  // A driver's no to saving a garage after a finished job is a display
+  // preference, never audited (ST-293 FR-004); the row is its own record.
+  'SaveSuggestionsService.dismiss',
 ]);
 
 const uncovered = (source: string) =>
