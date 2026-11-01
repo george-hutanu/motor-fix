@@ -142,7 +142,8 @@ describe('Notification switches: saves that fail', () => {
     expect(toast).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the lists on screen and toasts once when the re-read fails too', async () => {
+  // @traces 1411-FR-001
+  it('puts the switch back to the value before the press and toasts once when the re-read fails too', async () => {
     const { settle, sw } = await render();
     save.mockRejectedValueOnce(new Error('refused'));
     read.mockRejectedValueOnce(new Error('down'));
@@ -150,7 +151,68 @@ describe('Notification switches: saves that fail', () => {
     sw(EMAIL).click();
     await settle();
 
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('true');
+    expect(sw(PUSH).getAttribute('aria-checked')).toBe('true');
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1411-FR-001
+  it('ends on the value before the first press when two flips fail and every re-read fails', async () => {
+    const { settle, sw } = await render();
+    const first = deferred<never>();
+    const second = deferred<never>();
+    save
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    read.mockRejectedValue(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+    sw(EMAIL).click();
+    await settle();
+    second.reject(new Error('boom'));
+    await settle();
+    first.reject(new Error('boom'));
+    await settle();
+
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('true');
+    expect(toast).toHaveBeenCalledTimes(2);
+  });
+
+  // @traces 1411-FR-001
+  it('goes back to the value a save confirmed, not the one before it, when a later flip fails offline', async () => {
+    const { settle, sw } = await render();
+    save
+      .mockResolvedValueOnce(answer([owner(false, true)]))
+      .mockRejectedValueOnce(new Error('refused'));
+    read.mockRejectedValue(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+    sw(EMAIL).click();
+    await settle();
+
     expect(sw(EMAIL).getAttribute('aria-checked')).toBe('false');
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1411-FR-001
+  it('lets an older failed press change nothing once a newer press of that switch stands', async () => {
+    const { settle, sw } = await render();
+    const first = deferred<never>();
+    save
+      .mockImplementationOnce(() => first.promise)
+      .mockResolvedValueOnce(answer([owner(true, true)]));
+    read.mockRejectedValue(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+    sw(EMAIL).click();
+    await settle();
+    first.reject(new Error('boom'));
+    await settle();
+
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('true');
     expect(toast).toHaveBeenCalledTimes(1);
   });
 
@@ -204,5 +266,133 @@ describe('Notification switches: saves that fail', () => {
         ],
       },
     });
+  });
+});
+
+// @traces 1411-FR-001
+describe('Notification switches: failed save and failed re-read', () => {
+  // @traces 1411-FR-001
+  it('restores an off switch to off, not on, when its save and re-read fail', async () => {
+    const { settle, sw } = await render(owner(false, true));
+    save.mockRejectedValueOnce(new Error('refused'));
+    read.mockRejectedValueOnce(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('false');
+    expect(sw(PUSH).getAttribute('aria-checked')).toBe('true');
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1411-FR-001
+  it('restores only the failed switch and keeps a different switch whose save held', async () => {
+    const { settle, sw } = await render();
+    const emailSave = deferred<never>();
+    save
+      .mockImplementationOnce(() => emailSave.promise)
+      .mockResolvedValueOnce(answer([owner(true, false)]));
+    read.mockRejectedValue(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+    sw(PUSH).click();
+    await settle();
+    emailSave.reject(new Error('refused'));
+    await settle();
+
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('true');
+    expect(sw(PUSH).getAttribute('aria-checked')).toBe('false');
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1411-FR-001
+  it('sends the opposite value on the next press after a restore and makes no further read', async () => {
+    const { settle, sw } = await render();
+    save.mockRejectedValueOnce(new Error('refused'));
+    read.mockRejectedValueOnce(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+    await settle();
+    expect(read).toHaveBeenCalledTimes(2);
+    sw(EMAIL).click();
+    await settle();
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith({
+      body: {
+        preferences: [
+          {
+            channel: 'email',
+            enabled: false,
+            garageId: GARAGE,
+            type: 'REQUEST_RECEIVED',
+          },
+        ],
+      },
+    });
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('false');
+  });
+
+  // @traces 1411-FR-001
+  it('restores the confirmed value after three flips where the first saved and the next two fail', async () => {
+    const { settle, sw } = await render();
+    const b = deferred<never>();
+    const c = deferred<never>();
+    save
+      .mockResolvedValueOnce(answer([owner(false, true)]))
+      .mockImplementationOnce(() => b.promise)
+      .mockImplementationOnce(() => c.promise);
+    read.mockRejectedValue(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+    sw(EMAIL).click();
+    await settle();
+    sw(EMAIL).click();
+    await settle();
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('false');
+    b.reject(new Error('boom'));
+    c.reject(new Error('boom'));
+    await settle();
+
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('false');
+    expect(toast).toHaveBeenCalledTimes(2);
+  });
+
+  // @traces 1411-FR-001
+  it('keeps the unsaved value off screen when the newer press fails first and the older save then succeeds', async () => {
+    const { settle, sw } = await render();
+    const older = deferred<NotificationPreferencesDto>();
+    save
+      .mockImplementationOnce(() => older.promise)
+      .mockRejectedValueOnce(new Error('refused'));
+    read.mockRejectedValue(new Error('down'));
+
+    sw(EMAIL).click();
+    await settle();
+    sw(EMAIL).click();
+    await settle();
+    await settle();
+    older.resolve(answer([owner(false, true)]));
+    await settle();
+
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('false');
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1411-FR-001
+  it('toasts exactly once per failed save when the re-read rejects with a non-error value', async () => {
+    const { settle, sw } = await render();
+    save.mockRejectedValueOnce(undefined);
+    read.mockRejectedValueOnce(null);
+
+    sw(PUSH).click();
+    await settle();
+
+    expect(sw(PUSH).getAttribute('aria-checked')).toBe('true');
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('true');
+    expect(toast).toHaveBeenCalledTimes(1);
   });
 });

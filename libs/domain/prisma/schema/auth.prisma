@@ -60,6 +60,7 @@ model Account {
   mechanic                Mechanic?
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
+  notificationFallbacks   NotificationFallback[]
   pushSubscriptions       PushSubscription[]
   smsCounters             SmsCounter[]
   tokens                  AccountToken[]

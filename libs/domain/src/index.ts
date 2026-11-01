@@ -24,6 +24,7 @@ export {
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export {
+  ActorGuard,
   CurrentActor,
   OpenInMaintenance,
   Public,
@@ -125,6 +126,7 @@ export {
 } from './garages/verification/verification.service';
 export { verificationConfig } from './garages/verification/verification-config';
 export * from './health/health.module';
+export { AREAS, AreaLoader } from './insights/areas/areas';
 export { DemandModule } from './insights/demand/demand.module';
 export { GarageFiguresModule } from './insights/garage-figures/garage-figures.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';

@@ -306,6 +306,7 @@ export class PlatformRuleChangesService {
   private event(tx: Prisma.TransactionClient, row: PlatformRuleChange) {
     return this.events.record(tx, {
       audience: { adminOnly: true, type: 'platform' },
+      // publishes platform_rule.change_decided
       kind:
         row.status === 'requested'
           ? 'platform_rule.change_requested'
