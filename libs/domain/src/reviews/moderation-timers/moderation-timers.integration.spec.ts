@@ -57,7 +57,7 @@ let logged: string[];
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -70,9 +70,9 @@ beforeEach(async () => {
   const keep = (message: unknown) => {
     logged.push(String(message));
   };
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(keep);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(keep);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(keep);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(keep);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(keep);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(keep);
   await reset();
   await prisma.outboxEvent.deleteMany();
   await jobs.obliterate({ force: true });
@@ -541,9 +541,9 @@ describe('closing the report when its author deletes the review', () => {
   it('closes nothing when its audit entry cannot be written, and closes on the next delivery', async () => {
     const { report, review: one } = await setting();
     const timers = await start();
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValueOnce(new Error('audit down'));
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValueOnce(
+      new Error('audit down'),
+    );
     const event = await deleted(one.id, NOW);
 
     await expect(timers.onEvent(event)).rejects.toThrow('audit down');

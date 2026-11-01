@@ -59,7 +59,7 @@ const writing = (
   accountId: string,
   answer: () => unknown = () => ({ ok: 1 }),
 ) =>
-  jest.fn(async (tx: Prisma.TransactionClient) => {
+  vi.fn(async (tx: Prisma.TransactionClient) => {
     await audit.record(tx, {
       action: 'open',
       actorId: accountId,

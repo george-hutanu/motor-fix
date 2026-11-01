@@ -64,7 +64,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -371,9 +371,9 @@ describe('the odometer readings of a car', () => {
   it('gain none when the edit fails to write its history', async () => {
     const { auth } = await driver();
     const car = await saved(auth);
-    jest
-      .spyOn(AuditService.prototype, 'recordChanges')
-      .mockRejectedValue(new Error('history down'));
+    vi.spyOn(AuditService.prototype, 'recordChanges').mockRejectedValue(
+      new Error('history down'),
+    );
 
     const res = await edit(auth, car, { odometerKm: 149_000 });
 

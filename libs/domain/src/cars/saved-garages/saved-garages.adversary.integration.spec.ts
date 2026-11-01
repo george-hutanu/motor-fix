@@ -65,7 +65,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -618,7 +618,7 @@ describe('the distances of the saved list', () => {
       },
     });
     await save(auth, id);
-    const read = jest.spyOn(client, '$queryRaw');
+    const read = vi.spyOn(client, '$queryRaw');
 
     const res = await http()
       .get('/me/saved-garages?near=46.771,23.624')

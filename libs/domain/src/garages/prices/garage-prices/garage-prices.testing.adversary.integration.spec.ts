@@ -23,7 +23,7 @@ const openTransactions = async () => {
 describe('afterRace under hostile writers', () => {
   it('rejects with the first writer error and leaves nothing open', async () => {
     const boom = new Error('first writer failed');
-    const second = jest.fn(async () => 'never');
+    const second = vi.fn(async () => 'never');
 
     await expect(
       afterRace(

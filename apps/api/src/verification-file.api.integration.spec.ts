@@ -477,10 +477,10 @@ describe('POST /admin/verification-files/:id/decision', () => {
   // @traces 259-FR-005 259-FR-007
   it('still answers the refusal when its entry cannot be written, and logs why', async () => {
     const { id } = await file('in_review');
-    const record = jest
+    const record = vi
       .spyOn(app.get(VerificationService), 'recordRefusal')
       .mockRejectedValueOnce(new Error('store down'));
-    const warn = jest.spyOn(Logger.prototype, 'warn');
+    const warn = vi.spyOn(Logger.prototype, 'warn');
 
     const res = await post(id, 'decision', admin, { decision: 'approved' });
 

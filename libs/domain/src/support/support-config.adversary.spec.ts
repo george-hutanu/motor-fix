@@ -1,16 +1,17 @@
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { supportConfig } from './support-config';
 
 // @traces 280-FR-011 280-FR-016 280-FR-017 280-FR-018
 describe('the support settings under hostile input', () => {
-  let warn: jest.SpyInstance;
+  let warn: MockInstance;
   beforeEach(() => {
-    warn = jest
+    warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it.each([
     '',

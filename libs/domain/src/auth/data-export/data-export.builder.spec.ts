@@ -20,7 +20,7 @@ const failedTotal = () =>
 // moves it as the database would.
 function setup(status: 'queued' | 'ready') {
   const row = { status: status as string };
-  const updateMany = jest.fn(
+  const updateMany = vi.fn(
     async ({
       data,
       where,
@@ -34,12 +34,12 @@ function setup(status: 'queued' | 'ready') {
     },
   );
   const prisma = {
-    $transaction: jest.fn(async (work: (tx: unknown) => unknown) =>
+    $transaction: vi.fn(async (work: (tx: unknown) => unknown) =>
       work({ dataExport: { updateMany } }),
     ),
     dataExport: {
-      findMany: jest.fn(async (_query?: unknown): Promise<unknown[]> => []),
-      findUnique: jest.fn(async () => ({
+      findMany: vi.fn(async (_query?: unknown): Promise<unknown[]> => []),
+      findUnique: vi.fn(async () => ({
         account: {
           email: 'ana@example.test',
           language: 'ro',
@@ -49,16 +49,16 @@ function setup(status: 'queued' | 'ready') {
         requestedAt: new Date('2026-10-01T10:00:00Z'),
         status: row.status,
       })),
-      update: jest.fn(async () => ({})),
+      update: vi.fn(async () => ({})),
       updateMany,
     },
   };
   const storage = {
-    deleteObject: jest.fn(async () => undefined),
-    putObject: jest.fn(async () => undefined),
+    deleteObject: vi.fn(async () => undefined),
+    putObject: vi.fn(async () => undefined),
   };
-  const notifications = { notify: jest.fn(async () => 1) };
-  const events = { record: jest.fn(async () => undefined) };
+  const notifications = { notify: vi.fn(async () => 1) };
+  const events = { record: vi.fn(async () => undefined) };
   const builder = new DataExportBuilder(
     prisma as unknown as PrismaClient,
     events as unknown as EventPort,
@@ -66,14 +66,12 @@ function setup(status: 'queued' | 'ready') {
     notifications as unknown as NotificationsService,
     storage as unknown as StorageService,
   );
-  jest
-    .spyOn(
-      builder as unknown as {
-        collect: () => Promise<{ data: string; name: string }[]>;
-      },
-      'collect',
-    )
-    .mockResolvedValue([{ data: 'x', name: 'README.txt' }]);
+  vi.spyOn(
+    builder as unknown as {
+      collect: () => Promise<{ data: string; name: string }[]>;
+    },
+    'collect',
+  ).mockResolvedValue([{ data: 'x', name: 'README.txt' }]);
   const run = (attemptsMade: number) =>
     builder.onEvent({
       attemptsMade,
@@ -87,11 +85,11 @@ function setup(status: 'queued' | 'ready') {
 }
 
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('DataExportBuilder, a try that fails after the file is stored', () => {
   it('deletes the stored file when the last try fails to mark it ready', async () => {

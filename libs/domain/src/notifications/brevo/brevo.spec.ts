@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 // @traces 195-FR-005 392-FR-001 392-FR-002 392-FR-007 520-FR-001
 import { Brevo, BrevoError } from './brevo';
 import { BrevoMock } from './brevo-mock.testing';
@@ -263,15 +265,13 @@ describe('a Brevo error in the system log', () => {
     templateId: 12,
     to: '+40712345678',
   };
-  let write: jest.SpyInstance;
+  let write: MockInstance;
 
   beforeEach(() => {
     // A write that never finishes: the send must not wait for it.
-    write = jest
-      .spyOn(systemLog, 'write')
-      .mockReturnValue(new Promise(() => {}));
+    write = vi.spyOn(systemLog, 'write').mockReturnValue(new Promise(() => {}));
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('is written for a refused e-mail as an e-mail error with its status, without waiting for it', async () => {
     mock.answer({ status: 503 });

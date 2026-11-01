@@ -6,6 +6,7 @@ import {
   InMemoryMetricExporter,
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
+import type { MockInstance } from 'vitest';
 
 import { startTelemetry, type Telemetry } from './start';
 import { inMemory } from '../testing/in-memory';
@@ -34,23 +35,23 @@ const listeners = addedListeners(() => {
   );
 });
 
-// Stands for a listener the Jest worker may already hold: the handler's count
+// Stands for a listener the test worker may already hold: the handler's count
 // comes from the stub, so this one neither changes the outcome nor is detached.
 const unrelated = () => undefined;
 const signals: StopSignal[] = ['SIGINT', 'SIGTERM'];
 for (const signal of signals) process.on(signal, unrelated);
 
-const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
-const spanExport = jest.spyOn(memory.spanExporter, 'export');
-const metricExport = jest.spyOn(metricExporter, 'export');
-const logExport = jest.spyOn(memory.logExporter, 'export');
+const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+const spanExport = vi.spyOn(memory.spanExporter, 'export');
+const metricExport = vi.spyOn(metricExporter, 'export');
+const logExport = vi.spyOn(memory.logExporter, 'export');
 
 // The number of listeners the handler sees on the signal; every other event
 // keeps its real count.
-let listenerCount: jest.SpyInstance | undefined;
+let listenerCount: MockInstance | undefined;
 function listenersSeen(signal: StopSignal, count: number) {
   const real = process.listenerCount.bind(process);
-  listenerCount = jest
+  listenerCount = vi
     .spyOn(process, 'listenerCount')
     .mockImplementation((event) => (event === signal ? count : real(event)));
 }
@@ -66,7 +67,7 @@ function recordPending() {
 
 afterEach(() => {
   listenerCount?.mockRestore();
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   for (const signal of signals) {
     expect(process.listeners(signal)).toContain(unrelated);
   }

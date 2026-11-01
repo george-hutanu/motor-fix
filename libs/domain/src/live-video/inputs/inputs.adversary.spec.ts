@@ -1,5 +1,6 @@
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
+import type { Mock } from 'vitest';
 
 import { LiveInputs } from './inputs';
 import type { LiveStoppedJob } from '../recordings/recordings';
@@ -19,18 +20,18 @@ const closes = (outcome: 'closed' | 'close_failed') =>
 
 const SESSION = '5d2a1c7e-8b3f-4e6a-9d0c-1f2e3a4b5c6d';
 
-let findUnique: jest.Mock;
-let closeInput: jest.Mock;
-let warn: jest.Mock;
-let log: jest.Mock;
+let findUnique: Mock;
+let closeInput: Mock;
+let warn: Mock;
+let log: Mock;
 
 beforeEach(() => {
-  findUnique = jest
+  findUnique = vi
     .fn()
     .mockResolvedValue({ provider: 'fake', providerInputId: 'in-1' });
-  closeInput = jest.fn().mockResolvedValue(undefined);
-  warn = jest.fn();
-  log = jest.fn();
+  closeInput = vi.fn().mockResolvedValue(undefined);
+  warn = vi.fn();
+  log = vi.fn();
 });
 
 const inputs = () =>

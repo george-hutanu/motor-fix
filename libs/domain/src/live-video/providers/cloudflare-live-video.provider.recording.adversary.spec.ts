@@ -43,9 +43,9 @@ afterAll(async () => {
 });
 beforeEach(() => {
   calls = [];
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const json =
   (status: number, body: unknown): Answer =>

@@ -26,8 +26,8 @@ type Row = {
 };
 
 function service(row: Row | null) {
-  const findUnique = jest.fn(async () => row && { closedDays: [], ...row });
-  const bySlug = jest.fn(async (slug: string) => ({ name: 'Nord', slug }));
+  const findUnique = vi.fn(async () => row && { closedDays: [], ...row });
+  const bySlug = vi.fn(async (slug: string) => ({ name: 'Nord', slug }));
   const profile = new GarageProfileService(
     { garage: { findUnique } } as never,
     { bySlug } as never,
@@ -134,7 +134,7 @@ describe("the staff read of a garage's own public profile, in order", () => {
 
   // @traces 1246-FR-012
   it('carries every closed day the garage stored from today on, each with its note, for the hours dialog', async () => {
-    jest.useFakeTimers({ now: new Date('2026-10-30T22:30:00Z') });
+    vi.useFakeTimers({ now: new Date('2026-10-30T22:30:00Z') });
     try {
       const { findUnique, profile } = service({
         closedDays: [
@@ -166,7 +166,7 @@ describe("the staff read of a garage's own public profile, in order", () => {
         }),
       );
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });

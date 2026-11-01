@@ -408,16 +408,16 @@ const PASSWORD = 'secret-typo';
 async function refusal(blocked: boolean, forwarding: Forwarding) {
   const lines: string[] = [];
   for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-    jest
-      .spyOn(Logger.prototype, level)
-      .mockImplementation((...args: unknown[]) => {
+    vi.spyOn(Logger.prototype, level).mockImplementation(
+      (...args: unknown[]) => {
         lines.push(String(args[0]));
-      });
+      },
+    );
   }
   const attempts = {
-    blocked: jest.fn(async () => blocked),
-    clear: jest.fn(async () => undefined),
-    fail: jest.fn(async () => undefined),
+    blocked: vi.fn(async () => blocked),
+    clear: vi.fn(async () => undefined),
+    fail: vi.fn(async () => undefined),
   };
   const signIns = new SignInService(
     { account: { findUnique: async () => null } } as unknown as PrismaClient,
@@ -440,7 +440,7 @@ async function refusal(blocked: boolean, forwarding: Forwarding) {
   };
 }
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('a refused sign-in carries the forwarding facts', () => {
   const forwarding: Forwarding = {
