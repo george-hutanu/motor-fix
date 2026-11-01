@@ -73,7 +73,10 @@ describe('StorageService with telemetry on', () => {
       'S3 DeleteObject',
       'S3 HeadBucket',
     ]);
+    // The fake store's own inbound request is a server span in this process
+    // only; a real object store is never traced by motor-fix.
     for (const span of await spans()) {
+      if (span.kind === SpanKind.SERVER) continue;
       expect(JSON.stringify(span.attributes)).not.toContain('acc_1');
     }
     const put = (await spans()).find((span) => span.name === 'S3 PutObject');

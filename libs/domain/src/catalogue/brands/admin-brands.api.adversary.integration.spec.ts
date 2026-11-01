@@ -593,7 +593,7 @@ describe('the cached list after an admin write', () => {
   it('does not fail a write when the cache cannot be bumped', async () => {
     await loader.load(FILE);
     const dacia = await brandOf('dacia');
-    const spy = jest
+    const spy = vi
       .spyOn(Redis.prototype, 'incr')
       .mockRejectedValue(new Error('down'));
     try {

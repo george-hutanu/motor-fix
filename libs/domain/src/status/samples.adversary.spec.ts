@@ -8,17 +8,13 @@ function store() {
     const open = text.startsWith('(');
     return { n: Number(open ? text.slice(1) : text), open };
   };
-  const inside = (
-    score: number,
-    min: number | string,
-    max: number | string,
-  ) => {
+  // Parses the bounds once per call: ten thousand samples stay linear.
+  const inside = (min: number | string, max: number | string) => {
     const lo = bound(min);
     const hi = bound(max);
-    return (
+    return (score: number) =>
       (lo.open ? score > lo.n : score >= lo.n) &&
-      (hi.open ? score < hi.n : score <= hi.n)
-    );
+      (hi.open ? score < hi.n : score <= hi.n);
   };
   const fake = {
     expire: async (key: string, seconds: number) => {
@@ -35,20 +31,23 @@ function store() {
       key: string,
       min: number | string,
       max: number | string,
-    ) =>
-      [...(sets.get(key) ?? [])]
-        .filter(([, score]) => inside(score, min, max))
+    ) => {
+      const within = inside(min, max);
+      return [...(sets.get(key) ?? [])]
+        .filter(([, score]) => within(score))
         .sort((a, b) => a[1] - b[1])
-        .map(([member]) => member),
+        .map(([member]) => member);
+    },
     zremrangebyscore: async (
       key: string,
       min: number | string,
       max: number | string,
     ) => {
       const set = sets.get(key) ?? new Map<string, number>();
+      const within = inside(min, max);
       let removed = 0;
       for (const [member, score] of [...set]) {
-        if (inside(score, min, max)) {
+        if (within(score)) {
           set.delete(member);
           removed++;
         }
@@ -170,7 +169,7 @@ describe('the sample window under attack', () => {
       await recordSample(s, 'api', i, new Date(base + i));
     }
     expect(await medianLatency(s, 'api', new Date(base + 10_000))).toBe(4999.5);
-  });
+  }, 60_000);
 
   it('passes on a store failure instead of inventing a median', async () => {
     const broken = {

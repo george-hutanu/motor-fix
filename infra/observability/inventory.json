@@ -2313,7 +2313,7 @@
         "api-latency",
         "api-search-latency"
       ],
-      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, new searches still count in motorfix_searches_total, and `sort` changes in motorfix_sort_changes_total; the open_now and open_saturday filters narrow the same query and cache slot and add no signal",
+      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, new searches still count in motorfix_searches_total, and `sort` changes in motorfix_sort_changes_total; the open_now, open_saturday, max_price, min_rating and card filters narrow the same query and cache slot and add no signal",
       "story": "ST-267"
     },
     {
@@ -2353,7 +2353,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; the open_now and open_saturday filters only set each pin's matches flag and the total; no outside call (the browser fetches the tiles from the place-step map's provider)",
+      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; the open_now, open_saturday, max_price, min_rating and card filters only set each pin's matches flag and the total; no outside call (the browser fetches the tiles from the place-step map's provider)",
       "story": "ST-269"
     },
     {

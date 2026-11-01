@@ -50,7 +50,7 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -61,8 +61,8 @@ afterAll(async () => {
 beforeEach(async () => {
   // Brevo's address answers nothing, so the notifications worker never
   // starts and every message stays as the fan-out built it.
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
   await jobs.obliterate({ force: true });
@@ -266,7 +266,7 @@ describe('telling the driver about a sent quote', () => {
   });
 
   it('builds the message from the event the relay queued, once when relayed twice', async () => {
-    const handled = jest.spyOn(QuoteReceivedFanOut.prototype, 'handle');
+    const handled = vi.spyOn(QuoteReceivedFanOut.prototype, 'handle');
     const { driverId, event } = await quoted();
     await start(true);
 
@@ -366,7 +366,7 @@ describe('what the quote fan-out reports', () => {
   });
 
   it('logs one line with the quote id, and nothing about the range, the note or the driver', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const { job, quote } = await quoted({ note: 'Piesele le aducem noi' });

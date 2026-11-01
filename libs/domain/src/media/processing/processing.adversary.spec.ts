@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { ClipTooLong, convertClip } from './clip';
 import { convertPhoto } from './photo';
 
-jest.setTimeout(60_000);
+vi.setConfig({ hookTimeout: 60_000, testTimeout: 60_000 });
 
 const png = (w: number, h: number) =>
   sharp({ create: { background: '#369', channels: 3, height: h, width: w } })

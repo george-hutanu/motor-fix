@@ -8,10 +8,7 @@ import { join } from 'node:path';
 // its own default.
 const root = join(import.meta.dirname, '..', '..');
 const require = createRequire(import.meta.url);
-const CONFIGS = [
-  ['jest.preset.cjs', '1GB'],
-  ['libs/domain/jest.config.cts', '1536MB'],
-];
+const CONFIGS = [['jest.preset.cjs', '1GB']];
 const saved = process.env.JEST_IDLE_MEMORY;
 
 function load(file) {

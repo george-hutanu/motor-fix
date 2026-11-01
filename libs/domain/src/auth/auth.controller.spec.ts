@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import type { Mock } from 'vitest';
 
 import type { AuthOptions } from './actor.guard';
 import { AuthController } from './auth.controller';
@@ -16,7 +17,7 @@ const BODY = { email: 'sofer@example.test', password: 'parola-de-test' };
 // The route limit as Redis counts it: 30 sign-ins per address, then 429.
 function routeLimits() {
   const counts = new Map<string, number>();
-  const take = jest.fn(async (limit: string, value: string) => {
+  const take = vi.fn(async (limit: string, value: string) => {
     const n = (counts.get(`${limit}:${value}`) ?? 0) + 1;
     counts.set(`${limit}:${value}`, n);
     if (n > 30)
@@ -25,12 +26,12 @@ function routeLimits() {
         HttpStatus.TOO_MANY_REQUESTS,
       );
   });
-  return { take } as unknown as RateLimits & { take: jest.Mock };
+  return { take } as unknown as RateLimits & { take: Mock };
 }
 
 function controller(options: Partial<AuthOptions>) {
   const limits = routeLimits();
-  const signIn = jest.fn(async () => ({ accessToken: 't', remember: false }));
+  const signIn = vi.fn(async () => ({ accessToken: 't', remember: false }));
   const signIns = { signIn } as unknown as SignInService;
   const auth = new AuthController(
     signIns,
@@ -42,7 +43,7 @@ function controller(options: Partial<AuthOptions>) {
     auth.signIn(
       BODY,
       { headers: {}, ip: ADDRESS, socket: {} } as Request,
-      { cookie: jest.fn() } as unknown as Response,
+      { cookie: vi.fn() } as unknown as Response,
     );
   return { limits, send, signIn };
 }
@@ -106,7 +107,7 @@ describe('AuthController sign-in route limit', () => {
 // @traces 500-FR-004
 describe('AuthController sign-in with no caller address', () => {
   it('hands the sign-in an empty address, which its log names unknown', async () => {
-    const signIn = jest.fn(async () => ({ accessToken: 't', remember: false }));
+    const signIn = vi.fn(async () => ({ accessToken: 't', remember: false }));
     const auth = new AuthController(
       { signIn } as unknown as SignInService,
       {} as SignUpService,
@@ -117,7 +118,7 @@ describe('AuthController sign-in with no caller address', () => {
     await auth.signIn(
       BODY,
       { headers: {}, socket: {} } as Request,
-      { cookie: jest.fn() } as unknown as Response,
+      { cookie: vi.fn() } as unknown as Response,
     );
 
     expect(signIn).toHaveBeenCalledWith(BODY, '', {
@@ -130,7 +131,7 @@ describe('AuthController sign-in with no caller address', () => {
 // @traces 500-FR-011
 describe('AuthController sign-in forwarding facts', () => {
   it("hands the sign-in the request's headers and socket address for its refusal line", async () => {
-    const signIn = jest.fn(async () => ({ accessToken: 't', remember: false }));
+    const signIn = vi.fn(async () => ({ accessToken: 't', remember: false }));
     const auth = new AuthController(
       { signIn } as unknown as SignInService,
       {} as SignUpService,
@@ -146,7 +147,7 @@ describe('AuthController sign-in forwarding facts', () => {
         ip: ADDRESS,
         socket: { remoteAddress: 'fd12:3456::1' },
       } as unknown as Request,
-      { cookie: jest.fn() } as unknown as Response,
+      { cookie: vi.fn() } as unknown as Response,
     );
 
     expect(signIn).toHaveBeenCalledWith(BODY, ADDRESS, {

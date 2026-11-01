@@ -6,6 +6,7 @@ import type {
   LockedApproval,
 } from '@motor-fix/domain';
 import { HttpException } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { type ApproveDeps, approveApproval } from './approvals';
 import { AssistantApprovalsController } from './approvals.controller';
@@ -63,24 +64,24 @@ function setup(
   } = {},
 ) {
   const tx = {
-    $executeRawUnsafe: jest.fn(async () => 0),
-    assistantApproval: { updateManyAndReturn: jest.fn(async () => []) },
-    assistantConfirmation: { updateManyAndReturn: jest.fn(async () => []) },
+    $executeRawUnsafe: vi.fn(async () => 0),
+    assistantApproval: { updateManyAndReturn: vi.fn(async () => []) },
+    assistantConfirmation: { updateManyAndReturn: vi.fn(async () => []) },
     assistantGrant: {
-      findUniqueOrThrow: jest.fn(
+      findUniqueOrThrow: vi.fn(
         async () =>
           over.grant ?? { canAct: true, canRead: true, revokedAt: null },
       ),
     },
   };
   const approvals = {
-    close: jest.fn(async () => true),
-    get: jest.fn(async () => (over.shown === undefined ? shown() : over.shown)),
-    lockForDecision: jest.fn(async () => over.lock ?? locked()),
+    close: vi.fn(async () => true),
+    get: vi.fn(async () => (over.shown === undefined ? shown() : over.shown)),
+    lockForDecision: vi.fn(async () => over.lock ?? locked()),
   };
-  const handler = jest.fn(over.handler ?? (async () => ({ ok: true })));
+  const handler = vi.fn(over.handler ?? (async () => ({ ok: true })));
   const tool: ToolDefinition = { ...bookFixture, handler };
-  const activeAccount = jest.fn(async () =>
+  const activeAccount = vi.fn(async () =>
     account({ canAct: over.canAct, roles: over.roles ?? ['driver'] }),
   );
   const ctx = {
@@ -303,13 +304,13 @@ describe('what approving refuses', () => {
 });
 
 function controller(
-  over: Partial<Record<'get' | 'refuse', jest.Mock>> = {},
+  over: Partial<Record<'get' | 'refuse', Mock>> = {},
   maintenance = false,
 ) {
   const approvals = {
-    get: over.get ?? jest.fn(async () => shown()),
-    list: jest.fn(),
-    refuse: over.refuse ?? jest.fn(async () => shown({ status: 'refused' })),
+    get: over.get ?? vi.fn(async () => shown()),
+    list: vi.fn(),
+    refuse: over.refuse ?? vi.fn(async () => shown({ status: 'refused' })),
   } as unknown as AssistantApprovals;
   return new AssistantApprovalsController(
     approvals,
@@ -332,8 +333,8 @@ async function refusalOf(call: Promise<unknown>) {
 describe('the approvals API', () => {
   it('answers 404 to read, approve and refuse an approval not the caller’s', async () => {
     const api = controller({
-      get: jest.fn(async () => null),
-      refuse: jest.fn(async () => 'not_found'),
+      get: vi.fn(async () => null),
+      refuse: vi.fn(async () => 'not_found'),
     });
 
     for (const call of [
@@ -349,8 +350,8 @@ describe('the approvals API', () => {
 
   it('answers 409 approval_not_pending with the current status', async () => {
     const api = controller({
-      get: jest.fn(async () => shown({ status: 'expired' })),
-      refuse: jest.fn(async () => ({ notPending: 'expired' })),
+      get: vi.fn(async () => shown({ status: 'expired' })),
+      refuse: vi.fn(async () => ({ notPending: 'expired' })),
     });
 
     expect(await refusalOf(api.refuse(ACTOR, ID))).toMatchObject({
@@ -383,7 +384,7 @@ describe('the approvals API', () => {
     const down = Object.assign(new Error('down'), {
       name: 'PrismaClientInitializationError',
     });
-    const api = controller({ get: jest.fn(async () => Promise.reject(down)) });
+    const api = controller({ get: vi.fn(async () => Promise.reject(down)) });
 
     expect(await refusalOf(api.approve(ACTOR, ID, {}))).toMatchObject({
       body: { code: 'service_unavailable' },

@@ -153,8 +153,13 @@ describe('strykerOptions for a shard', () => {
       'rest',
     ) as Record<string, any>;
 
+    // libs/domain runs on Vitest: Stryker narrows it to the shard's files,
+    // and allowEmpty lets a shard whose folders hold none run anyway.
     expect(shard['allowEmpty']).toBe(true);
-    expect(shard['jest'].config.passWithNoTests).toBe(true);
+    expect(shard['testRunner']).toBe('vitest');
+    expect(shard['jest']).toBeUndefined();
+    expect(Array.isArray(shard['testFiles'])).toBe(true);
+    expect(shard['thresholds'].break).toBeNull();
   });
 
   it('refuses a shard the project does not have', () => {

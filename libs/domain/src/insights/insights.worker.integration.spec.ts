@@ -209,7 +209,7 @@ describe('the night job', () => {
         brandId: brand.id,
       },
     });
-    const info = jest
+    const info = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const app = await boot();
@@ -258,7 +258,7 @@ describe('the night job', () => {
     });
     const cache = new Redis(redisUrl);
     const version = Number((await cache.get('brands:version')) ?? 0);
-    const info = jest
+    const info = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const app = await boot();
@@ -310,7 +310,7 @@ describe('the night job', () => {
     await prisma.$executeRawUnsafe(
       'CREATE TRIGGER refuse_brand_update BEFORE UPDATE ON brand FOR EACH ROW EXECUTE FUNCTION refuse_brand_update()',
     );
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const app = await boot();
@@ -384,7 +384,7 @@ describe('the night job', () => {
         writtenAt: new Date(),
       },
     });
-    const info = jest
+    const info = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const app = await boot();
@@ -446,7 +446,7 @@ describe('the night job', () => {
   });
 
   it('logs a failed run and does not try it again', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const app = await boot('postgresql://nobody@localhost:1/none');
@@ -475,7 +475,7 @@ describe('the night job', () => {
     error.mockRestore();
   });
   it('writes the response figures when that job runs, logging the counts and no garage', async () => {
-    const info = jest
+    const info = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const garage = await prisma.garage.create({
@@ -518,7 +518,7 @@ describe('the night job', () => {
   });
 
   it('logs the response figures only when their last attempt has failed', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const app = await boot('postgresql://nobody@localhost:1/none');

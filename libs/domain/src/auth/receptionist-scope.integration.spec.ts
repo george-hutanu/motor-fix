@@ -86,10 +86,10 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await world.reset();
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;

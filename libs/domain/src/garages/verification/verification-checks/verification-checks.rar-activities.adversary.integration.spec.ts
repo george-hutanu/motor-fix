@@ -446,7 +446,7 @@ describe('the file read beside the record', () => {
     createDownloadUrl: async (key: string) => `https://store.test/${key}`,
     derivedKey: (key: string, copy: string) => `${key}.${copy}`,
     metadataOf: async () => null,
-    ready: jest.fn(async () => undefined),
+    ready: vi.fn(async () => undefined),
   };
   const read = () =>
     new VerificationFileService(

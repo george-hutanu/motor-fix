@@ -134,8 +134,60 @@ describe('ResultsSheet on a phone', () => {
     pointer(handle(), 'pointerup', 301);
     const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8');
     expect(css).toMatch(
-      /:host \{\s*--rest: min\(\s*max\(50%, 6\.5rem\),\s*max\(6\.5rem, calc\(100% - var\(--sheet-top, 160px\) - 6rem\)\),\s*calc\(100% - var\(--sheet-top, 160px\)\)\s*\);/,
+      /:host \{\s*--rest: max\(\s*0px,\s*min\(\s*max\(50%, 6\.5rem\),\s*max\(6\.5rem, calc\(100% - var\(--sheet-top, 160px\) - 6rem\)\),\s*calc\(100% - var\(--sheet-top, 160px\)\)\s*\)\s*\);/,
     );
+  });
+
+  // A header taller than the whole stage (320 px, the consent bar open):
+  // the sheet never rises out of its cell over "Schimbă locul" (the change
+  // button and the handle overlapped by 4.6 px).
+  it('never rests above its cell when the header is taller than the stage', async () => {
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 200 : 160;
+      });
+    pointer(handle(), 'pointerdown', 300);
+    pointer(handle(), 'pointermove', 301);
+    await settle();
+
+    // Full and low are both the cell's top, so the drag holds there too.
+    expect(offset()).toBe('0px');
+    pointer(handle(), 'pointerup', 301);
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8');
+    expect(css).toMatch(
+      /:host\(\[data-position="low"\]\) \{\s*--rest: max\(0px, calc\(100% - var\(--sheet-top, 160px\)\)\);/,
+    );
+  });
+
+  // A header taller than the whole stage (320 px, the consent bar asking):
+  // the header scrolls inside the sheet, so "Filtre" and the filter chips
+  // under the brand search stay reachable, and the rests read the header's
+  // whole height, not the part the sheet shows.
+  it('scrolls a header taller than the stage and reads its whole height for the rests', async () => {
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 150 : 160;
+      });
+    jest
+      .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 240 : 0;
+      });
+    pointer(handle(), 'pointerdown', 300);
+    pointer(handle(), 'pointermove', 301);
+    await settle();
+
+    // 160 - 240 is under the cell's top: every rest is the top.
+    expect(offset()).toBe('0px');
+    pointer(handle(), 'pointerup', 301);
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const top = css.match(/\.top \{([^}]*)\}/)?.[1] ?? '';
+    expect(top).toMatch(/max-height: 100%;/);
+    expect(top).toMatch(/overflow-y: auto;/);
   });
 
   // A header taller than half the stage (the brand search and the sorts
@@ -571,6 +623,48 @@ describe('ResultsSheet holding the pointer', () => {
 });
 
 describe('ResultsSheet forced full across 768 px', () => {
+  it('goes back to half when forcing ends while it still rests full', async () => {
+    await render();
+    fixture.componentInstance.forced.set(true);
+    await settle();
+    expect(position()).toBe('full');
+
+    fixture.componentInstance.forced.set(false);
+    await settle();
+
+    expect(position()).toBe('half');
+    expect(push).not.toHaveBeenCalled();
+    expect(back).not.toHaveBeenCalled();
+  });
+  // At 390 px with the consent bar asking, the header (chips, brand search,
+  // filter chips, sorts) took nearly the whole forced sheet and cut the
+  // filtered empty state's heading and "Scoate filtrele": forced full, the
+  // header keeps a third of the sheet and scrolls, and the list fills the
+  // rest.
+  // @traces 1399-FR-007 1399-FR-008
+  it('keeps the header to a third of a forced sheet, so its list shows whole', async () => {
+    await render();
+    fixture.componentInstance.forced.set(true);
+    await settle();
+
+    expect(host().classList.contains('forced')).toBe(true);
+
+    await drag(100, 500);
+    expect(host().classList.contains('forced')).toBe(false);
+
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const top = css.match(/:host\(\.forced\) \.top \{([^}]*)\}/)?.[1] ?? '';
+    const body = css.match(/:host\(\.forced\) \.body \{([^}]*)\}/)?.[1] ?? '';
+    expect(top).toMatch(
+      /max-height: max\(var\(--mf-tap\), min\(33%, 100% - 11rem\)\);/,
+    );
+    expect(body).toMatch(/flex: 1 1 auto;/);
+    expect(body).toMatch(/height: auto;/);
+    expect(body).toMatch(/min-height: 0;/);
+  });
+
   it('stays full when the map failed', async () => {
     layout.set('tablet');
     await render();

@@ -1685,7 +1685,9 @@ describe('the RAR number of a file', () => {
 
   // @traces 204-FR-015
   it('logs a correction once with the file and the admin, and nothing for the same number', async () => {
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
     try {
       const file = await submitted('B 1234/2019');
 
@@ -1709,7 +1711,9 @@ describe('the RAR number of a file', () => {
   ] as const)(
     'logs nothing for a correction refused for %s',
     async (_, status, number, code) => {
-      const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      const log = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
       try {
         const file = await fileIn(status);
         const by = code === 404 ? mihai : undefined;
@@ -2001,7 +2005,7 @@ describe('the approval note', () => {
   it('logs one line per refusal, with the file and the reason', async () => {
     const file = await fileIn('in_review');
     await guide(file.id, 'photos', 'failed');
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     await refusal(approve(ioana, file.id));
 
@@ -2076,7 +2080,7 @@ describe('the RAR test switch', () => {
     const file = await fileIn('in_review');
     await setCheck(file.id, 'rar', 'not_run');
     await switchTo(true);
-    const read = jest.spyOn(prisma.platformRule, 'findUnique');
+    const read = vi.spyOn(prisma.platformRule, 'findUnique');
 
     const refused = await refusal(
       inTx((tx) =>
@@ -2100,24 +2104,13 @@ describe('the last check date', () => {
       .lastCheckedOn;
   // Only Date is faked: the database and the timers keep real time.
   const at = (iso: string) =>
-    jest
+    vi
       .useFakeTimers({
-        doNotFake: [
-          'nextTick',
-          'setImmediate',
-          'clearImmediate',
-          'setTimeout',
-          'clearTimeout',
-          'setInterval',
-          'clearInterval',
-          'queueMicrotask',
-          'hrtime',
-          'performance',
-        ],
+        toFake: ['Date'],
       })
       .setSystemTime(new Date(iso));
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('is the Bucharest day of the approval: 23:30 UTC on a summer day is the next', async () => {
     const file = await fileIn('in_review');
@@ -2303,11 +2296,13 @@ describe('rejecting a garage', () => {
   // @traces 305-FR-009
   it('names the rejection and its reason on the request span and in one log line, never the note', async () => {
     const file = await fileIn('in_review');
-    const setAttributes = jest.fn();
-    const span = jest
+    const setAttributes = vi.fn();
+    const span = vi
       .spyOn(trace, 'getActiveSpan')
       .mockReturnValue({ setAttributes } as never);
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     try {
       await decideWith(ioana, file.id, {
@@ -2773,11 +2768,13 @@ describe('asking a garage for more', () => {
       approvals: await approvals('more_requested'),
       asked: await moreRequests(),
     };
-    const setAttributes = jest.fn();
-    const span = jest
+    const setAttributes = vi.fn();
+    const span = vi
       .spyOn(trace, 'getActiveSpan')
       .mockReturnValue({ setAttributes } as never);
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     try {
       await decideWith(ioana, file.id, {
@@ -2810,7 +2807,9 @@ describe('asking a garage for more', () => {
   // @traces 304-FR-012
   it('logs a request with no items with empty brackets', async () => {
     const file = await fileIn('in_review');
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     try {
       await decideWith(ioana, file.id, {
@@ -2832,7 +2831,9 @@ describe('asking a garage for more', () => {
   it('counts a file sent again once and logs it, and counts nothing when the resend is refused', async () => {
     const file = await fileIn('more_requested');
     const before = await resubmissions();
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     try {
       await inTx((tx) => service().resend(tx, mihai, file.id));

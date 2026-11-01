@@ -50,11 +50,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   await reset();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const garage = (
   lastCheckedOn: string | null,
@@ -186,7 +186,7 @@ describe('the daily re-check reminder', () => {
   it('asks no outside register', async () => {
     const ana = await account('Ana Popescu', ['admin']);
     await garage(null);
-    const outside = jest.spyOn(globalThis, 'fetch');
+    const outside = vi.spyOn(globalThis, 'fetch');
 
     await task.run(NOW);
 

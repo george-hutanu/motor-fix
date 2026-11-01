@@ -3,14 +3,14 @@ import { basename } from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Client } from 'pg';
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '../../generated/prisma/client';
 
-type JestGlobal = { expect?: { getState(): { testPath?: string } } };
+type TestGlobal = { expect?: { getState(): { testPath?: string } } };
 
 // Shown in pg_stat_activity, so CI's Database waits step names the holder.
 function holderName() {
-  const path = (globalThis as JestGlobal).expect?.getState().testPath;
-  return `turn ${path ? basename(path) : 'outside jest'}`.slice(0, 63);
+  const path = (globalThis as TestGlobal).expect?.getState().testPath;
+  return `turn ${path ? basename(path) : 'outside a test'}`.slice(0, 63);
 }
 
 // How long a take may wait: the turn goes out in order, so a file waits for

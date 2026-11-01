@@ -11,22 +11,23 @@ import type { DynamicModule, Provider, Type } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 // Every Brevo built while the API's module tree is put together.
-jest.mock('../../../libs/domain/src/notifications/brevo/brevo', () => {
-  const actual = jest.requireActual(
-    '../../../libs/domain/src/notifications/brevo/brevo',
-  );
-  const built = jest.fn();
-  class Counted extends actual.Brevo {
-    constructor(...args: [never]) {
-      super(...args);
-      built();
-    }
-  }
-  return { ...actual, Brevo: Counted, built };
-});
-const { built } = jest.requireMock(
+const { built } = vi.hoisted(() => ({ built: vi.fn() }));
+vi.mock(
   '../../../libs/domain/src/notifications/brevo/brevo',
-) as { built: jest.Mock };
+  async (actualModule) => {
+    const actual =
+      await actualModule<
+        typeof import('../../../libs/domain/src/notifications/brevo/brevo')
+      >();
+    class Counted extends actual.Brevo {
+      constructor(...args: [never]) {
+        super(...args);
+        built();
+      }
+    }
+    return { ...actual, Brevo: Counted };
+  },
+);
 
 const env = {
   APP_ENV: 'test',

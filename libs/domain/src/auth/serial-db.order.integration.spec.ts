@@ -22,7 +22,8 @@ const turnTakenElsewhere = async () => {
 
 // A spec's own teardown (closing its app, queues and workers)
 // can still write, so the turn must outlast every afterAll the spec declares
-// after taking it. Jest runs afterAll hooks in the order they were declared.
+// after taking it.
+// @traces 1338-FR-007
 afterAll(async () => {
   expect(await turnTakenElsewhere()).toBe(false);
 });

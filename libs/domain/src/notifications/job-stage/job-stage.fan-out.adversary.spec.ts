@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { Mock, MockInstance } from 'vitest';
 
 import { JOB_STAGE_CONSUMER, JobStageFanOut } from './job-stage.fan-out';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -39,19 +40,19 @@ interface Opts {
 function setup(job: Row | null | Error, opts: Opts = {}) {
   const prisma = {
     garageFeature: {
-      findUnique: jest.fn(async () => {
+      findUnique: vi.fn(async () => {
         if (opts.feature instanceof Error) throw opts.feature;
         return opts.feature === undefined ? { enabled: true } : opts.feature;
       }),
     },
     job: {
-      findUnique: jest.fn(async () => {
+      findUnique: vi.fn(async () => {
         if (job instanceof Error) throw job;
         return job;
       }),
     },
   } as unknown as PrismaClient;
-  const notify = jest.fn(async () => {
+  const notify = vi.fn(async () => {
     if (opts.notifyError) throw opts.notifyError;
     return 1;
   });
@@ -66,14 +67,14 @@ function setup(job: Row | null | Error, opts: Opts = {}) {
 const ev = (kind: string, id = '42', subjectId = 'j-1') =>
   ({ data: { id, kind, payload: {}, subjectId } }) as never;
 
-const firstCall = (notify: jest.Mock) =>
+const firstCall = (notify: Mock) =>
   (notify.mock.calls[0] as unknown as [Record<string, unknown>])[0];
 
-let log: jest.SpyInstance;
+let log: MockInstance;
 beforeEach(() => {
-  log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 277-FR-003
 describe('job stage fan-out: kinds and failures', () => {
@@ -272,9 +273,7 @@ describe('job stage fan-out: link and recipient', () => {
     const { fanOut, prisma } = setup(row({ status: 'done' }));
     await fanOut.handle(ev('job.done', '5', 'job-5'));
     expect(
-      JSON.stringify(
-        (prisma.job.findUnique as unknown as jest.Mock).mock.calls,
-      ),
+      JSON.stringify((prisma.job.findUnique as unknown as Mock).mock.calls),
     ).toContain('job-5');
   });
 

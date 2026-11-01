@@ -469,7 +469,7 @@ describe('the event a hard bounce records', () => {
 });
 
 describe('a hard bounce', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('fails the e-mail row, marks the address and falls back to push', async () => {
     const andrei = await account('andrei');
@@ -533,9 +533,9 @@ describe('a hard bounce', () => {
     const andrei = await account('andrei');
     await withDevice(andrei);
     await sentEmail(andrei, 'evt-b', '<b@relay>');
-    jest
-      .spyOn(queue, 'add')
-      .mockRejectedValueOnce(new Error('Redis unavailable'));
+    vi.spyOn(queue, 'add').mockRejectedValueOnce(
+      new Error('Redis unavailable'),
+    );
 
     await expect(service.recordBounce('<b@relay>')).rejects.toThrow(
       'Redis unavailable',

@@ -18,7 +18,7 @@ afterAll(() => started?.shutdown());
 beforeEach(async () => {
   await started?.flush();
   memory.spanExporter.reset();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const NOW = new Date('2026-10-26T12:00:00.000Z');
@@ -217,7 +217,9 @@ describe('counting the confirmations', () => {
   });
 
   it('logs the outcome with the confirmation, tool and grant, and nothing else', () => {
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     recordConfirmation('refused', who);
 
@@ -225,7 +227,7 @@ describe('counting the confirmations', () => {
   });
 
   it('marks the outcome on the call’s span', async () => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
     trace
       .getTracer('spec')

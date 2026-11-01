@@ -184,7 +184,7 @@ describe('the news worker', () => {
   });
 
   it('queues the outbox news with the run’s retries', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const admin = await account('admin', ['admin']);
     const { id } = await prisma.outboxEvent.create({
       data: {
@@ -202,7 +202,7 @@ describe('the news worker', () => {
       job ??= await until('the news job', () => newsJobs.getJob(`event-${id}`));
     } finally {
       await app.close();
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     }
     expect(job?.opts).toMatchObject({
       attempts: NEWS_CONSUMER.jobs.attempts,
@@ -216,7 +216,7 @@ describe('the news worker', () => {
   ])(
     'leaves the run queued and says why without %s',
     async (name, secret, webUrl) => {
-      const error = jest
+      const error = vi
         .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => undefined);
       const admin = await account('admin', ['admin']);
@@ -239,7 +239,7 @@ describe('the news worker', () => {
   );
 
   it('gives the month back once the last attempt fails', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const admin = await account('admin', ['admin']);
@@ -248,9 +248,9 @@ describe('the news worker', () => {
       data: { month: '2026-11', recipients: 1, sentById: admin },
     });
     const app = await worker('test-secret');
-    jest
-      .spyOn(app.get(NotificationsService), 'notify')
-      .mockRejectedValue(new Error('pipeline down'));
+    vi.spyOn(app.get(NotificationsService), 'notify').mockRejectedValue(
+      new Error('pipeline down'),
+    );
     await app.init();
     try {
       await queueRun(admin, 1);
@@ -324,7 +324,7 @@ describe('the news worker', () => {
   });
 
   it('adds nothing for a run whose job is still in Redis', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const admin = await account('admin', ['admin']);
     const { id } = await relayedRun(admin, 10);
     await newsJobs.add(
@@ -343,7 +343,7 @@ describe('the news worker', () => {
       }
     } finally {
       await app.close();
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     }
     expect(await relayedAgain(id)).toBe(true);
     expect(await newsJobs.getJobCounts('waiting', 'delayed', 'active')).toEqual(

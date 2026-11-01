@@ -25,6 +25,7 @@
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/vitest.config.mts",
       "!{projectRoot}/src/test-setup.[jt]s",
       "!{projectRoot}/test-setup.[jt]s"
     ],
@@ -81,15 +82,17 @@
         "default",
         "^production",
         "{workspaceRoot}/jest.preset.cjs",
+        "{workspaceRoot}/vitest.preset.mts",
         {
-          "env": "JEST_SUITE"
+          "env": "TEST_SUITE"
         },
         {
           "externalDependencies": [
             "jest",
             "@nx/jest",
             "ts-jest",
-            "jest-preset-angular"
+            "jest-preset-angular",
+            "vitest"
           ]
         },
         {
