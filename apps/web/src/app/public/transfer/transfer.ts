@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   afterRenderEffect,
   ChangeDetectionStrategy,
@@ -8,6 +8,7 @@ import {
   effect,
   inject,
   PendingTasks,
+  PLATFORM_ID,
   RESPONSE_INIT,
   signal,
   untracked,
@@ -16,6 +17,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import {
   CarsService,
   type CarTransferLinkDto,
@@ -28,6 +30,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 import { Consent } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import { publicRead } from '../../public-read';
+import { ReacceptDialog } from '../../sign-in/reaccept/reaccept-dialog';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 
 type State =
@@ -82,6 +85,8 @@ export class TransferPage {
   private readonly router = inject(Router);
   private readonly session = inject(Session);
   private readonly signInDialog = inject(SignInDialog);
+  private readonly reacceptDialog = inject(ReacceptDialog);
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly i18n = inject(I18n);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   protected readonly state = signal<State>('loading');
@@ -144,14 +149,23 @@ export class TransferPage {
     return this.route.snapshot.paramMap.get('token') ?? '';
   }
 
+  // The session the read goes with. In the browser it is loaded from the
+  // cookie first, so a person already signed in is read as themselves; the
+  // server render reads as a visitor.
+  private held(): Promise<MeDto | null> {
+    if (!this.browser) return Promise.resolve(this.session.current());
+    return this.session.load({ keepLanguage: true }).catch(() => null);
+  }
+
   protected async read() {
-    const me = this.session.current();
-    this.readFor = me;
     const read = ++this.reads;
     this.state.set('loading');
     this.acceptFailed.set(false);
     const done = this.pending.add();
     try {
+      const me = await this.held();
+      if (read !== this.reads) return;
+      this.readFor = me;
       // Without a session the read goes as a visitor's, so the server
       // render's answer is handed over; with one it carries the token.
       const answer = await this.cars.carTransferLinkControllerRead(
@@ -175,16 +189,25 @@ export class TransferPage {
       this.response.status = status;
   }
 
-  // "Intră în cont": a session already held reads at once; otherwise the
-  // sign-in dialog, and a closed dialog leaves the line as it was.
+  // "Intră în cont": a session the last read went with, and still no car,
+  // has terms in force to accept: the re-accept dialog. A session held since
+  // reads at once; with none, the sign-in dialog. A closed dialog, or a
+  // sign-out instead, leaves the line as it was.
   protected async signIn() {
     if (this.asking) return;
     this.asking = true;
     try {
-      const me =
-        (await this.session.load({ keepLanguage: true }).catch(() => null)) ??
-        ((await this.signInDialog.gate()) ? this.session.current() : null);
-      if (!me && !this.session.current()) return;
+      const held = await this.session
+        .load({ keepLanguage: true })
+        .catch(() => null);
+      const go = !held
+        ? await this.signInDialog.gate()
+        : held === this.readFor
+          ? await this.reacceptDialog
+              .gate({ ...CURRENT_CONSENT })
+              .catch(() => false)
+          : true;
+      if (!go || !this.session.current()) return;
       this.refocus = true;
       await this.read();
     } finally {

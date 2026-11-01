@@ -16,6 +16,7 @@ import { TransferPage } from './transfer';
 import { Consent } from '../../consent/consent';
 import { Session } from '../../dashboard/session';
 import { PUBLIC_READ } from '../../public-read';
+import { ReacceptDialog } from '../../sign-in/reaccept/reaccept-dialog';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { publicChildren } from '../routes';
 
@@ -40,6 +41,7 @@ const offer = (over: Partial<CarTransferLinkDto> = {}): CarTransferLinkDto => ({
 let read: jest.Mock;
 let accept: jest.Mock;
 let gate: jest.Mock;
+let reaccept: jest.Mock;
 let track: jest.Mock;
 let current: ReturnType<typeof signal<MeDto | null>>;
 let session: {
@@ -62,6 +64,8 @@ interface Options {
   language?: 'ro' | 'en';
   server?: boolean;
   me?: MeDto | null;
+  // The session the browser's cookie holds, loaded only when asked for.
+  cookie?: MeDto | null;
   accepted?: () => Promise<CarTransferAcceptedDto>;
   signIn?: () => Promise<boolean>;
 }
@@ -72,6 +76,7 @@ async function open(
     language = 'ro',
     server = true,
     me = null,
+    cookie = me,
     accepted = async () => ({ carId: 'car-9' }),
     signIn = async () => {
       current.set(VICTOR);
@@ -82,11 +87,15 @@ async function open(
   read = jest.fn((_params, context) => answer(!context?.get(PUBLIC_READ)));
   accept = jest.fn(accepted);
   gate = jest.fn(signIn);
+  reaccept = jest.fn(async () => true);
   track = jest.fn();
   current = signal<MeDto | null>(me);
   session = {
     current,
-    load: jest.fn(async () => current()),
+    load: jest.fn(async () => {
+      if (cookie && !current()) current.set(cookie);
+      return current();
+    }),
     reload: jest.fn(async () => undefined),
     switchRole: jest.fn(async (role: MeDto['role']) => {
       current.set({ ...(current() as MeDto), role });
@@ -110,6 +119,7 @@ async function open(
       },
       { provide: Session, useValue: session },
       { provide: SignInDialog, useValue: { gate } },
+      { provide: ReacceptDialog, useValue: { gate: reaccept } },
       { provide: Consent, useValue: { track } },
       ...(server ? [{ provide: RESPONSE_INIT, useValue: response }] : []),
     ],
@@ -307,6 +317,84 @@ describe('the waiting line', () => {
     expect(heading()).toBe(
       'VW Golf 2015 · 5 reparații transmise · de la Andrei M.',
     );
+  });
+
+  it('loads the session the cookie holds before the first read, so a signed-in buyer reads the car', async () => {
+    await open(forSession, { cookie: VICTOR });
+
+    expect(session.load).toHaveBeenCalledWith({ keepLanguage: true });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(read.mock.calls[0][1]?.get(PUBLIC_READ) ?? false).toBe(false);
+    expect(heading()).toBe(
+      'VW Golf 2015 · 5 reparații transmise · de la Andrei M.',
+    );
+  });
+
+  it('tells a seller signed in by cookie that they cannot take over their own car', async () => {
+    await open(
+      async (withSession) => {
+        if (withSession) throw refusal(403, 'own_transfer');
+        return { status: 'sent' };
+      },
+      { cookie: VICTOR },
+    );
+
+    expect(heading()).toBe('Nu poți prelua propria mașină');
+    expect(buttons()).toEqual([]);
+  });
+
+  it('opens the re-accept dialog for a held session whose read has no car, then reads again', async () => {
+    let accepted = false;
+    await open(async () => (accepted ? offer() : { status: 'sent' }), {
+      me: VICTOR,
+    });
+    reaccept.mockImplementation(async () => {
+      accepted = true;
+      return true;
+    });
+    expect(heading()).toBe('O mașină te așteaptă.');
+
+    press('Intră în cont');
+    await settle();
+
+    expect(gate).not.toHaveBeenCalled();
+    expect(reaccept).toHaveBeenCalledTimes(1);
+    expect(reaccept.mock.calls[0][0]).toEqual({
+      privacyVersion: expect.any(String),
+      termsVersion: expect.any(String),
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(heading()).toBe(
+      'VW Golf 2015 · 5 reparații transmise · de la Andrei M.',
+    );
+    expect(document.activeElement).toBe(page().querySelector('h1'));
+  });
+
+  it('leaves the waiting line, with no second dialog, when the re-read after re-accepting still has no car', async () => {
+    await open(async () => ({ status: 'sent' }), { me: VICTOR });
+
+    press('Intră în cont');
+    await settle();
+    await settle();
+
+    expect(reaccept).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(heading()).toBe('O mașină te așteaptă.');
+  });
+
+  it('keeps the waiting line without reading again when the re-accept dialog ends in a sign-out', async () => {
+    await open(async () => ({ status: 'sent' }), { me: VICTOR });
+    reaccept.mockImplementation(async () => {
+      current.set(null);
+      return false;
+    });
+
+    press('Intră în cont');
+    await settle();
+
+    expect(reaccept).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(heading()).toBe('O mașină te așteaptă.');
   });
 
   it('reads again when the person signs in elsewhere on the page', async () => {
@@ -543,6 +631,8 @@ describe('taking the car over', () => {
         current.set(null);
         throw refusal(401, 'sign_in_required');
       },
+      // The session ended: the cookie holds none either.
+      cookie: null,
       me: VICTOR,
     });
 
