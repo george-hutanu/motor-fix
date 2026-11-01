@@ -643,7 +643,7 @@ export class DataExportBuilder {
 
   private async notificationsOf(accountId: string, requestedAt: Date) {
     const since = new Date(requestedAt.getTime() - NOTIFICATIONS_KEPT_MS);
-    const [notifications, preferences, devices] = await Promise.all([
+    const [notifications, preferences, devices, fallbacks] = await Promise.all([
       this.prisma.notification.findMany({
         orderBy: { createdAt: 'asc' },
         select: {
@@ -673,8 +673,13 @@ export class DataExportBuilder {
         select: { createdAt: true, label: true, lastSuccessAt: true },
         where: { accountId },
       }),
+      this.prisma.notificationFallback.findMany({
+        orderBy: { type: 'asc' },
+        select: { at: true, from: true, reason: true, to: true, type: true },
+        where: { accountId },
+      }),
     ]);
-    return { devices, notifications, preferences };
+    return { devices, fallbacks, notifications, preferences };
   }
 
   private async consents(accountId: string) {

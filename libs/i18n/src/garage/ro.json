@@ -331,6 +331,25 @@
       "unavailable": "Încărcarea nu e disponibilă acum"
     }
   },
+  "liftSchedule": {
+    "blocked": "Blocat",
+    "closed": "Închis azi",
+    "empty": "Nicio programare azi",
+    "failed": "Programul nu s‑a încărcat",
+    "lift": "Elevator {n}",
+    "minutes": "{time}, {minutes} min",
+    "noLift": "Fără elevator",
+    "now": "acum, {time}",
+    "offline": "Fără legătură: programul se poate schimba",
+    "retry": "Reîncearcă",
+    "state": {
+      "blocked": "blocat",
+      "done": "gata",
+      "paused": "în pauză",
+      "todo": "programată",
+      "work": "în lucru"
+    }
+  },
   "mechanicCard": {
     "brands": "Mărci pe care lucrează",
     "certifications": "Certificări",

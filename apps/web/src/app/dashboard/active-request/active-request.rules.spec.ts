@@ -33,6 +33,7 @@ const activeRequest = (
   jobs: [brakes],
   mechanicName: null,
   range: null,
+  saveSuggestion: null,
   stage: 'sent',
   ...over,
 });
