@@ -55,7 +55,7 @@ async function readyWithin(ms: number) {
   }
 }
 
-jest.setTimeout(30_000);
+vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
 
 beforeAll(async () => {
   await brevo.start();
@@ -71,14 +71,14 @@ afterAll(async () => {
 beforeEach(async () => {
   await queue.obliterate({ force: true });
   brevo.reset();
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 });
 
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the worker while Brevo is unreachable at start-up', () => {

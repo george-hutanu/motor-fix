@@ -1,18 +1,19 @@
 const nxPreset = require('@nx/jest/preset').default;
 
 // Specs that need PostgreSQL or Redis are named *.integration.spec.ts.
-// JEST_SUITE=unit leaves them out, JEST_SUITE=integration runs only them, and
-// no JEST_SUITE runs everything. A chosen suite passes a project that has
-// none of its specs, as the other suite may hold them all.
+// TEST_SUITE=unit leaves them out, TEST_SUITE=integration runs only them, and
+// no TEST_SUITE runs everything. A chosen suite passes a project that has
+// none of its specs, as the other suite may hold them all. vitest.preset.mts
+// reads the same variable for the projects on Vitest.
 const INTEGRATION = '\\.integration\\.spec\\.ts$';
 const suites = {
   integration: { testMatch: ['**/?(*.)integration.spec.ts'] },
   unit: { testPathIgnorePatterns: ['/node_modules/', INTEGRATION] },
 };
-const suite = process.env.JEST_SUITE;
+const suite = process.env.TEST_SUITE;
 if (suite && !(suite in suites))
   throw new Error(
-    `JEST_SUITE must be "unit" or "integration", or unset; got "${suite}"`,
+    `TEST_SUITE must be "unit" or "integration", or unset; got "${suite}"`,
   );
 
 // scripts/heavy.sh sets JEST_MAX_WORKERS so a run in a shared heavy-command

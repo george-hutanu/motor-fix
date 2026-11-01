@@ -36,7 +36,7 @@ const declineOf = (
   answer: () => Promise<GarageRecipientDto> = async () =>
     DECLINED as GarageRecipientDto,
   preview: () => Promise<DeclinePreview> = async () => PREVIEW,
-) => ({ preview: jest.fn(preview), run: jest.fn(answer) });
+) => ({ preview: vi.fn(preview), run: vi.fn(answer) });
 
 type Decline = ReturnType<typeof declineOf>;
 

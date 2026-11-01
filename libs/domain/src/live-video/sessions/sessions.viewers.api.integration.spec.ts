@@ -160,11 +160,11 @@ describe('the most people watching a live session at once', () => {
 
 // @traces 1252-FR-005
 describe('counting the views that record a viewer', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('counts each recorded view once as issued, on the existing counter', async () => {
     const s = await live();
-    const counted = jest.spyOn(metrics, 'countViewToken');
+    const counted = vi.spyOn(metrics, 'countViewToken');
 
     await send('post', s.path, s.driver);
     await send('post', s.path, s.owner);
@@ -174,12 +174,13 @@ describe('counting the views that record a viewer', () => {
 
   it('counts a view the provider could not sign as unavailable, with no viewer kept', async () => {
     const s = await live();
-    const counted = jest.spyOn(metrics, 'countViewToken');
-    jest
-      .spyOn(provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER), 'viewUrl')
-      .mockImplementation(() => {
-        throw new Error('live video is not configured');
-      });
+    const counted = vi.spyOn(metrics, 'countViewToken');
+    vi.spyOn(
+      provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER),
+      'viewUrl',
+    ).mockImplementation(() => {
+      throw new Error('live video is not configured');
+    });
 
     expect((await send('post', s.path, s.driver)).status).toBe(503);
 

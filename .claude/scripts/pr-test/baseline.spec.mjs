@@ -233,6 +233,15 @@ describe('what the run makes of the baseline', () => {
     ]);
   });
 
+  it('blames no changed shot on the PR when the web code changed between the baseline and the base', () => {
+    const got = visualOutcome({ meta, shots, web: false, stale: true });
+    assert.deepEqual(got.findings, []);
+    assert.deepEqual(got.notes, [
+      'Visual: 1 changed, 1 identical, 1 new against run 20 of aaaaaaa.',
+      'The web code changed between the baseline run and this PR\'s base, so a changed shot is main\'s, not this PR\'s: no visual finding this lap.',
+    ]);
+  });
+
   it('says every shot is new when there is no baseline', () => {
     const got = visualOutcome({ meta: { none: 'no finished run of a commit on main' }, shots: null, web: true });
     assert.deepEqual(got.notes, ['No baseline: no finished run of a commit on main; every shot is new.']);

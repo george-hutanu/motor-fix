@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { StorageEnv } from '@motor-fix/contracts';
+import type { Mock } from 'vitest';
 
 import { purgeMedia } from './purge';
 import type { MediaRetentionDeps } from './retention';
@@ -29,14 +30,14 @@ const past = new Date(NOW.getTime() - DAY);
 const future = new Date(NOW.getTime() + DAY);
 
 let fake: FakeLiveVideo;
-let logger: { log: jest.Mock; error: jest.Mock };
+let logger: { log: Mock; error: Mock };
 
 beforeEach(() => {
   store.objects.clear();
   fake = new FakeLiveVideo();
-  logger = { error: jest.fn(), log: jest.fn() };
+  logger = { error: vi.fn(), log: vi.fn() };
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const deps = (): MediaRetentionDeps => ({
   audit: new AuditService(),
@@ -178,11 +179,9 @@ describe('the nightly media purge', () => {
     const good = await item(j, past);
     const storage = provider(StorageService);
     const real = storage.deleteWithCopies.bind(storage);
-    jest
-      .spyOn(storage, 'deleteWithCopies')
-      .mockImplementation((key) =>
-        key.endsWith(bad.id) ? Promise.reject(new Error('down')) : real(key),
-      );
+    vi.spyOn(storage, 'deleteWithCopies').mockImplementation((key) =>
+      key.endsWith(bad.id) ? Promise.reject(new Error('down')) : real(key),
+    );
 
     expect(await purgeMedia(deps(), NOW)).toBe(1);
 
@@ -191,7 +190,7 @@ describe('the nightly media purge', () => {
     expect(logger.error).toHaveBeenCalledWith(
       `media ${bad.id} not purged: Error`,
     );
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
 
     expect(await purgeMedia(deps(), NOW)).toBe(1);
     expect(await statusOf(bad.id)).toBe('purged');
@@ -200,7 +199,7 @@ describe('the nightly media purge', () => {
   it('rolls back an item whose provider delete fails', async () => {
     const j = await job();
     const rec = await item(j, past, 'visible', { providerRef: 'rec-6' });
-    jest.spyOn(fake, 'deleteRecording').mockRejectedValue(new Error('down'));
+    vi.spyOn(fake, 'deleteRecording').mockRejectedValue(new Error('down'));
 
     expect(await purgeMedia(deps(), NOW)).toBe(0);
 
@@ -212,7 +211,7 @@ describe('the nightly media purge', () => {
     const j = await job();
     for (let i = 0; i < 6; i += 1) await item(j, past);
     const storage = provider(StorageService);
-    const deletes = jest.spyOn(storage, 'deleteWithCopies');
+    const deletes = vi.spyOn(storage, 'deleteWithCopies');
 
     const [one, two] = await Promise.all([
       purgeMedia(deps(), NOW),

@@ -16,17 +16,17 @@ function world(
   listedUnderLock = 1,
 ) {
   const garagePrice = {
-    count: jest.fn().mockResolvedValue(listedUnderLock),
-    create: jest.fn().mockResolvedValue({ id: 'new' }),
-    deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-    findFirst: jest.fn().mockResolvedValue({
+    count: vi.fn().mockResolvedValue(listedUnderLock),
+    create: vi.fn().mockResolvedValue({ id: 'new' }),
+    deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    findFirst: vi.fn().mockResolvedValue({
       brand: { slug: 'bmw' },
       fromBani: 100_000,
       garage: { slug: 'nord' },
       id: 'own',
       toBani: 150_000,
     }),
-    findMany: jest.fn().mockResolvedValue(
+    findMany: vi.fn().mockResolvedValue(
       rows.map((row) => ({
         fromBani: 89_000,
         position: 3,
@@ -34,26 +34,26 @@ function world(
         ...row,
       })),
     ),
-    updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    updateMany: vi.fn().mockResolvedValue({ count: 0 }),
   };
   const prisma = {
     $transaction: (work: (tx: unknown) => unknown) =>
       work({
-        $queryRaw: jest.fn().mockResolvedValue([{ slug: 'nord' }]),
+        $queryRaw: vi.fn().mockResolvedValue([{ slug: 'nord' }]),
         garagePrice,
       }),
-    brand: { findUnique: jest.fn().mockResolvedValue({ slug: 'bmw' }) },
+    brand: { findUnique: vi.fn().mockResolvedValue({ slug: 'bmw' }) },
     garage: {
-      findUnique: jest.fn().mockResolvedValue({
+      findUnique: vi.fn().mockResolvedValue({
         brands: [{ stance: 'works_on' }],
         slug: 'nord',
       }),
     },
     garagePrice,
   };
-  const audit = { record: jest.fn() };
-  const events = { record: jest.fn() };
-  const cache = { take: jest.fn() };
+  const audit = { record: vi.fn() };
+  const events = { record: vi.fn() };
+  const cache = { take: vi.fn() };
   const service = new PriceListService(
     prisma as never,
     audit as never,
@@ -123,12 +123,12 @@ describe('a brand range write racing a removal', () => {
 // The owner's read carries the garage's hourly labour range when both ends
 // are set, and no labour otherwise.
 function reading(garage: Record<string, unknown> | null) {
-  const findUnique = jest.fn().mockResolvedValue(garage);
+  const findUnique = vi.fn().mockResolvedValue(garage);
   const service = new PriceListService(
     { garage: { findUnique } } as never,
-    { record: jest.fn() } as never,
-    { record: jest.fn() } as never,
-    { take: jest.fn() } as never,
+    { record: vi.fn() } as never,
+    { record: vi.fn() } as never,
+    { take: vi.fn() } as never,
     {} as never,
   );
   return { findUnique, service };

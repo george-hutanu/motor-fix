@@ -13,7 +13,7 @@
         "{projectRoot}/src/test-setup.ts",
         "{workspaceRoot}/apps/web/src/**/*",
         {
-          "env": "JEST_SUITE"
+          "env": "TEST_SUITE"
         },
         {
           "externalDependencies": [

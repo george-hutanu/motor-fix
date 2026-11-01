@@ -28,10 +28,13 @@ const entry = (id: string, more: Record<string, unknown> = {}): Entry =>
   }) as Entry;
 
 const scheduleOf = (answer: Partial<Schedule> = {}) =>
-  jest.fn(async () => ({
+  vi.fn(async () => ({
     blocks: [] as Schedule['blocks'],
+    days: [] as Schedule['days'],
     entries: [] as Entry[],
     from: '2026-10-09',
+    hoursSet: false,
+    liftCount: 0,
     lifts: true,
     to: '2026-10-09',
     ...answer,
@@ -138,7 +141,7 @@ describe('get_schedule under hostile calls', () => {
     ],
     ['a lift while lifts are off', { lift: 2 }],
   ])('relays the read’s refusal of %s as validation', async (_c, args) => {
-    const list = jest.fn(async () => {
+    const list = vi.fn(async () => {
       throw new BadRequestException({ code: 'validation', message: 'no' });
     });
     const result = await call(args, list);
@@ -157,7 +160,7 @@ describe('get_schedule under hostile calls', () => {
     });
     const result = await call(
       {},
-      jest.fn(() => Promise.reject(down)),
+      vi.fn(() => Promise.reject(down)),
     );
     expect(result.structuredContent).toMatchObject({
       code: 'service_unavailable',
@@ -288,12 +291,15 @@ describe('get_schedule answers', () => {
       context({
         garage: {
           schedule: {
-            list: jest
+            list: vi
               .fn()
               .mockResolvedValueOnce({
                 blocks: [],
+                days: [{ day: '2026-10-09', open: [] }],
                 entries: [],
                 from: '2026-10-09',
+                hoursSet: false,
+                liftCount: 0,
                 lifts: false,
                 to: '2026-10-09',
               })

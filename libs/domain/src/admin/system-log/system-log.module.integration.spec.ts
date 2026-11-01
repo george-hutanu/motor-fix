@@ -81,7 +81,7 @@ describe('the deploy entry', () => {
   it('is written once by two instances of a new release booting either side of a minute', async () => {
     const write = systemLog.write.bind(systemLog);
     let minutes = 0;
-    const spy = jest
+    const spy = vi
       .spyOn(systemLog, 'write')
       .mockImplementation(async (kind, source, context) => {
         const at = new Date(Date.now() + minutes++ * 60_000);
@@ -96,10 +96,10 @@ describe('the deploy entry', () => {
   });
 
   it('never fails the boot when the log cannot be checked', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    const write = jest
+    const write = vi
       .spyOn(systemLog, 'write')
       .mockRejectedValueOnce(new Error('log down'));
     try {

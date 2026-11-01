@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { GENERIC_FILES, MODEL_3D_FILES } from './models-3d';
 import { Models3dStore } from './models-3d.store';
@@ -19,10 +20,8 @@ function memoryStorage(held: string[] = []) {
     ]),
   );
   const storage = {
-    contentTypeOf: jest.fn(
-      async (key: string) => objects.get(key)?.type ?? null,
-    ),
-    putObject: jest.fn(
+    contentTypeOf: vi.fn(async (key: string) => objects.get(key)?.type ?? null),
+    putObject: vi.fn(
       async (
         key: string,
         body: Uint8Array,
@@ -41,17 +40,15 @@ function memoryStorage(held: string[] = []) {
   };
 }
 
-let logs: jest.SpyInstance;
-let errors: jest.SpyInstance;
+let logs: MockInstance;
+let errors: MockInstance;
 beforeEach(() => {
-  logs = jest
-    .spyOn(Logger.prototype, 'log')
-    .mockImplementation(() => undefined);
-  errors = jest
+  logs = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  errors = vi
     .spyOn(Logger.prototype, 'error')
     .mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('Models3dStore.fill', () => {
   it('writes all 26 catalogue files to an empty store as immutable GLBs', async () => {

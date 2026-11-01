@@ -2,6 +2,7 @@ import { inMemory } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
 import { MeterProvider } from '@opentelemetry/sdk-metrics';
+import type { MockInstance } from 'vitest';
 
 import { noShowWorld } from './no-show.testing';
 import { quotesApp } from '../quotes-api.testing';
@@ -26,20 +27,18 @@ const counted = async (action: string, outcome: string) => {
   return Number(point?.value ?? 0);
 };
 
-const linesAbout = (spy: jest.SpyInstance, id: string) =>
+const linesAbout = (spy: MockInstance, id: string) =>
   spy.mock.calls
     .map(([message]) => String(message))
     .filter((m) => m.includes(id));
 
-let log: jest.SpyInstance;
-let warn: jest.SpyInstance;
+let log: MockInstance;
+let warn: MockInstance;
 beforeEach(() => {
-  log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-  warn = jest
-    .spyOn(Logger.prototype, 'warn')
-    .mockImplementation(() => undefined);
+  log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1259-FR-012
 describe('watching no-shows', () => {

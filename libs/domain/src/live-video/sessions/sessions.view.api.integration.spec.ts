@@ -208,11 +208,12 @@ describe('a view that is refused', () => {
 
   it('answers 503 live_unavailable when the provider can no longer sign a link', async () => {
     const s = await setting();
-    jest
-      .spyOn(provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER), 'viewUrl')
-      .mockImplementation(() => {
-        throw new Error('live video is not configured');
-      });
+    vi.spyOn(
+      provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER),
+      'viewUrl',
+    ).mockImplementation(() => {
+      throw new Error('live video is not configured');
+    });
 
     const res = await view(s.view, s.driver);
 

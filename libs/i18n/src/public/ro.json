@@ -859,11 +859,17 @@
     "filters": {
       "button": "Filtre",
       "buttonCount": "Filtre · {n}",
+      "card": "Plată cu cardul",
       "clear": "Scoate filtrele",
       "filtering": "Se filtrează…",
       "none": "Niciun service nu are tot ce ai ales",
       "openNow": "Deschis acum",
       "openSaturday": "Deschis sâmbăta",
+      "priceChip": "Până la {n} lei/oră",
+      "priceTitle": "Manoperă până la … lei/oră",
+      "ratingChip": "Notă {r}+",
+      "ratingChoice": "{r}+",
+      "ratingTitle": "Notă minimă",
       "remove": "Scoate filtrul {name}",
       "summary": "{n} cu filtrele alese",
       "title": "Filtre"

@@ -111,6 +111,8 @@ async function render(
       {
         provide: GaragesService,
         useValue: {
+          // The lift schedule stays loading: its own spec reads it.
+          garageSchedule: jest.fn(() => new Promise(() => undefined)),
           garageWeeklyFigures: weeklyRead,
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
@@ -174,7 +176,6 @@ describe('the sections of Panou, in their default order', () => {
   it.each([
     ['kpi', 'Cifrele zilei', /^Aici apar cifrele zilei/],
     ['load', 'Încărcarea mecanicilor azi', /^Aici apare încărcarea/],
-    ['sched', 'Programul de azi, pe elevatoare', /^Aici apare programul/],
     ['brands', 'Mărci cerute luna asta', /^Aici apar mărcile/],
   ])(
     'gives %s its title and one sentence, and no data',
@@ -192,6 +193,18 @@ describe('the sections of Panou, in their default order', () => {
       expect(text(shown)).not.toMatch(/\d/);
     },
   );
+
+  // @traces 151-FR-001
+  it('draws the lift schedule in the sched place', async () => {
+    const { element } = await render('garage');
+    const shown = section(element, 'sched') as Element;
+
+    expect(shown.tagName).toBe('MF-LIFT-SCHEDULE');
+    expect(text(shown.querySelector('h2'))).toBe(
+      'Programul de azi, pe elevatoare',
+    );
+    expect(text(shown)).not.toMatch(/^Aici apare programul/);
+  });
 
   it('no longer shows the coming-soon line', async () => {
     const { element } = await render('garage', {

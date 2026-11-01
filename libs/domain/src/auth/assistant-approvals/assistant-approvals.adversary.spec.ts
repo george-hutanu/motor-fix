@@ -32,7 +32,7 @@ function fakeTx(
   }[] = [],
 ) {
   return {
-    assistantApproval: { updateManyAndReturn: jest.fn(async () => rows) },
+    assistantApproval: { updateManyAndReturn: vi.fn(async () => rows) },
   };
 }
 
@@ -98,7 +98,7 @@ describe('judging an approval at the edge of its life', () => {
 
   it('expires nothing for an empty list of grants', async () => {
     const tx = fakeTx();
-    const events = { record: jest.fn() };
+    const events = { record: vi.fn() };
 
     const count = await expireAssistantApprovals(
       tx as never,
@@ -117,7 +117,7 @@ describe('judging an approval at the edge of its life', () => {
     const tx = fakeTx();
 
     await expireAssistantApprovals(tx as never, { accountId: 'a-1' }, {
-      record: jest.fn(),
+      record: vi.fn(),
     } as never);
 
     expect(tx.assistantApproval.updateManyAndReturn).toHaveBeenCalledWith(
@@ -138,7 +138,7 @@ describe('judging an approval at the edge of its life', () => {
         tool: 't',
       },
     ];
-    const events = { record: jest.fn() };
+    const events = { record: vi.fn() };
 
     const count = await expireAssistantApprovals(
       fakeTx(rows) as never,

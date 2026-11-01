@@ -1177,6 +1177,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-members-remove",
+      "source": "libs/domain/src/garages/members/members.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/members/:accountId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each removal is audited (delete on member) and recorded as member.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the account and garage ids while the removal stays; a 409 owner_row is the rule working",
+      "story": "ST-400"
+    },
+    {
+      "kind": "endpoint",
       "name": "garage-mechanic-hours-read",
       "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/hours",
@@ -1883,6 +1896,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "save-suggestions",
+      "source": "libs/domain/src/cars/save-suggestions/save-suggestions.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/save-suggestions/:garageId/dismiss",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "POST dismiss shows on the request-duration metric by route and status code; a dismissal is a display preference with no audit row and no event, so no product counter is added; its spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-293"
+    },
+    {
+      "kind": "endpoint",
       "name": "cars",
       "source": "libs/domain/src/cars/my-cars/cars/cars.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/cars and /api/v1/cars/:id",
@@ -2286,7 +2312,7 @@
         "api-latency",
         "api-search-latency"
       ],
-      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, new searches still count in motorfix_searches_total, and `sort` changes in motorfix_sort_changes_total; the open_now and open_saturday filters narrow the same query and cache slot and add no signal",
+      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, new searches still count in motorfix_searches_total, and `sort` changes in motorfix_sort_changes_total; the open_now, open_saturday, max_price, min_rating and card filters narrow the same query and cache slot and add no signal",
       "story": "ST-267"
     },
     {
@@ -2326,7 +2352,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; the open_now and open_saturday filters only set each pin's matches flag and the total; no outside call (the browser fetches the tiles from the place-step map's provider)",
+      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; the open_now, open_saturday, max_price, min_rating and card filters only set each pin's matches flag and the total; no outside call (the browser fetches the tiles from the place-step map's provider)",
       "story": "ST-269"
     },
     {

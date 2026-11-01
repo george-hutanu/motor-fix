@@ -66,6 +66,30 @@ model Notification {
   @@map("notification")
 }
 
+enum NotificationFallbackReason {
+  no_device
+  phone_not_verified
+  sms_cap_reached
+  send_failed
+
+  @@map("notification_fallback_reason")
+}
+
+// The last message of one type a person got on another channel than the one
+// it was meant for, and why; the next one replaces it.
+model NotificationFallback {
+  accountId String                     @map("account_id") @db.Uuid
+  type      String
+  from      NotificationChannel
+  to        NotificationChannel
+  reason    NotificationFallbackReason
+  at        DateTime                   @db.Timestamptz(3)
+  account   Account                    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, type])
+  @@map("notification_fallback")
+}
+
 // A person's choice for one type: a driver type has one row (its chosen
 // channel), any other type one row per channel, with the garage for staff.
 // No unique index: a driver row is unique per type whatever its channel, a

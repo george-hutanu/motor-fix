@@ -22,7 +22,7 @@ const NONE = {
 };
 const TEST_ONLY = ['skip_manual_approval', 'skip_rar_check'];
 
-const flag = { on: jest.fn(), set: jest.fn() } satisfies Maintenance;
+const flag = { on: vi.fn(), set: vi.fn() } satisfies Maintenance;
 
 const rules = (production: boolean, audit: AuditPort = new AuditService()) =>
   new PlatformRulesService(prisma, audit, outbox, { production }, flag);
@@ -54,7 +54,7 @@ const events = () =>
   prisma.outboxEvent.findMany({ where: { kind: 'platform_rule.changed' } });
 
 beforeEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   flag.set.mockReset().mockResolvedValue(undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
@@ -374,7 +374,9 @@ describe('switching maintenance', () => {
   });
 
   it('logs who switched it on and off', async () => {
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     await rules(false).change(ioana, 'maintenance_mode', {
       seen: false,
@@ -395,7 +397,9 @@ describe('switching maintenance', () => {
   });
 
   it('keeps the change when the fast store write fails, and logs the failure', async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     flag.set.mockRejectedValue(new Error('Command timed out'));
 
     const saved = await rules(false).change(ioana, 'maintenance_mode', {

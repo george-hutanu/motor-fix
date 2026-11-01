@@ -3,7 +3,7 @@ set -e
 # Fast checks only, no heavy slot: the affected typecheck, unit tests and full
 # lint run once per slice and at ready (node .claude/scripts/lifecycle.mjs
 # check), CI runs them on every push, and the Stop gate runs jest --onlyChanged
-# each turn. The commit message is checked by the pre:bash:commit gate.
+# and each changed Vitest project's vitest run --changed each turn. The commit message is checked by the pre:bash:commit gate.
 sh .husky/identity.sh check
 if ! git rev-parse --verify --quiet origin/main >/dev/null; then
   echo "pre-commit: origin/main is missing, so the folder rules cannot be compared. Run: git fetch origin main" >&2

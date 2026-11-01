@@ -97,7 +97,7 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const read = (query: Record<string, string>, bearer?: string) => {
   const req = request(app.getHttpServer()).get('/car-models-3d').query(query);
@@ -423,7 +423,7 @@ describe('GET /car-models-3d/files/:key', () => {
 
 describe('filling the store at start', () => {
   it('writes every catalogue file once, then nothing', async () => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     const fill = () => app.get(Models3dStore).fill();
 
     expect(await fill()).toEqual({ written: MODEL_3D_FILES.length });

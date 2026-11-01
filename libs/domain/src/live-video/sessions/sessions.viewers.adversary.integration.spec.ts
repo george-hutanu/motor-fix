@@ -258,7 +258,7 @@ describe('refusals write nothing', () => {
 
   it('leaves the driver’s first view null when signing fails', async () => {
     const s = await live();
-    const spy = jest
+    const spy = vi
       .spyOn(provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER), 'viewUrl')
       .mockImplementation(() => {
         throw new Error('live video is not configured');
@@ -277,7 +277,7 @@ describe('refusals write nothing', () => {
   it('keeps an earlier viewer and the peak when a later signing fails', async () => {
     const s = await live();
     await send('post', s.path, s.owner);
-    const spy = jest
+    const spy = vi
       .spyOn(provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER), 'viewUrl')
       .mockImplementation(() => {
         throw new Error('live video is not configured');
