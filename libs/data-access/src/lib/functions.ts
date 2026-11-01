@@ -237,6 +237,8 @@ export type { VerificationFileControllerReopen$Params as VerificationFileControl
 export { verificationFileControllerReopen as verificationFileControllerReopen } from './fn/admin/verification-file-controller-reopen';
 export type { VerificationFileControllerCorrect$Params as VerificationFileControllerCorrect$Params } from './fn/admin/verification-file-controller-correct';
 export { verificationFileControllerCorrect as verificationFileControllerCorrect } from './fn/admin/verification-file-controller-correct';
+export type { StatusControllerRead$Params as StatusControllerRead$Params } from './fn/admin/status-controller-read';
+export { statusControllerRead as statusControllerRead } from './fn/admin/status-controller-read';
 export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
 export { systemLogControllerList as systemLogControllerList } from './fn/admin/system-log-controller-list';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';

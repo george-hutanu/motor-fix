@@ -47,6 +47,7 @@ import {
   ReviewsModule,
   SavedGaragesModule,
   SearchModule,
+  StatusModule,
   StorageModule,
   SupportModule,
   SystemLogModule,
@@ -152,6 +153,7 @@ export class AppModule {
         OwnerDocumentsModule.register(garages, notifications, email.webUrl),
         ListingSubmitModule.register(garages, photos, notifications),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
+        StatusModule.register(),
         SystemLogModule.register({
           databaseUrl: env.DATABASE_URL,
           redisUrl: env.REDIS_URL,
