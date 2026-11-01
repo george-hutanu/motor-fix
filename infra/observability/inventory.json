@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 262,
+    "count": 264,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1692,6 +1692,28 @@
       "story": "ST-276, ST-406"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-job-lock",
+      "source": "libs/domain/src/workshop/job-lock/job-lock.controller.ts",
+      "metric": "http.server.request.duration by http.route POST and DELETE /api/v1/garage/jobs/:id/lock",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a take sets the Redis key job:lock:{id} (five minutes) and writes its copy on the job row; a release or the owner's force deletes the key and clears the copy, the force writing one job.lock_forced audit entry in the same transaction; each outcome is counted in motorfix_job_lock_outcomes_total{action}; Redis unreachable answers 503 try_again, counted as unavailable, with one JobLock warning line; a 423 job_locked is the rule working",
+      "story": "ST-395"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_job_lock_outcomes_total",
+      "source": "libs/domain/src/workshop/job-lock/job-lock.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts what became of a job's edit lock by action (take, refresh, release, force, locked, stale, expired, unavailable), on the Job locks row; a lock store that stops answering shows as unavailable here and in the redis alerts, and a sweep that throws is a failed job-locks job, which worker-jobs-failed sees",
+      "story": "ST-395"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_job_steps_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
@@ -3066,6 +3088,19 @@
       ],
       "reason": "one scheduler, live-idle-check, every minute reads each live session's publisher state from the provider and stops, as the system with stop_reason idle, a session with no publisher for ten minutes straight, through the one stop routine (keep or discard as the sender last chose); counted in motorfix_live_idle_stops_total, the check timed in motorfix_live_idle_check_seconds, one LiveIdle line per stop and one warning per session the provider could not tell, ids only; a check that throws is a failed job, which worker-jobs-failed sees",
       "story": "ST-1251"
+    },
+    {
+      "kind": "queue",
+      "name": "job-locks",
+      "source": "libs/domain/src/workshop/job-lock-sweep/job-lock-sweep.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one scheduler, job-lock-sweep, every minute clears the job row's copy of a lock whose Redis key ran out (publishing job.lock_changed, counted as motorfix_job_lock_outcomes_total{action=\"expired\"}, no audit entry) and writes back a held key the row lost; a sweep that throws is a failed job, which worker-jobs-failed sees",
+      "story": "ST-395"
     },
     {
       "kind": "queue",
