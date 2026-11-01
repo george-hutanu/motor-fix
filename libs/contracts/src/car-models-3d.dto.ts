@@ -3,7 +3,7 @@ import { IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 
 import { FUELS, type Fuel } from './marked-brands';
 
-export const BODY_STYLES = [
+const BODY_STYLES = [
   'saloon',
   'hatchback',
   'suv',
@@ -13,8 +13,8 @@ export const BODY_STYLES = [
 ] as const;
 export type BodyStyle = (typeof BODY_STYLES)[number];
 
-export const CAR_MODEL_3D_SOURCES = ['own_car', 'brand', 'generic'] as const;
-export type CarModel3dSource = (typeof CAR_MODEL_3D_SOURCES)[number];
+const CAR_MODEL_3D_SOURCES = ['own_car', 'brand', 'generic'] as const;
+type CarModel3dSource = (typeof CAR_MODEL_3D_SOURCES)[number];
 
 export class CarModels3dQueryDto {
   @ApiProperty({
@@ -36,7 +36,7 @@ export class CarModels3dQueryDto {
   car?: string;
 }
 
-export class CarModel3dBrandDto {
+class CarModel3dBrandDto {
   @ApiProperty({ example: 'dacia' })
   key!: string;
 

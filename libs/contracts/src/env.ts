@@ -326,8 +326,9 @@ function baseUrl(
   const value = source[name];
   if (!value) return fallback;
   const absolute = /^https?:\/\/[^/]/i.test(value) && URL.canParse(value);
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: refuses them
-  const unsafe = /[\s\\\x00-\x1f\x7f]/.test(value);
+  const unsafe =
+    /[\s\\]/.test(value) ||
+    [...value].some((c) => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f);
   if (unsafe || (!absolute && !/^\/(?!\/)/.test(value))) {
     throw new Error(`${name} must be an http(s) URL or a path starting with /`);
   }
