@@ -6,6 +6,7 @@ import {
   fieldProblems,
   type Problem,
   type ProblemBrand,
+  type ProblemLockHolder,
 } from '@motor-fix/contracts';
 import { countRateLimitRefusal, systemLog } from '@motor-fix/domain';
 import {
@@ -35,6 +36,9 @@ export function sendProblem(
     | 'rule'
     | 'warnings'
     | 'brand'
+    | 'holder'
+    | 'job'
+    | 'updatedAt'
   > & {
     field?: string;
     inviteId?: string;
@@ -108,11 +112,15 @@ export class ProblemFilter implements ExceptionFilter {
       // limit lifts, what a refused move was about, and
       // the garage a refused quote request names, the one field a refused
       // re-check marks, and the notes a refused listing check keeps beside
-      // its errors, and the current brand a stale save is refused with.
+      // its errors, the current brand a stale save is refused with, the
+      // holder a locked job is refused with, and the current job and its
+      // version a stale change is refused with.
       // Nothing else an exception holds leaves.
       {
         ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
         ...brand(own.brand),
+        ...holder(own.holder),
+        ...currentJob(own.job),
         ...warnings(own.warnings),
         ...attemptsLeft(own.attemptsLeft),
         ...finalPrice(own.finalPriceBani),
@@ -197,6 +205,36 @@ function brand(value: unknown): Pick<Problem, 'brand'> {
   };
 }
 
+const LOCK_HOLDER_ROLES: readonly string[] = [
+  'owner',
+  'receptionist',
+  'mechanic',
+] satisfies ProblemLockHolder['role'][];
+
+// Who holds a locked job: their first name, role and since when, and none of
+// it unless every one has its type.
+function holder(value: unknown): Pick<Problem, 'holder'> {
+  if (typeof value !== 'object' || value === null) return {};
+  const h = value as Record<keyof ProblemLockHolder, unknown>;
+  if (
+    typeof h.firstName !== 'string' ||
+    typeof h.role !== 'string' ||
+    !LOCK_HOLDER_ROLES.includes(h.role) ||
+    typeof h.since !== 'string'
+  )
+    return {};
+  const { firstName, role, since } = h as ProblemLockHolder;
+  return { holder: { firstName, role, since } };
+}
+
+// The job as it is now, read by the use case for a stale change: the same
+// object its own read answers with.
+function currentJob(value: unknown): Pick<Problem, 'job'> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? { job: value as Record<string, unknown> }
+    : {};
+}
+
 function detail(message: unknown): string | undefined {
   if (typeof message === 'string') return message;
   return Array.isArray(message) ? message.join('; ') : undefined;
@@ -206,7 +244,8 @@ function detail(message: unknown): string | undefined {
 // decided a verification file first), of a garage that cannot receive a
 // request (`garage_cannot_receive`), and the approved job a name clashes with
 // (`exists`), and the texts in force a pending account must accept
-// (`consent_required`).
+// (`consent_required`), and the current version of a job a stale change is
+// refused with (`job_changed`).
 const STRING_MEMBERS = [
   'entity',
   'field',
@@ -222,6 +261,7 @@ const STRING_MEMBERS = [
   'nameRo',
   'termsVersion',
   'privacyVersion',
+  'updatedAt',
 ] as const;
 
 function stringMembers(

@@ -11,6 +11,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { firstName } from '../../audit/audit.service';
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -56,6 +57,8 @@ const SUMMARY = {
   },
   car: { select: { odometerKm: true, plate: true } },
   driver: { select: { name: true } },
+  lockForcedBy: { select: { name: true } },
+  lockHolder: { select: { name: true } },
   mechanic: { select: { name: true } },
   steps: { select: { doneAt: true } },
 };
@@ -73,6 +76,8 @@ type SummaryRow = Job & {
   };
   car: Pick<Car, 'odometerKm' | 'plate'>;
   driver: Pick<Account, 'name'>;
+  lockForcedBy: Pick<Account, 'name'> | null;
+  lockHolder: Pick<Account, 'name'> | null;
   mechanic: Pick<Mechanic, 'name'> | null;
   steps: Pick<JobStep, 'doneAt'>[];
 };
@@ -95,6 +100,18 @@ function summaryOf(actor: Actor, row: SummaryRow): JobSummaryDto {
     handedOverAt: iso(row.handedOverAt),
     id: row.id,
     jobs: jobsOf(row.booking.request.jobs),
+    lastForcedUnlock:
+      row.lockForcedAt && row.lockForcedHolderId
+        ? {
+            at: row.lockForcedAt.toISOString(),
+            by: {
+              firstName: firstName(row.lockForcedBy?.name ?? ''),
+              role: 'owner',
+            },
+            holderId: row.lockForcedHolderId,
+          }
+        : null,
+    lock: lockOf(row),
     ...noShowFlags(
       {
         ...booking,
@@ -115,7 +132,28 @@ function summaryOf(actor: Actor, row: SummaryRow): JobSummaryDto {
     status: row.status,
     stepsDone: row.steps.filter((step) => step.doneAt).length,
     stepsTotal: row.steps.length,
+    updatedAt: row.updatedAt.toISOString(),
     workedSeconds: row.workedSeconds,
+  };
+}
+
+// The job's copy of who holds it; Redis decides, the sweep keeps this in step.
+function lockOf(row: SummaryRow): JobSummaryDto['lock'] {
+  if (
+    !row.lockHolderId ||
+    !row.lockHolderRole ||
+    !row.lockSince ||
+    !row.lockLastChangeAt
+  )
+    return null;
+  return {
+    holder: {
+      accountId: row.lockHolderId,
+      firstName: firstName(row.lockHolder?.name ?? ''),
+      role: row.lockHolderRole,
+    },
+    lastChangeAt: row.lockLastChangeAt.toISOString(),
+    since: row.lockSince.toISOString(),
   };
 }
 
