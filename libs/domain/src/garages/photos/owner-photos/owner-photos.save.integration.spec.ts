@@ -30,7 +30,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());
@@ -367,7 +367,7 @@ describe('saving the gallery', () => {
     store.beforeDelete = () => {
       throw new Error('storage down');
     };
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 

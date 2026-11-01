@@ -38,32 +38,32 @@ function harness({
   stored = {} as Record<string, Stored>,
 } = {}) {
   const tx = {
-    $queryRaw: jest.fn(async () => [{ profile_version: version, status }]),
-    garage: { updateMany: jest.fn(async () => ({ count: updated })) },
+    $queryRaw: vi.fn(async () => [{ profile_version: version, status }]),
+    garage: { updateMany: vi.fn(async () => ({ count: updated })) },
     garagePhoto: {
-      createManyAndReturn: jest.fn(
+      createManyAndReturn: vi.fn(
         async ({ data }: { data: { fileKey: string }[] }) =>
           data.map((row, n) => ({ ...row, id: uuid(100 + n) })),
       ),
-      deleteMany: jest.fn(async () => ({ count: 0 })),
-      findMany: jest.fn(async () => rows),
-      update: jest.fn(async () => ({})),
-      updateMany: jest.fn(async () => ({ count: rows.length })),
+      deleteMany: vi.fn(async () => ({ count: 0 })),
+      findMany: vi.fn(async () => rows),
+      update: vi.fn(async () => ({})),
+      updateMany: vi.fn(async () => ({ count: rows.length })),
     },
   };
   const prisma = {
-    $transaction: jest.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+    $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
   };
-  const audit = { recordMany: jest.fn(async () => undefined) };
-  const events = { record: jest.fn(async () => undefined) };
+  const audit = { recordMany: vi.fn(async () => undefined) };
+  const events = { record: vi.fn(async () => undefined) };
   const storage = {
-    deleteWithCopies: jest.fn(async () => undefined),
-    metadataOf: jest.fn(async (key: string) =>
+    deleteWithCopies: vi.fn(async () => undefined),
+    metadataOf: vi.fn(async (key: string) =>
       stored[key] === null ? null : {},
     ),
   };
   const photos = {
-    describe: jest.fn(async (keys: string[]) =>
+    describe: vi.fn(async (keys: string[]) =>
       keys.map((key) =>
         stored[key]?.processed === false
           ? { key }
@@ -78,7 +78,7 @@ function harness({
     ),
   };
   const answer = { photos: [], version: String(version + 1) };
-  const gallery = { answer: jest.fn(async () => answer) };
+  const gallery = { answer: vi.fn(async () => answer) };
   const save = new OwnerPhotosSave(
     prisma as never,
     audit as never,
@@ -530,7 +530,7 @@ describe('the gallery save', () => {
   it('logs a removed file storage cannot delete, with the garage id, and still answers', async () => {
     const h = harness();
     h.storage.deleteWithCopies.mockRejectedValue(new Error('storage down'));
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 

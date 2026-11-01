@@ -53,7 +53,7 @@ export function ownerPhotosWorld(prisma: PrismaClient) {
   const queue = new Queue(LISTING_PHOTOS_QUEUE, {
     connection: { url: redisUrlFor(14) },
   });
-  const limits = { take: jest.fn(async () => undefined) };
+  const limits = { take: vi.fn(async () => undefined) };
   const audit = new AuditService();
   const parts = {} as {
     storage: StorageService;

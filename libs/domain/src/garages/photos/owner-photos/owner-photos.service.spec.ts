@@ -21,11 +21,11 @@ const actor = (role: Actor['role'] = 'garage', garageId = GARAGE) =>
 function harness({ rows = 3, status = 'approved', inGallery = false } = {}) {
   const prisma = {
     garage: {
-      findUnique: jest.fn(async () => ({ profileVersion: 7, status })),
+      findUnique: vi.fn(async () => ({ profileVersion: 7, status })),
     },
     garagePhoto: {
-      count: jest.fn(async () => rows),
-      findMany: jest.fn(async () => [
+      count: vi.fn(async () => rows),
+      findMany: vi.fn(async () => [
         {
           caption: 'Hala',
           fileKey: FINAL,
@@ -35,24 +35,22 @@ function harness({ rows = 3, status = 'approved', inGallery = false } = {}) {
           width: 800,
         },
       ]),
-      findUnique: jest.fn(async () => (inGallery ? { id: ID } : null)),
+      findUnique: vi.fn(async () => (inGallery ? { id: ID } : null)),
     },
   };
   const storage = {
-    confirmUpload: jest.fn(async () => FINAL),
-    createDownloadUrl: jest.fn(async () => 'https://signed/thumb'),
-    createUpload: jest.fn(async () => ({ key: INCOMING, url: 'https://up' })),
-    deleteWithCopies: jest.fn(async () => undefined),
-    derivedKey: jest.fn((key: string, copy: string) => `${copy}/${key}`),
-    metadataOf: jest.fn(
-      async (): Promise<Record<string, string> | null> => null,
-    ),
+    confirmUpload: vi.fn(async () => FINAL),
+    createDownloadUrl: vi.fn(async () => 'https://signed/thumb'),
+    createUpload: vi.fn(async () => ({ key: INCOMING, url: 'https://up' })),
+    deleteWithCopies: vi.fn(async () => undefined),
+    derivedKey: vi.fn((key: string, copy: string) => `${copy}/${key}`),
+    metadataOf: vi.fn(async (): Promise<Record<string, string> | null> => null),
   };
   const photos = {
-    describe: jest.fn(async (keys: string[]) => keys.map((key) => ({ key }))),
-    queue: jest.fn(async () => undefined),
+    describe: vi.fn(async (keys: string[]) => keys.map((key) => ({ key }))),
+    queue: vi.fn(async () => undefined),
   };
-  const limits = { take: jest.fn(async () => undefined) };
+  const limits = { take: vi.fn(async () => undefined) };
   const service = new OwnerPhotosService(
     prisma as never,
     storage as never,

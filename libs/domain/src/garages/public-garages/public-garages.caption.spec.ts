@@ -16,21 +16,21 @@ const photo = (id: string, caption?: string | null) => ({
 function build() {
   const statements: string[] = [];
   const prisma = {
-    $queryRaw: jest.fn((strings: TemplateStringsArray) => {
+    $queryRaw: vi.fn((strings: TemplateStringsArray) => {
       statements.push(strings.join('?'));
       return Promise.resolve([]);
     }),
   } as unknown as PrismaClient;
   const cache = {
-    read: jest.fn(async (spec: { read: () => Promise<{ value: unknown }> }) => {
+    read: vi.fn(async (spec: { read: () => Promise<{ value: unknown }> }) => {
       const filled = await spec.read();
       return filled.value;
     }),
   } as unknown as CacheService;
   const storage = {
-    createDownloadUrl: jest.fn().mockResolvedValue('https://signed'),
+    createDownloadUrl: vi.fn().mockResolvedValue('https://signed'),
     derivedKey: (key: string, kind: string) => `${key}.${kind}`,
-    metadataOf: jest.fn().mockResolvedValue(null),
+    metadataOf: vi.fn().mockResolvedValue(null),
   } as unknown as StorageService;
   return {
     service: new PublicGaragesService(prisma, cache, storage),
