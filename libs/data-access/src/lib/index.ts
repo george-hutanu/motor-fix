@@ -871,6 +871,8 @@ export type { MechanicScheduleControllerRemoveDayOff$Params as MechanicScheduleC
 export { mechanicScheduleControllerRemoveDayOff as mechanicScheduleControllerRemoveDayOff } from './fn/garages/mechanic-schedule-controller-remove-day-off';
 export type { GarageMembersControllerList$Params as GarageMembersControllerList$Params } from './fn/garages/garage-members-controller-list';
 export { garageMembersControllerList as garageMembersControllerList } from './fn/garages/garage-members-controller-list';
+export type { GarageMembersControllerRemove$Params as GarageMembersControllerRemove$Params } from './fn/garages/garage-members-controller-remove';
+export { garageMembersControllerRemove as garageMembersControllerRemove } from './fn/garages/garage-members-controller-remove';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
