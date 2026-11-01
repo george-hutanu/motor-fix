@@ -6,6 +6,7 @@ import { ActiveRequestCarDto } from '../models/active-request-car-dto';
 import { ActiveRequestJobDto } from '../models/active-request-job-dto';
 import { ActiveRequestRangeDto } from '../models/active-request-range-dto';
 import { RequestJobDto } from '../models/request-job-dto';
+import { SaveSuggestionDto } from '../models/save-suggestion-dto';
 export interface ActiveRequestDto {
   booking: (ActiveRequestBookingDto & {
 }) | null;
@@ -17,6 +18,8 @@ export interface ActiveRequestDto {
   jobs: Array<RequestJobDto>;
   mechanicName: string | null;
   range: (ActiveRequestRangeDto & {
+}) | null;
+  saveSuggestion: (SaveSuggestionDto & {
 }) | null;
   stage: 'sent' | 'quoted' | 'booked' | 'in_work' | 'done';
 }
