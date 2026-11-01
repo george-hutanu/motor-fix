@@ -1,4 +1,5 @@
 import { noShowWorld } from './no-show.testing';
+import { localDay } from '../../bucharest';
 import { quotesApp } from '../quotes-api.testing';
 
 const app = quotesApp();
@@ -21,8 +22,17 @@ async function rowBooking(auth: string, requestId: string) {
     ?.booking;
 }
 
+// The list starts at a Bucharest day, today by default: a booking due 30
+// minutes ago started yesterday when the test runs just after midnight, so
+// the list is asked from that day.
 async function jobSummary(auth: string, bookingId: string) {
-  const res = await get('/garage/jobs', auth);
+  const booking = await prisma.booking.findUniqueOrThrow({
+    where: { id: bookingId },
+  });
+  const res = await get(
+    `/garage/jobs?from=${localDay(booking.startsAt)}`,
+    auth,
+  );
   expect(res.status).toBe(200);
   return res.body.items.find(
     (item: { bookingId: string }) => item.bookingId === bookingId,

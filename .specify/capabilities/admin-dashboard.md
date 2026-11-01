@@ -35,6 +35,7 @@ features:
   - 1391-admin-dashboard-customise
   - 165-admin-roles
   - 106-demand-supply
+  - 1416-demand-supply-web
   - 295-service-health-tiles
 ---
 
@@ -1069,6 +1070,54 @@ _From 106-demand-supply._
 ### 106-FR-014 — Jest on real PostgreSQL and Redis MUST cover: area placement of a workshop, a mobile mechanic by its seat, a search cell's centre, a point outside every area and a garage without a position (`unknown`); a `does_not_take`, an unmarked, a suspended and a non-approved garage left out of supply; a request to garages in two areas counted once in each; an unmet request against an expired one with a quote and a cancelled one; requests per garage rounding and null; the brand and area filters and the order of FR-007; 404 for a non-admin and 401 without a token; the nightly `brand_area` rows written once with their marker, and back-filled for a day that has only its `total` row; an unmet-only row; a window day unwritten counted live; and the AREA load run twice. A `// @traces` line names the FR ids in each test file.
 
 _From 106-demand-supply._
+
+### 1416-FR-001 — The admin dashboard's view "Mărci și lucrări" / "Brands and jobs" (1368-FR-001) MUST show, directly under its two demand reports and above the brand list, a table headed "Cerere și ofertă" / "Demand and supply" with the subtitle "Unde caută șoferii o marcă și câte service-uri o primesc, ultimele 30 de zile" / "Where drivers look for a brand and how many garages take it, last 30 days"; the table is not part of Panou's demand overview panel and appears in no other view.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-002 — The table MUST read `GET /api/v1/admin/demand/supply` (106-FR-006) once when the view first shows it, once more on each filter change and on each "Reîncearcă", with no polling, no event and no cache, and show only the answer to the latest read; the table reads in the same way as the view's two existing reports, leaving the view drops an answer still in flight, and each visit starts with "Toate" in both filters and one read; a view that does not show the table (Panou, every other view) MUST make no supply request and hold none of the table's code in the first-page bundle: the table ships in the chunk "Mărci și lucrări" already loads lazily, and the initial bundle does not grow.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-003 — Each row MUST name its brand and area as "{brand} · {area name}", the pseudo-area `unknown` translated as "Zonă necunoscută" / "Unknown area" and every other area by the name the answer carries; its figures as "{searches} căutări · {requests} cereri · {supply} service-uri · {requestsPerGarage} cereri pe service" / "{searches} searches · {requests} requests · {supply} garages · {requestsPerGarage} requests per garage", numbers in the interface language's format, the singular for 1 ("1 căutare", "1 cerere", "1 service", "1 cerere pe service" / "1 search", "1 request", "1 garage", "1 request per garage"); and its unmet requests as "{unmet} fără ofertă" / "{unmet} without a quote" ("1 fără ofertă" / "1 without a quote"), shown for every row including 0.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-004 — Where `requestsPerGarage` is null the row MUST show "—" in its place (the figures read "0 service-uri · —" / "0 garages · —"), with the accessible name "fără service-uri" / "no garages".
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-005 — A row with `searches` above 0 and `supply` 0 MUST carry a red lamp with the visible text "lipsesc service-uri" / "no garages take it", in the lamp component the dashboard's tables use; every other row carries none. The lamp is never colour alone.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-006 — The rows MUST be shown in the order the answer gives them, never re-sorted on the client (106-FR-007: without a quote first, then searches, then requests, most first).
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-007 — The table MUST offer two filters, "Marcă" / "Brand" and "Zonă" / "Area", each defaulting to "Toate" / "All"; a chosen brand is sent as `brand` (the exact brand name) and a chosen area as its code in `area`; "Toate" sends nothing for that filter. The area options are "Toate" then the answer's `areas` in its order (code `unknown` translated as in FR-003); the brand options are "Toate" then the distinct brands of the rows of the latest answer read with no brand filter, in the order they first appear, so choosing a brand does not shrink the list; a chosen brand absent from that list stays the select's value, appended last, until "Toate" is picked. The options are the answer's: no catalogue read, no typed text.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-008 — The table MUST state the last nightly run from `writtenAt`: "actualizat azi la {HH:mm}" / "updated today at {HH:mm}" when it falls on today's Europe/Bucharest day, else "actualizat {day} la {HH:mm}" / "updated {day} at {HH:mm}" with the day as day and short month without a year in Europe/Bucharest ("actualizat 30 oct. la 01:00" / "updated 30 Oct at 01:00"); the line is omitted while `writtenAt` is null.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-009 — The table MUST have three states besides the rows: skeleton rows while a read is in flight (marked busy for assistive technology, with the loading label); with an answer of no rows the text "Încă nu sunt date pentru ultimele 30 de zile." / "No data for the last 30 days yet." when no filter is chosen and "Nimic pentru filtrul ales." / "Nothing for the chosen filter." when one is; on a failed read the report error text the view's reports use and a "Reîncearcă" / "Retry" button (the label of the reports' own retry, `shell.chart.retry`) that reads again with the current filters. The filters keep their values across states, and the table's state is independent of the two reports above.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-010 — Every text MUST exist in Romanian and English in the admin namespace of the translations, and the view MUST be readable at 320 px and 390 px, on a tablet and a desktop, light and dark, with no sideways scroll: the two filters stack on a phone, a row wraps its parts onto lines, the table's columns have accessible headers, the filters accessible labels, and the lamp's text is read with its row. The two filters stay in the page, enabled and focused, while a read is in flight (the rows are replaced by skeletons, the selects are not), so keyboard focus is never lost on a filter change or retry; the states are announced by their own roles (skeleton `aria-busy` with its label, the empty text `role="status"`, the failed state `role="alert"`); a brand or area name too long for 320 px wraps inside its line.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-011 — The table MUST follow the row style the design check records for the performance table of the mock; where the mock shows none, the row style of the brand list in the same view (skeleton rows, header, count cells, lamp); the table is a component in its own folder (Constitution IV), with no inline template or styles.
+
+_From 1416-demand-supply-web._
+
+### 1416-FR-012 — Jest MUST cover, in the component's colocated spec: the BMW and Tesla row texts in Romanian and English, the singular forms, "—" and its accessible name, the lamp shown and not shown (searches 0 and supply 0: none), "Zonă necunoscută", the brand and area option lists and the query each choice sends (`brand`, `area`, both, neither), the latest-answer rule, the "actualizat" line (today, another day, null), the skeleton, both empty texts and the failed state with retry, and that Panou's overview makes no supply read. A Playwright flow MUST open "Mărci și lucrări" as an admin with the supply read stubbed to the brief's two rows, as the demand suite stubs its read, and check the two rows, the lamp, the dash, a brand filter and the "actualizat" line; the deviation from the brief's seeded flow is recorded in the PR (searches need area cells the nightly job places; the stub keeps the test free of the server's clock). A whole-line `// @traces` comment names the FR ids in each test file.
+
+_From 1416-demand-supply-web._
 
 ### 295-FR-001 — An admin MUST be able to read `GET /api/v1/admin/status`, with no parameters. The route MUST follow the `admin/*` access policy as `GET /api/v1/admin/system-log` does (capability `admin.settings`): an admin reads it, any other role (driver, garage owner, receptionist, mechanic) answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`. The route joins the admin-route guard test's list of known routes (`apps/api/src/admin-routes.integration.spec.ts`).
 
