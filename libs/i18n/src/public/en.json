@@ -1082,7 +1082,7 @@
     "search": "Search"
   },
   "transfer": {
-    "accept": "Take the car over",
+    "accept": "Take the car",
     "accepted": "The car has already been taken over",
     "cancelled": "The link is no longer valid",
     "carLimit": "You can have at most 20 cars.",

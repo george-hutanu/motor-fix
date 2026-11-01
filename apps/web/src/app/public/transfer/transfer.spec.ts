@@ -473,7 +473,7 @@ describe('the buyer’s offer', () => {
 
       expect(heading()).toBe(line);
       expect(buttons().map((b) => b.textContent?.trim())).toEqual([
-        'Take the car over',
+        'Take the car',
       ]);
     },
   );
@@ -595,7 +595,7 @@ describe('taking the car over', () => {
       me: VICTOR,
     });
 
-    press('Take the car over');
+    press('Take the car');
     await settle();
 
     expect(said()).toContain(text);
