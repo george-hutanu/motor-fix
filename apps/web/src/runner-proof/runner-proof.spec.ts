@@ -1,26 +1,37 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+// The ahead-of-time compiler refuses both templates before any test runs, so
+// each is compiled at run time, where the spec setup's own checks are tried.
 // @traces 1332-angular-vitest-FR-006
-@Component({ template: '<unknown-proof-element />' })
+@Component({ template: '' })
 class UnknownElement {}
 
-@Component({ template: '<div [unknownProofProperty]="1"></div>' })
+@Component({ template: '' })
 class UnknownProperty {}
 
 const double = vi.fn();
 
 describe('the component spec setup', () => {
+  // TestBed applies the environment's strict checks when a test module is
+  // configured, as every component spec does.
+  beforeEach(() => TestBed.configureTestingModule({}));
+
   it('refuses a template with an unknown element', () => {
-    expect(() => TestBed.createComponent(UnknownElement)).toThrow(
-      /unknown-proof-element/,
-    );
+    TestBed.overrideTemplate(UnknownElement, '<unknown-proof-element />');
+    expect(() =>
+      TestBed.createComponent(UnknownElement).detectChanges(),
+    ).toThrow(/unknown-proof-element/);
   });
 
   it('refuses a template binding an unknown property', () => {
-    expect(() => TestBed.createComponent(UnknownProperty)).toThrow(
-      /unknownProofProperty/,
+    TestBed.overrideTemplate(
+      UnknownProperty,
+      '<div [unknownProofProperty]="1"></div>',
     );
+    expect(() =>
+      TestBed.createComponent(UnknownProperty).detectChanges(),
+    ).toThrow(/unknownProofProperty/);
   });
 
   it('records a call on a module-level double', () => {
