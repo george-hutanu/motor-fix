@@ -46,6 +46,7 @@ let track: jest.Mock;
 let current: ReturnType<typeof signal<MeDto | null>>;
 let session: {
   current: typeof current;
+  roleHint: ReturnType<typeof signal<MeDto['role'] | null>>;
   load: jest.Mock;
   reload: jest.Mock;
   switchRole: jest.Mock;
@@ -66,6 +67,8 @@ interface Options {
   me?: MeDto | null;
   // The session the browser's cookie holds, loaded only when asked for.
   cookie?: MeDto | null;
+  // The role this browser last saw signed in; the cookie's by default.
+  hint?: MeDto['role'] | null;
   accepted?: () => Promise<CarTransferAcceptedDto>;
   signIn?: () => Promise<boolean>;
 }
@@ -77,6 +80,7 @@ async function open(
     server = true,
     me = null,
     cookie = me,
+    hint = cookie?.role ?? null,
     accepted = async () => ({ carId: 'car-9' }),
     signIn = async () => {
       current.set(VICTOR);
@@ -97,6 +101,7 @@ async function open(
       return current();
     }),
     reload: jest.fn(async () => undefined),
+    roleHint: signal<MeDto['role'] | null>(hint),
     switchRole: jest.fn(async (role: MeDto['role']) => {
       current.set({ ...(current() as MeDto), role });
       return current();
@@ -328,6 +333,17 @@ describe('the waiting line', () => {
     expect(heading()).toBe(
       'VW Golf 2015 · 5 reparații transmise · de la Andrei M.',
     );
+  });
+
+  it('never asks for the session of a browser that saw nobody signed in, so a visitor’s open renews nothing', async () => {
+    await open(async () => ({ status: 'sent' }), {
+      cookie: VICTOR,
+      hint: null,
+    });
+
+    expect(session.load).not.toHaveBeenCalled();
+    expect(read.mock.calls[0][1].get(PUBLIC_READ)).toBe(true);
+    expect(heading()).toBe('O mașină te așteaptă.');
   });
 
   it('tells a seller signed in by cookie that they cannot take over their own car', async () => {

@@ -41,6 +41,7 @@ let load: jest.Mock;
 let current: ReturnType<typeof signal<MeDto | null>>;
 let session: {
   current: typeof current;
+  roleHint: ReturnType<typeof signal<MeDto['role'] | null>>;
   load: jest.Mock;
   reload: jest.Mock;
   switchRole: jest.Mock;
@@ -83,6 +84,8 @@ async function open(
     current,
     load,
     reload: jest.fn(async () => undefined),
+    // A browser that saw nobody signed in: the page asks for no session.
+    roleHint: signal<MeDto['role'] | null>(null),
     switchRole: jest.fn(async (role: MeDto['role']) => {
       current.set({ ...(current() as MeDto), role });
       return current();

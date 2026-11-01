@@ -149,11 +149,14 @@ export class TransferPage {
     return this.route.snapshot.paramMap.get('token') ?? '';
   }
 
-  // The session the read goes with. In the browser it is loaded from the
-  // cookie first, so a person already signed in is read as themselves; the
-  // server render reads as a visitor.
+  // The session the read goes with. A browser that last saw someone signed
+  // in loads it from the cookie first, so that person is read as themselves;
+  // any other open, and the server render, reads as a visitor, since each ask
+  // for the session renews the cookie.
   private held(): Promise<MeDto | null> {
-    if (!this.browser) return Promise.resolve(this.session.current());
+    const known = this.session.current();
+    if (!this.browser || known || !this.session.roleHint())
+      return Promise.resolve(known);
     return this.session.load({ keepLanguage: true }).catch(() => null);
   }
 

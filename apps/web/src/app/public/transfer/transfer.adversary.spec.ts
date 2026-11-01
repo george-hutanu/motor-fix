@@ -20,6 +20,7 @@ const pageStubs = () => [
       current: signal(null),
       load: async () => null,
       reload: async () => undefined,
+      roleHint: signal(null),
       switchRole: async () => null,
     },
   },
