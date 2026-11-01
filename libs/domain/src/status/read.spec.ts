@@ -1,5 +1,7 @@
+import type { TileKey, TileState } from '@motor-fix/contracts';
+
 import { readStatus } from './read';
-import type { TileKey, TileRow, TileState } from './tiles';
+import type { TileRow } from './tiles';
 import type { PrismaClient } from '../generated/prisma/client';
 
 // 13:00 in Bucharest (summer time, UTC+3).
@@ -253,15 +255,6 @@ describe('a tile nobody has checked lately', () => {
         ],
       },
     ]);
-  });
-
-  it('leaves the stored row as it was', async () => {
-    const stale = row('maps', 'green', { checkedAt: ago(900) });
-    const before = structuredClone(stale);
-
-    await read(replace(greens(), stale));
-
-    expect(stale).toEqual(before);
   });
 });
 

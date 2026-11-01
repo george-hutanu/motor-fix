@@ -13,15 +13,18 @@ const SINCE = new Date('2026-10-17T06:00:00Z');
 const seed = (over: Record<string, object> = {}) =>
   prisma.statusTile.createMany({
     data: [
-      { detail: { latency_ms: 82 }, key: 'api' },
-      { detail: { latency_ms: 140 }, key: 'search' },
-      { detail: { latency_ms: 310 }, key: 'maps' },
-      { detail: { failed_share: 0, latency_ms: 200 }, key: 'email' },
+      { detail: { latency_ms: 82 }, key: 'api' as const },
+      { detail: { latency_ms: 140 }, key: 'search' as const },
+      { detail: { latency_ms: 310 }, key: 'maps' as const },
+      { detail: { failed_share: 0, latency_ms: 200 }, key: 'email' as const },
       {
         detail: { failed_share: 0, oldest_waiting_s: 3 },
-        key: 'notifications',
+        key: 'notifications' as const,
       },
-      { detail: { last_backup_at: '2026-10-17T00:00:00.000Z' }, key: 'backup' },
+      {
+        detail: { last_backup_at: '2026-10-17T00:00:00.000Z' },
+        key: 'backup' as const,
+      },
     ].map((tile) => ({
       checkedAt: CHECKED,
       since: SINCE,

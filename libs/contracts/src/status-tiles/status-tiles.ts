@@ -195,20 +195,22 @@ function timedShort(tile: StatusTileView): StatusTexts {
     : word;
 }
 
+function noData(name: StatusTexts, since: Date | null): StatusTexts {
+  if (!since)
+    return {
+      en: `There is no data on ${name.en} yet.`,
+      ro: `Nu avem încă date despre ${name.ro}.`,
+    };
+  const t = timeOf(since);
+  return {
+    en: `No data on ${name.en} since ${t}. The service may be in another state.`,
+    ro: `Nu avem date despre ${name.ro} din ${t}. Starea serviciului poate fi alta.`,
+  };
+}
+
 function sentence(tile: StatusTileView): StatusTexts | null {
   const name = NAMES[tile.key];
-  if (tile.stale) {
-    if (!tile.since)
-      return {
-        en: `There is no data on ${name.en} yet.`,
-        ro: `Nu avem încă date despre ${name.ro}.`,
-      };
-    const t = timeOf(tile.since);
-    return {
-      en: `No data on ${name.en} since ${t}. The service may be in another state.`,
-      ro: `Nu avem date despre ${name.ro} din ${t}. Starea serviciului poate fi alta.`,
-    };
-  }
+  if (tile.stale) return noData(name, tile.since);
   if (tile.state === 'green') return null;
   if (tile.key === 'backup') {
     const last = lastBackup(tile.detail);
@@ -223,8 +225,9 @@ function sentence(tile: StatusTileView): StatusTexts | null {
       ro: `Ultimul backup reușit este din ${when.ro}.`,
     };
   }
-  const t = tile.since ? timeOf(tile.since) : '--:--';
-  return EFFECTS[tile.key][tile.state](t);
+  // A problem with no since was never checked: it reads as no data.
+  if (!tile.since) return noData(name, null);
+  return EFFECTS[tile.key][tile.state](timeOf(tile.since));
 }
 
 // The tile's short state and, when it is a problem, the sentence saying what

@@ -39,7 +39,7 @@ function answer(
       stale: true,
       state: 'red',
     };
-  const detail = row.detail as Detail;
+  const detail = { ...(row.detail as Detail) };
   if (row.checkedAt.getTime() <= now.getTime() - STALE_AFTER_MS)
     return {
       checkedAt: row.checkedAt,

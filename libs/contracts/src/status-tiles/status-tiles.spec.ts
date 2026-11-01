@@ -357,6 +357,13 @@ describe('the effect sentence of a tile', () => {
     },
   );
 
+  it('says there is no data yet on a problem with no since', () => {
+    expect(texts(tile('maps', 'amber', { since: null })).sentence).toEqual({
+      en: 'There is no data on Maps yet.',
+      ro: 'Nu avem încă date despre Hărți.',
+    });
+  });
+
   it('reads the time of a problem in Bucharest', () => {
     // 23:50 UTC on 16 October is 02:50 on the 17th in Bucharest.
     expect(

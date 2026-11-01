@@ -2,8 +2,6 @@ import type { TileKey, TileState } from '@motor-fix/contracts';
 
 import type { Limits } from './thresholds';
 
-export { TILES, type TileKey, type TileState } from '@motor-fix/contracts';
-
 export interface Figures {
   latency_ms?: number;
   failed_share?: number;
