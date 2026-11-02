@@ -31,6 +31,9 @@ const entryKey = (generation: string, k: FreeSlotsKey) =>
 const SCHEDULE_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
   'booking.confirmed',
   'booking.moved',
+  'booking.move_proposed',
+  'booking.move_lapsed',
+  'booking.move_refused',
   'booking.cancelled',
   'booking.lapsed',
   'booking.no_show_recorded',

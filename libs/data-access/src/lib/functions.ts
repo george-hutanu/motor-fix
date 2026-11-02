@@ -335,6 +335,8 @@ export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
 export type { CancelBookingControllerCancel$Params as CancelBookingControllerCancel$Params } from './fn/bookings/cancel-booking-controller-cancel';
 export { cancelBookingControllerCancel as cancelBookingControllerCancel } from './fn/bookings/cancel-booking-controller-cancel';
+export type { MovesControllerAsk$Params as MovesControllerAsk$Params } from './fn/bookings/moves-controller-ask';
+export { movesControllerAsk as movesControllerAsk } from './fn/bookings/moves-controller-ask';
 export type { NoShowControllerRecord$Params as NoShowControllerRecord$Params } from './fn/bookings/no-show-controller-record';
 export { noShowControllerRecord as noShowControllerRecord } from './fn/bookings/no-show-controller-record';
 export type { NoShowControllerWithdraw$Params as NoShowControllerWithdraw$Params } from './fn/bookings/no-show-controller-withdraw';

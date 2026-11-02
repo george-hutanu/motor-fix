@@ -449,6 +449,79 @@ describe('a start the confirm accepts', () => {
   });
 });
 
+// A confirmed hour of Fixer's at 08:00 whose driver asked to move it to
+// `to`, the only mechanic on the garage.
+async function asked(s: Setting, to: Date) {
+  await prisma.mechanic.update({
+    data: { removedAt: new Date() },
+    where: { id: s.plainMechanic.id },
+  });
+  const booking = await world.booked(
+    s.garage.id,
+    at(8).toISOString(),
+    'confirmed',
+    { mechanicId: s.answeringMechanic.id },
+  );
+  const placed = await prisma.booking.update({
+    data: { durationMinutes: 60 },
+    select: { quote: { select: { request: { select: { driverId: true } } } } },
+    where: { id: booking.id },
+  });
+  const move = await prisma.bookingMove.create({
+    data: {
+      bookingId: booking.id,
+      idempotencyKey: randomUUID(),
+      lapsesAt: new Date(Date.now() + 24 * 60 * MINUTE),
+      newStartsAt: to,
+      proposedBy: placed.quote.request.driverId,
+      proposedBySide: 'driver',
+    },
+  });
+  return { booking, move };
+}
+
+const firstFrom = (s: Setting, extra: Query = {}) =>
+  ask(s.garage.id, s.owner, {
+    count: 1,
+    duration: 60,
+    earliest: at(10).toISOString(),
+    horizonDays: 1,
+    ...extra,
+  });
+
+// @traces 184-FR-006
+describe("a move's asked stretch", () => {
+  it('is held from the free starts while proposed, as an awaiting booking is', async () => {
+    const s = await setting();
+    await asked(s, at(10));
+
+    const res = await firstFrom(s);
+
+    expect(res.status).toBe(200);
+    expect(starts(res.body)).toEqual([at(11).getTime()]);
+  });
+
+  it('is offered again once the move lapses', async () => {
+    const s = await setting();
+    const { move } = await asked(s, at(10));
+    await prisma.bookingMove.update({
+      data: { decidedAt: new Date(), status: 'lapsed' },
+      where: { id: move.id },
+    });
+
+    expect(starts((await firstFrom(s)).body)).toEqual([at(10).getTime()]);
+  });
+
+  it('is left out with its booking when the question excludes that booking', async () => {
+    const s = await setting();
+    const { booking } = await asked(s, at(10));
+
+    const res = await firstFrom(s, { excludeBookingId: booking.id });
+
+    expect(starts(res.body)).toEqual([at(10).getTime()]);
+  });
+});
+
 // @traces 154-FR-012
 describe('the cached answer', () => {
   it('stops offering a start once a booking takes it and the relay drops the cache', async () => {

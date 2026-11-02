@@ -32,6 +32,11 @@ import {
   type BookingLapsedEvent,
   BookingLapsedFanOut,
 } from './booking-lapsed/booking-lapsed.fan-out';
+import {
+  BOOKING_MOVE_QUEUE,
+  type BookingMoveEvent,
+  BookingMoveFanOut,
+} from './booking-move/booking-move.fan-out';
 import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import {
@@ -206,6 +211,7 @@ const QUOTE_LOST_WORKER = Symbol('QUOTE_LOST_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const FINAL_PRICE_CORRECTED_WORKER = Symbol('FINAL_PRICE_CORRECTED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
+const BOOKING_MOVE_WORKER = Symbol('BOOKING_MOVE_WORKER');
 const NO_SHOW_WORKER = Symbol('NO_SHOW_WORKER');
 const JOB_STAGE_WORKER = Symbol('JOB_STAGE_WORKER');
 const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
@@ -294,6 +300,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(BOOKING_LAPSED_WORKER)
     private readonly bookingLapsedWorker?: Worker | null,
+    @Optional()
+    @Inject(BOOKING_MOVE_WORKER)
+    private readonly bookingMoveWorker?: Worker | null,
     @Optional()
     @Inject(NO_SHOW_WORKER)
     private readonly noShowWorker?: Worker | null,
@@ -868,6 +877,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        BookingMoveFanOut,
+        {
+          inject: [BookingMoveFanOut],
+          provide: BOOKING_MOVE_WORKER,
+          useFactory: (fanOut: BookingMoveFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('BookingMove').error(
+                'PUBLIC_WEB_URL missing; booking move messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<BookingMoveEvent>(
+              BOOKING_MOVE_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('BookingMove'));
+            return worker;
+          },
+        },
         NoShowFanOut,
         {
           inject: [NoShowFanOut],
@@ -1158,6 +1194,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.finalPriceCorrectedWorker?.close();
     await this.jobStageWorker?.close();
     await this.bookingLapsedWorker?.close();
+    await this.bookingMoveWorker?.close();
     await this.noShowWorker?.close();
     await this.requestCancelledWorker?.close();
     await this.bookingCancelledWorker?.close();

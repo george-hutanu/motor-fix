@@ -53,6 +53,13 @@ function scheduleEvents(): [string, LiveSubject, string][] {
     mechanicId: randomUUID(),
     type: 'booking',
   });
+  // A move's events name no mechanic: the garage and the driver hear them.
+  const move = (garageId: string): LiveSubject => ({
+    driverAccountId: randomUUID(),
+    garageId,
+    mechanicId: null,
+    type: 'booking',
+  });
   const mechanic = (garageId: string): LiveSubject => ({
     garageId,
     mechanicId: randomUUID(),
@@ -75,6 +82,10 @@ function scheduleEvents(): [string, LiveSubject, string][] {
     row('booking.cancelled', booking),
     row('booking.lapsed', booking),
     row('booking.no_show_recorded', booking),
+    // @traces 184-FR-006
+    row('booking.move_proposed', move),
+    row('booking.move_lapsed', move),
+    row('booking.move_refused', move),
     row('quote.accepted', (garageId) => ({
       driverAccountId: randomUUID(),
       garageId,

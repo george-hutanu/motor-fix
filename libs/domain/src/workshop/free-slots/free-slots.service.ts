@@ -11,7 +11,7 @@ import {
   Logger,
 } from '@nestjs/common';
 
-import { freeSlots } from './free-slots';
+import { type FreeSlotsInput, freeSlots } from './free-slots';
 import { FreeSlotsCache, type FreeSlotsKey } from './free-slots.cache';
 import { recordFreeSlots } from './free-slots.metrics';
 import { notFound, refusal } from '../../auth/http-refusal';
@@ -20,7 +20,7 @@ import { PRISMA } from '../../auth/prisma';
 import { addDays, atLocal, localDay, localIso } from '../../bucharest';
 import { switchesOf } from '../../garages/features/garage-options';
 import type { GarageCalendar } from '../../garages/mechanic-hours';
-import type { PrismaClient } from '../../generated/prisma/client';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
 const MINUTE = 60_000;
 const STEP = 30 * MINUTE;
@@ -29,6 +29,8 @@ const STAFF = ['garage', 'receptionist', 'mechanic'];
 
 const dayOf = (date: Date) => date.toISOString().slice(0, 10);
 const asDate = (day: string) => new Date(`${day}T00:00:00Z`);
+
+type Db = PrismaClient | Prisma.TransactionClient;
 
 const invalid = (field: string, message: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, [
@@ -191,100 +193,7 @@ export class FreeSlotsService {
   }
 
   private async read(key: FreeSlotsKey): Promise<FreeSlotsDto> {
-    const { garageId } = key;
-    const first = localDay(key.earliest);
-    const last = addDays(first, key.horizonDays);
-    const from = atLocal(first, 0);
-    const to = atLocal(last, 0);
-    const days = { gte: asDate(first), lt: asDate(last) };
-    const [garage, switches, closed, holidays, mechanics, segments, awaiting] =
-      await Promise.all([
-        this.prisma.garage.findUniqueOrThrow({
-          select: { hours: true, liftCount: true },
-          where: { id: garageId },
-        }),
-        switchesOf(this.prisma, garageId),
-        this.prisma.garageClosedDay.findMany({
-          where: { day: days, garageId },
-        }),
-        this.prisma.publicHoliday.findMany({ where: { day: days } }),
-        this.prisma.mechanic.findMany({
-          select: {
-            daysOff: {
-              select: { firstDay: true, lastDay: true },
-              where: { firstDay: { lt: days.lt }, lastDay: { gte: days.gte } },
-            },
-            id: true,
-            workingHours: true,
-            worksSaturdays: true,
-          },
-          where: { garageId, removedAt: null },
-        }),
-        this.prisma.bookingSegment.findMany({
-          select: {
-            bookingId: true,
-            endsAt: true,
-            lift: true,
-            mechanicId: true,
-            startsAt: true,
-          },
-          where: { endsAt: { gt: from }, garageId, startsAt: { lt: to } },
-        }),
-        this.prisma.booking.findMany({
-          select: {
-            durationMinutes: true,
-            id: true,
-            request: {
-              select: {
-                jobs: { select: { jobType: { select: { needsLift: true } } } },
-              },
-            },
-            startsAt: true,
-          },
-          where: {
-            garageId,
-            startsAt: {
-              gte: new Date(from.getTime() - FREE_SLOTS_DURATION_MAX * MINUTE),
-              lt: to,
-            },
-            status: 'awaiting_confirmation',
-          },
-        }),
-      ]);
-    const { slots } = freeSlots({
-      awaiting: awaiting.map((b) => ({
-        bookingId: b.id,
-        endsAt: new Date(b.startsAt.getTime() + b.durationMinutes * MINUTE),
-        needsLift: b.request.jobs.some((j) => j.jobType.needsLift),
-        startsAt: b.startsAt,
-      })),
-      calendar: {
-        closedDays: new Set(closed.map((c) => dayOf(c.day))),
-        holidays: new Set(holidays.map((h) => dayOf(h.day))),
-        hours: (garage.hours ?? {}) as GarageCalendar['hours'],
-      },
-      count: key.count,
-      durationMinutes: key.duration,
-      earliest: key.earliest,
-      excludeBookingId: key.excludeBookingId,
-      horizonDays: key.horizonDays,
-      liftCount: switches.lifts ? garage.liftCount : 0,
-      mechanicId: key.mechanicId,
-      mechanics: mechanics.map((m) => ({
-        id: m.id,
-        schedule: {
-          daysOff: m.daysOff.map((d) => ({
-            firstDay: dayOf(d.firstDay),
-            lastDay: dayOf(d.lastDay),
-          })),
-          workingHours: m.workingHours,
-          worksSaturdays: m.worksSaturdays,
-        },
-      })),
-      needsLift: key.needsLift,
-      segments,
-      switches,
-    });
+    const { slots } = freeSlots(await question(this.prisma, key));
     const dto = slots.map((s) => ({
       endsAt: localIso(s.endsAt),
       startsAt: localIso(s.startsAt),
@@ -293,4 +202,138 @@ export class FreeSlotsService {
       ? { slots: dto }
       : { reason: 'none_in_horizon', slots: [] };
   }
+}
+
+const LIFT_OF_JOBS = {
+  select: {
+    request: {
+      select: {
+        jobs: { select: { jobType: { select: { needsLift: true } } } },
+      },
+    },
+  },
+} as const;
+
+const needsLiftOf = (booking: {
+  request: { jobs: { jobType: { needsLift: boolean } }[] };
+}) => booking.request.jobs.some((j) => j.jobType.needsLift);
+
+// What the engine is asked for a key, read in the caller's client: a move's
+// check reads it inside its own transaction, behind the garage's lock.
+export async function question(
+  db: Db,
+  key: FreeSlotsKey,
+): Promise<FreeSlotsInput> {
+  const { garageId } = key;
+  const first = localDay(key.earliest);
+  const last = addDays(first, key.horizonDays);
+  const from = atLocal(first, 0);
+  const to = atLocal(last, 0);
+  const days = { gte: asDate(first), lt: asDate(last) };
+  const reach = {
+    gte: new Date(from.getTime() - FREE_SLOTS_DURATION_MAX * MINUTE),
+    lt: to,
+  };
+  const [
+    garage,
+    switches,
+    closed,
+    holidays,
+    mechanics,
+    segments,
+    awaiting,
+    asked,
+  ] = await Promise.all([
+    db.garage.findUniqueOrThrow({
+      select: { hours: true, liftCount: true },
+      where: { id: garageId },
+    }),
+    switchesOf(db, garageId),
+    db.garageClosedDay.findMany({ where: { day: days, garageId } }),
+    db.publicHoliday.findMany({ where: { day: days } }),
+    db.mechanic.findMany({
+      select: {
+        daysOff: {
+          select: { firstDay: true, lastDay: true },
+          where: { firstDay: { lt: days.lt }, lastDay: { gte: days.gte } },
+        },
+        id: true,
+        workingHours: true,
+        worksSaturdays: true,
+      },
+      where: { garageId, removedAt: null },
+    }),
+    db.bookingSegment.findMany({
+      select: {
+        bookingId: true,
+        endsAt: true,
+        lift: true,
+        mechanicId: true,
+        startsAt: true,
+      },
+      where: { endsAt: { gt: from }, garageId, startsAt: { lt: to } },
+    }),
+    db.booking.findMany({
+      select: {
+        durationMinutes: true,
+        id: true,
+        startsAt: true,
+        ...LIFT_OF_JOBS.select,
+      },
+      where: { garageId, startsAt: reach, status: 'awaiting_confirmation' },
+    }),
+    // A start a driver asked to move to is held like an awaiting booking
+    // until the garage answers or the ask lapses.
+    db.bookingMove.findMany({
+      select: {
+        booking: {
+          select: { durationMinutes: true, id: true, ...LIFT_OF_JOBS.select },
+        },
+        newStartsAt: true,
+      },
+      where: {
+        booking: { garageId, status: 'confirmed' },
+        newStartsAt: reach,
+        status: 'proposed',
+      },
+    }),
+  ]);
+  const held = [
+    ...awaiting,
+    ...asked.map((m) => ({ ...m.booking, startsAt: m.newStartsAt })),
+  ];
+  return {
+    awaiting: held.map((b) => ({
+      bookingId: b.id,
+      endsAt: new Date(b.startsAt.getTime() + b.durationMinutes * MINUTE),
+      needsLift: needsLiftOf(b),
+      startsAt: b.startsAt,
+    })),
+    calendar: {
+      closedDays: new Set(closed.map((c) => dayOf(c.day))),
+      holidays: new Set(holidays.map((h) => dayOf(h.day))),
+      hours: (garage.hours ?? {}) as GarageCalendar['hours'],
+    },
+    count: key.count,
+    durationMinutes: key.duration,
+    earliest: key.earliest,
+    excludeBookingId: key.excludeBookingId,
+    horizonDays: key.horizonDays,
+    liftCount: switches.lifts ? garage.liftCount : 0,
+    mechanicId: key.mechanicId,
+    mechanics: mechanics.map((m) => ({
+      id: m.id,
+      schedule: {
+        daysOff: m.daysOff.map((d) => ({
+          firstDay: dayOf(d.firstDay),
+          lastDay: dayOf(d.lastDay),
+        })),
+        workingHours: m.workingHours,
+        worksSaturdays: m.worksSaturdays,
+      },
+    })),
+    needsLift: key.needsLift,
+    segments,
+    switches,
+  };
 }
