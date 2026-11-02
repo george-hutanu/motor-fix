@@ -14,6 +14,7 @@ import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
+import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   type OwnershipRow,
@@ -139,7 +140,7 @@ export class LogRepairService {
     }
     const garage = await tx.garage.findFirst({
       select: { id: true, name: true },
-      where: { id: dto.garageId, status: 'approved' },
+      where: { ...publicGarages(), id: dto.garageId },
     });
     if (!garage) {
       recordLogged('unknown_garage');
