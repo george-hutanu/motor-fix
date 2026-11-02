@@ -68,25 +68,11 @@ let calls: Params[];
 beforeEach(() => {
   calls = [];
   answer = async () => supply([BMW, TESLA]);
-  jest.useFakeTimers({
-    doNotFake: [
-      'nextTick',
-      'setImmediate',
-      'clearImmediate',
-      'setTimeout',
-      'clearTimeout',
-      'setInterval',
-      'clearInterval',
-      'queueMicrotask',
-      'requestAnimationFrame',
-      'cancelAnimationFrame',
-    ],
-    now: NOW,
-  });
+  vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 
