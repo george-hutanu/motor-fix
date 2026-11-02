@@ -45,6 +45,7 @@ features:
   - 059-profile-direct-requests
   - 154-free-slots
   - 122-one-job-status
+  - 184-move-booking
 ---
 
 # Capability: Live updates
@@ -554,6 +555,10 @@ _From 154-free-slots._
 ### 122-FR-011 — Every `job.*` and `booking.*` event of a job whose booking has a mechanic MUST carry `mechanic:{mechanicId}` in its audience, and a test MUST prove each kind reaches that channel and no other mechanic's; the read of FR-005 writes nothing: no audit entry, no event, no stage entry.
 
 _From 122-one-job-status._
+
+### 184-FR-013 — `booking.move_proposed`, `booking.move_lapsed`, `booking.move_refused` and `booking.moved` MUST reach the live streams `account:{driverId}` and `garage:{garageId}`, proven by an integration test of the hub's audiences.
+
+_From 184-move-booking._
 
 ## Retired
 

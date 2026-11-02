@@ -244,14 +244,14 @@ export function recordNoShow(
   noShows().add(1, { action, outcome });
 }
 
-type BookingMoveOutcome = 'asked' | 'lapsed' | 'cancelled';
+type BookingMoveOutcome = 'asked' | 'lapsed';
 
 export const bookingMoves = () =>
   meter().createCounter('motorfix_booking_moves_total', {
-    description: 'Booking moves asked and settled, by outcome and side',
+    description: 'Booking moves asked and lapsed, by outcome and side',
   });
 
-// One count per move asked or settled, by outcome and the side that asked;
+// One count per move asked or lapsed, by outcome and the side that asked;
 // never which booking.
 export function recordBookingMove(
   outcome: BookingMoveOutcome,

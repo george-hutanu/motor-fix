@@ -21,6 +21,7 @@ features:
   - 154-free-slots
   - 293-save-garage-suggest
   - 122-one-job-status
+  - 184-move-booking
 ---
 
 # Capability: Workshop
@@ -628,6 +629,10 @@ _From 122-one-job-status._
 ### 122-FR-014 — Tests MUST be written first (Principle II) and cover, in Vitest on real PostgreSQL and Valkey with a `// @traces` line per spec file: the schema test of FR-001; `in_work_since` and `worked_seconds` across start, pause, automatic pause, resume, finish and finish from `paused` (FR-002, FR-003), with the brief's 10:07 / 11:20 / 4,380 s case; the migration backfill; which booking statuses are in and out, order, carry-over on today and not on other days, a multi-day booking on each of its days, lift on and off, lock holder, counts, no phone (FR-007 to FR-010); 404 for every other caller and `team_mechanics` off, 422 for a malformed and an out-of-range date, 30 days accepted (FR-005, FR-006); every job and booking event kind on `mechanic:{mechanicId}` (FR-011); the share by role and month with automatic pauses apart (FR-012). Playwright, in the end-to-end suite: the owner pauses Costel's job in the garage dashboard and the job's state read by Costel's browser shows Pauză within 2 seconds (the queue screen itself is #16; until it ships the flow asserts on the limited dashboard's Lucrări row).
 
 _From 122-one-job-status._
+
+### 184-FR-006 — (extends 154-FR-004) The free-slot engine MUST count a `proposed` move's stretch `[new_starts_at, new_starts_at + the booking's duration_minutes)` as taken exactly as it counts an awaiting booking of that booking's jobs (a lift unit when needed, a mechanic's capacity with `team_mechanics` on, nothing but the hours with it off), and MUST stop counting it the moment the move leaves `proposed`; the slot cache MUST be dropped on `booking.move_proposed`, `booking.move_lapsed`, `booking.move_refused` and `booking.moved` like on the other schedule events (154-FR-012).
+
+_From 184-move-booking._
 
 ## Retired
 

@@ -1,7 +1,7 @@
+import { noEvents } from '../events/event.port';
 import type { Prisma } from '../generated/prisma/client';
 import type {
   BookingCancelReason,
-  BookingMoveRefuseReason,
   BookingMoveStatus,
   BookingStatus,
   CancelledBySide,
@@ -322,23 +322,16 @@ export async function moveBooking(
   return moved;
 }
 
-// A refusal needs its reason (checked by the database, as a cancellation is).
-type BookingMoveMove =
-  | Base<Exclude<BookingMoveStatus, 'refused'>>
-  | (Base<'refused'> & { refuseReason: BookingMoveRefuseReason });
-
 export function moveBookingMove(
   tx: Tx,
   ports: TransitionPorts,
-  move: BookingMoveMove,
+  move: Base<Exclude<BookingMoveStatus, 'refused'>> & {
+    scope?: Move<BookingMoveStatus>['scope'];
+  },
 ) {
   return applyTransition(tx, BOOKING_MOVE, ports, {
     ...move,
-    set: () => ({
-      decidedAt: new Date(),
-      decidedBy: move.actor.accountId,
-      ...('refuseReason' in move && { refuseReason: move.refuseReason }),
-    }),
+    set: () => ({ decidedAt: new Date(), decidedBy: move.actor.accountId }),
   });
 }
 
@@ -355,23 +348,15 @@ async function cancelWaitingMove(
     where: { bookingId: move.id, status: 'proposed' },
   });
   if (!waiting) return;
-  await tx.bookingMove.update({
-    data: {
-      decidedAt: new Date(),
-      decidedBy: move.actor.accountId,
-      status: 'cancelled',
+  await moveBookingMove(
+    tx,
+    { audit: ports.audit, events: noEvents },
+    {
+      actor: move.actor,
+      event: move.event,
+      id: waiting.id,
+      scope: () => ({ garageId }),
+      to: 'cancelled',
     },
-    where: { id: waiting.id },
-  });
-  await ports.audit.record(tx, {
-    action: 'update',
-    actorId: move.actor.accountId,
-    actorRole: move.actor.role,
-    field: 'status',
-    garageId,
-    newValue: 'cancelled',
-    oldValue: 'proposed',
-    subjectId: waiting.id,
-    subjectType: 'booking_move',
-  });
+  );
 }

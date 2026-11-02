@@ -1,30 +1,24 @@
 import type { AskBookingMoveDto, BookingMoveDto } from '@motor-fix/contracts';
 import { HttpException, Inject, Injectable, Logger } from '@nestjs/common';
 
-import { lapsesAt, moveState } from './move-state';
+import { lapsesAt, moveOf, moveState } from './move-state';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { notFound } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
-import {
-  type BookingMove,
-  Prisma,
-  type PrismaClient,
-} from '../../generated/prisma/client';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import type { BookingStatus } from '../../generated/prisma/enums';
 import { freeSlots } from '../../workshop/free-slots/free-slots';
 import { question } from '../../workshop/free-slots/free-slots.service';
 import { recordBookingMove } from '../quotes/quotes.metrics';
-import { MOVE_REACH_DAYS } from '../quotes-config';
+import { MOVE_CUTOFF_HOURS, MOVE_REACH_DAYS } from '../quotes-config';
 import { type MoveRefusal, moveRefused, moveTooLate } from '../refusals';
 
 type Tx = Prisma.TransactionClient;
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
-// The free slots never offer a start sooner than this.
-const LEAD_HOURS = 2;
 
 interface Locked {
   driverId: string;
@@ -46,17 +40,6 @@ const REFUSAL: Record<'cutoff' | 'limit' | 'pending', MoveRefusal> = {
   limit: 'move_limit',
   pending: 'move_pending',
 };
-
-const moveOf = (move: BookingMove): BookingMoveDto => ({
-  bookingId: move.bookingId,
-  decidedAt: move.decidedAt?.toISOString() ?? null,
-  id: move.id,
-  lapsesAt: move.lapsesAt.toISOString(),
-  newStartsAt: move.newStartsAt.toISOString(),
-  proposedBySide: move.proposedBySide,
-  refuseReason: move.refuseReason,
-  status: move.status,
-});
 
 const isUniqueViolation = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -87,8 +70,8 @@ export class MovesService {
       );
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
-      // The same key on another booking at once: the other call's move is
-      // the answer.
+      // The key holds a move of another of the driver's bookings, or the
+      // same key's other call wrote first: that move is the answer.
       const move = await this.replayOf(this.prisma, actor.accountId, key);
       if (!move) throw error;
       return { created: false, move: moveOf(move) };
@@ -128,12 +111,20 @@ export class MovesService {
     });
   }
 
-  private replayOf(client: Tx, proposedBy: string, key: string) {
-    return client.bookingMove.findUnique({
+  // The driver's move under this key; given a booking, only one of that
+  // booking, so a key never answers for a booking the driver was not judged on.
+  private async replayOf(
+    client: Tx,
+    proposedBy: string,
+    key: string,
+    bookingId?: string,
+  ) {
+    const move = await client.bookingMove.findUnique({
       where: {
         proposedBy_idempotencyKey: { idempotencyKey: key, proposedBy },
       },
     });
+    return move && (!bookingId || move.bookingId === bookingId) ? move : null;
   }
 
   private async store(
@@ -143,7 +134,7 @@ export class MovesService {
     body: AskBookingMoveDto,
     key: string,
   ): Promise<{ move: BookingMoveDto; created: boolean }> {
-    const replay = await this.replayOf(tx, actor.accountId, key);
+    const replay = await this.replayOf(tx, actor.accountId, key, bookingId);
     if (replay) return { created: false, move: moveOf(replay) };
     const newStartsAt = new Date(body.startsAt);
     let booking: Locked;
@@ -151,7 +142,7 @@ export class MovesService {
       booking = await this.judge(tx, actor, bookingId, newStartsAt);
     } catch (error) {
       // The same key's first call held the booking while this one waited.
-      const raced = await this.replayOf(tx, actor.accountId, key);
+      const raced = await this.replayOf(tx, actor.accountId, key, bookingId);
       if (raced) return { created: false, move: moveOf(raced) };
       this.refused(error, bookingId);
       throw error;
@@ -254,7 +245,7 @@ export class MovesService {
     startsAt: Date,
     now: Date,
   ) {
-    const from = now.getTime() + LEAD_HOURS * HOUR;
+    const from = now.getTime() + MOVE_CUTOFF_HOURS * HOUR;
     const to = now.getTime() + MOVE_REACH_DAYS * DAY;
     if (startsAt.getTime() < from || startsAt.getTime() > to) return false;
     const lifting = await tx.requestJob.count({

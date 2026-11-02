@@ -205,6 +205,7 @@ describe('GET /requests once a quote is accepted', () => {
 
     expect(res.body.items[0].booking).toEqual({
       cancelledBySide: null,
+      canMove: true,
       confirmBy: newest.confirmBy.toISOString(),
       finalPriceBani: null,
       garage: {
@@ -216,6 +217,9 @@ describe('GET /requests once a quote is accepted', () => {
       id: newest.id,
       jobStarted: false,
       lateCancellation: false,
+      move: null,
+      moveBlockedReason: null,
+      moveCount: 0,
       noShowAt: null,
       startsAt: newest.startsAt.toISOString(),
       status: 'confirmed',
@@ -362,6 +366,7 @@ describe('GET /requests/:id', () => {
       cancelledBySide: null,
       cancelNote: null,
       cancelReason: null,
+      canMove: true,
       completedAt: null,
       confirmBy: booking.confirmBy.toISOString(),
       confirmedAt: booking.confirmedAt?.toISOString(),
@@ -372,6 +377,9 @@ describe('GET /requests/:id', () => {
       handedOverAt: null,
       id: booking.id,
       lateCancellation: false,
+      move: null,
+      moveBlockedReason: null,
+      moveCount: 0,
       noShowAt: null,
       quoteId: quote.id,
       startsAt: booking.startsAt.toISOString(),

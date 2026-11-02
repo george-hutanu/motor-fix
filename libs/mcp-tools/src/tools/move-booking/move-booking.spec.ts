@@ -82,8 +82,8 @@ describe('move_booking', () => {
   });
 
   it.each([
-    ['ro', /Atelier Dinamo/],
-    ['en', /Atelier Dinamo/],
+    ['ro', /^Ceri service-ului Atelier Dinamo /],
+    ['en', /^You ask Atelier Dinamo /],
   ] as const)('names the garage in the %s summary', async (language, name) => {
     const { first } = setup(movesOf(), language);
 

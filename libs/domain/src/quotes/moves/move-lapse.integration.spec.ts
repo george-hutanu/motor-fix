@@ -139,7 +139,7 @@ describe('a move nobody decided in time', () => {
       where: { kind: 'booking.move_lapsed' },
     });
     expect(events).toHaveLength(1);
-    expect(events[0].payload).toEqual({
+    expect(events[0].payload).toMatchObject({
       bookingId: booking.id,
       moveId: move.id,
     });

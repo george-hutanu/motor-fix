@@ -223,7 +223,7 @@ describe('counting booking moves', () => {
     recordBookingMove('asked', 'driver');
     recordBookingMove('asked', 'driver');
     recordBookingMove('lapsed', 'driver');
-    recordBookingMove('cancelled', 'garage');
+    recordBookingMove('lapsed', 'garage');
 
     const moves = await metric('motorfix_booking_moves_total');
     expect(
@@ -235,7 +235,7 @@ describe('counting booking moves', () => {
       expect.arrayContaining([
         { outcome: 'asked', side: 'driver', value: 2 },
         { outcome: 'lapsed', side: 'driver', value: 1 },
-        { outcome: 'cancelled', side: 'garage', value: 1 },
+        { outcome: 'lapsed', side: 'garage', value: 1 },
       ]),
     );
   });

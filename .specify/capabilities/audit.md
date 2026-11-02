@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-30
+updated: 2026-11-02
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -20,6 +20,7 @@ features:
   - 1156-retention-job
   - 427-time-blocks
   - 395-job-lock
+  - 184-move-booking
 ---
 
 # Capability: Audit history
@@ -283,6 +284,10 @@ _From 427-time-blocks._
 ### 395-FR-012 — A forced unlock MUST write one audit entry through the shared writer in the same transaction as the mirror clear: action `update`, subject `job`, field `lock_holder_id`, old value the former holder's account id, new value null, kind `job.lock_forced`, text "{holder first name}, {role}, de la {since ISO}", the owner as actor, `internal` true, the garage and job ids. Taking, refreshing, releasing and expiry write no audit entry; the changes themselves are recorded by their own use cases.
 
 _From 395-job-lock._
+
+### 184-FR-015 — The audit entries "move asked" and "move lapsed" MUST be key changes in the driver's short history (220-FR-018), each naming the old and the new time.
+
+_From 184-move-booking._
 
 ## Retired
 

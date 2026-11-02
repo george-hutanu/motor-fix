@@ -36,6 +36,21 @@ interface ReadMove extends LatestMove {
   refuseReason: BookingMoveRefuseReason | null;
 }
 
+const latestOf = (move: ReadMove) => ({
+  decidedAt: move.decidedAt?.toISOString() ?? null,
+  id: move.id,
+  lapsesAt: move.lapsesAt.toISOString(),
+  newStartsAt: move.newStartsAt.toISOString(),
+  proposedBySide: move.proposedBySide,
+  refuseReason: move.refuseReason,
+  status: move.status,
+});
+
+export const moveOf = (move: ReadMove & { bookingId: string }) => ({
+  bookingId: move.bookingId,
+  ...latestOf(move),
+});
+
 // The garage answers within a day, and never later than the cutoff before
 // the booking it would move.
 export const lapsesAt = (askedAt: Date, startsAt: Date) =>
@@ -82,15 +97,7 @@ export function moveFieldsOf(
 ) {
   return {
     ...moveState(booking, job, latest, now),
-    move: latest && {
-      decidedAt: latest.decidedAt?.toISOString() ?? null,
-      id: latest.id,
-      lapsesAt: latest.lapsesAt.toISOString(),
-      newStartsAt: latest.newStartsAt.toISOString(),
-      proposedBySide: latest.proposedBySide,
-      refuseReason: latest.refuseReason,
-      status: latest.status,
-    },
+    move: latest && latestOf(latest),
     moveCount: booking.moveCount,
   };
 }

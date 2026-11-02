@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-31
+updated: 2026-11-02
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -60,6 +60,7 @@ features:
   - 1398-open-now-results-filters
   - 154-free-slots
   - 1379-provider-calls-worker
+  - 184-move-booking
 ---
 
 # Capability: Observability
@@ -947,6 +948,10 @@ _From 154-free-slots._
 ### 1379-FR-009 — Observability ships with the change: the `direct-send` queue is listed in `infra/observability/inventory.json` (kind `queue`, dashboard `motorfix-queues`, the worker queue rule uids as the other queues), reports the worker's job and queue metrics under its name (876-FR-009, 878-FR-009), is shown by the existing `motorfix-queues` panels, which aggregate every series `by (queue)` (no new panel is added: Principle I), is covered by `worker-queue-backlog`, `worker-queue-growing` and `worker-jobs-failed`, writes `job_failed` and `service_error` system-log entries from the worker as the other queues do (297-FR-007, 297-FR-008), the inventory reasons of the entries that describe the moved sends (`brevo`, `my-details`, `car-transfers`, `motorfix_car_transfer_whatsapp_total`) say the send runs in the worker through `direct-send`, and the PR Notes list these reports.
 
 _From 1379-provider-calls-worker._
+
+### 184-FR-016 — The new route and the `move-lapse` job MUST be listed in `infra/observability/inventory.json` with the API's request duration by route, a counter of moves asked, lapsed, refused and accepted by side, the lapse job's failures, a panel and an alert on lapse-job failures, and the move's log lines carry the booking and move ids.
+
+_From 184-move-booking._
 
 ## Retired
 

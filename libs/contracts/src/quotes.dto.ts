@@ -84,8 +84,11 @@ const onHalfHour = () =>
     name: 'onHalfHour',
     validator: {
       defaultMessage: (args) => `${args?.property} must fall on a half hour`,
+      // A date alone parses as its midnight: a start names its time.
       validate: (value) =>
-        typeof value === 'string' && Date.parse(value) % HALF_HOUR === 0,
+        typeof value === 'string' &&
+        value.includes('T') &&
+        Date.parse(value) % HALF_HOUR === 0,
     },
   });
 

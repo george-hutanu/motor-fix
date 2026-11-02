@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, Queue } from 'bullmq';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { noEvents, outbox } from '../../events/event.port';
+import { outbox } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { NOTIFICATIONS_PRISMA } from '../../notifications/notifications.service';
 import { ObjectTimers, type TimerKind } from '../../scheduler/timers';
@@ -23,6 +23,7 @@ export interface MoveProposedEvent {
 
 interface Lapsing {
   bookingId: string;
+  proposedBySide: 'driver' | 'garage';
   driverId: string;
   garageId: string;
   newStartsAt: Date;
@@ -74,25 +75,26 @@ export class MoveLapse implements TimerKind {
 
   async fire(id: string, sweep: boolean): Promise<void> {
     const lapsed = await this.prisma.$transaction((tx) => this.lapse(tx, id));
-    if (lapsed) recordBookingMove('lapsed', 'driver');
+    if (lapsed) recordBookingMove('lapsed', lapsed.proposedBySide);
     this.logger.log(
-      `move ${id} lapse${sweep ? ' (sweep)' : ''}: ${lapsed ? 'lapsed' : 'nothing to do'}`,
+      `move ${id}${lapsed ? ` (booking ${lapsed.bookingId})` : ''} lapse${sweep ? ' (sweep)' : ''}: ${lapsed ? 'lapsed' : 'nothing to do'}`,
     );
   }
 
   private async lapse(
     tx: Prisma.TransactionClient,
     id: string,
-  ): Promise<boolean> {
+  ): Promise<Lapsing | null> {
     const [move] = await tx.$queryRaw<Lapsing[]>`
-      SELECT m.booking_id AS "bookingId", b.driver_id AS "driverId",
+      SELECT m.booking_id AS "bookingId",
+        m.proposed_by_side::text AS "proposedBySide", b.driver_id AS "driverId",
         b.garage_id AS "garageId", m.new_starts_at AS "newStartsAt",
         b.starts_at AS "startsAt"
       FROM booking_move m JOIN booking b ON b.id = m.booking_id
       WHERE m.id = ${id}::uuid AND m.status = 'proposed'
         AND m.lapses_at <= ${this.now()}
       FOR UPDATE OF m`;
-    if (!move) return false;
+    if (!move) return null;
     const audience = {
       driverAccountId: move.driverId,
       garageId: move.garageId,
@@ -101,10 +103,14 @@ export class MoveLapse implements TimerKind {
     };
     await moveBookingMove(
       tx,
-      { audit: this.audit, events: noEvents },
+      { audit: this.audit, events: outbox },
       {
         actor: SYSTEM,
-        event: { audience, kind: 'booking.move_lapsed' },
+        event: {
+          audience,
+          kind: 'booking.move_lapsed',
+          payload: { bookingId: move.bookingId, moveId: id },
+        },
         id,
         to: 'lapsed',
       },
@@ -120,12 +126,6 @@ export class MoveLapse implements TimerKind {
       subjectId: move.bookingId,
       subjectType: 'booking',
     });
-    await outbox.record(tx, {
-      audience,
-      kind: 'booking.move_lapsed',
-      payload: { bookingId: move.bookingId, moveId: id },
-      subjectId: id,
-    });
-    return true;
+    return move;
   }
 }
