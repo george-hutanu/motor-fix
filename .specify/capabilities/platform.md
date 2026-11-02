@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-31
+updated: 2026-11-02
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -130,6 +130,7 @@ features:
   - 1338-nest-vitest
   - 1411-1315-qa-fixes
   - 1407-toggle-idempotency
+  - 1332-angular-vitest
 ---
 
 # Capability: Platform
@@ -146,9 +147,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-003 — Biome MUST be the only linter and formatter, from the root configuration; Jest MUST run from the root configuration; Playwright MUST run in `web-e2e`. The harness folders (`.claude/`, `.specify/`, `.worktrees/`) MUST stay outside Nx, Jest and the product Biome scope.
+### 1332-FR-001 — The `test` target of each of `web`, `ui-cockpit`, `overlays`, `i18n` and `media` MUST run that project's specs on Vitest through the Angular build system's unit-test builder (`@angular/build:unit-test`, runner `vitest`); `npx nx run <project>:test` MUST exit 0 for each.
 
-_From 421-monorepo-platform._
+_From 1332-angular-vitest._
 
 ### 421-FR-004 — TypeScript MUST run in strict mode everywhere. The Node version MUST be written once in `.nvmrc` and repeated only in `engines` and the Dockerfiles.
 
@@ -274,13 +275,13 @@ _From 421-monorepo-platform._
 
 _From 516-production-release-queue._
 
-### 431-FR-001 — Every project with a Jest configuration (`apps/api`, `apps/worker`, `apps/web`, `apps/mcp`, `libs/contracts`, `libs/domain`, `libs/media`, `scripts`) MUST have its own `stryker.config.json` with a `thresholds.break` floor and an Nx `test:mutation` target.
+### 1332-FR-010 — Every `thresholds.break` in the five `stryker.config.json` files MUST stay as on `main` (web 79, ui-cockpit 66, overlays 76, i18n 85, media 85); no floor is raised or lowered.
 
-_From 431-mutation-testing._
+_From 1332-angular-vitest._
 
-### 1338-FR-008 — The mutation run of each in-scope project MUST use Stryker's Vitest runner with that project's own test configuration and the same runtime options as its `test` target; the Angular projects' runs keep the Jest runner (modifies 431-FR-002; 431-FR-001's project list and 1159-FR-016's Jest-options read still hold as written).
+### 1332-FR-008 — `scripts/mutation.ts` MUST build Stryker's options for the five projects with the Vitest test runner (`@stryker-mutator/vitest-runner`) and a Vitest configuration that compiles the project's Angular code; the NestJS and script projects MUST keep their options as on `main` (Vitest since ST-1338, which merged first).
 
-_From 1338-nest-vitest._
+_From 1332-angular-vitest._
 
 ### 431-FR-003 — A mutation run MUST report a mutation score and MUST exit non-zero when the score is below the project's `thresholds.break`.
 
@@ -3094,10 +3095,6 @@ _From 1379-provider-calls-worker._
 
 _From 1338-nest-vitest._
 
-### 1338-FR-002 — The Angular projects (`apps/web`, `libs/ui-cockpit`, `libs/data-access`, `libs/media`, `libs/i18n`, `libs/overlays`) MUST keep running on Jest, unchanged, with `jest`, `@nx/jest`, `jest-preset-angular` and `jest.preset.cjs` still in place; their move is ST-1332 and dropping Jest is ST-1304.
-
-_From 1338-nest-vitest._
-
 ### 1338-FR-003 — No in-scope spec or test helper MUST use Jest's API: `jest.fn`, `jest.mock`, `jest.spyOn`, `jest.requireActual`, `jest.setTimeout`, `jest.isolateModules`, `jest.useFakeTimers` and the types `jest.Mock` and `jest.SpyInstance` are replaced by their Vitest equivalents asserting the same behaviour.
 
 _From 1338-nest-vitest._
@@ -3137,6 +3134,66 @@ _From 1338-nest-vitest._
 ### 1338-FR-015 — The constitution (`421-FR-003`'s "root Jest", principles II and IV), AGENTS.md's "Tests: Jest from the root config" line and the Jest wording of the docs MUST NOT be amended by this story; only text naming `JEST_SUITE` or describing an in-scope project's runner is updated to `TEST_SUITE` and Vitest (lifecycle.md "CI, tests and release", `ci.yml` and `mutation.yml` headers, `scripts/test-services.ts`).
 
 _From 1338-nest-vitest._
+
+### 1332-FR-002 — Every `*.spec.ts` under the five projects' `src` present on `origin/main` MUST still exist, run and pass on the new runner: the passed spec-file count per project MUST equal the Jest baseline (web 674, ui-cockpit 40, overlays 13, i18n 39, media 8) plus the runner-proof specs this task adds (web: `src/server/environment.spec.ts` and the three under `src/runner-proof/`, so 678), and no spec may carry a skipped or todo suite or test that `main` lacks.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-003 — Spec edits MUST be limited to what the runner change forces: the Jest API renamed to its Vitest equivalent (`jest.fn`, `jest.Mock`, `jest.spyOn`, fake timers, `requireActual`, `requireMock`, `doMock`/`dontMock`, `isolateModulesAsync`), and a module mock of a workspace module that the new build bundles rewritten as an equivalent test double. No assertion may be weakened or removed.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-004 — The five projects' specs MUST run with per-file isolation (each spec file in its own module and global environment), as Jest ran them.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-005 — The 28 web specs that ran in a node environment on Jest (the server code under `apps/web/src/server/` and `app.config.spec.ts`) MUST run in a node environment on Vitest; every other spec MUST run in a jsdom browser environment.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-006 — Component specs MUST keep failing on unknown elements and unknown properties, and each test MUST start with cleared mock records, as the Jest setup (`src/test-setup.ts` with `clearMocks`) gave them.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-007 — Each library's `test` target MUST run without a production build of the library and without adding a deployable or a new app.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-009 — Shards from `scripts/mutation-shards.json` MUST still limit the specs Stryker runs for a shard of a sharded project, with the `x`, `x/*`, `*` meanings and the automatic `rest` shard unchanged; `scripts/mutation-plan.ts` MUST produce the same job matrix as on `main`.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-011 — The Vitest configuration Stryker runs for each of the five projects MUST be proven by running its test pass locally without mutants, passing with the same spec-file count as FR-002; the task MUST NOT dispatch, read or wait for a Mutation workflow run.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-012 — The PR body MUST list the five before scores with their floors (web 84.28/79, ui-cockpit 71.38/66, overlays 81.85/76, i18n 90.96/85, media 90.63/85, from #518–#522), state that the after scores are those of the next scheduled Mutation run on `main`, and state that no floor was raised.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-013 — CI's unit job MUST run the five projects' `test` targets on Vitest and pass; the five projects' Nx `test` target inputs MUST name the Vitest tooling as external dependencies (not `jest`, `@nx/jest`, `ts-jest`, `jest-preset-angular`) and the Vitest configuration files, so a runner-configuration change invalidates their cache.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-014 — `lifecycle.mjs check` MUST run an affected Angular project's `test` target on Vitest under a memory bound no looser than today's (a 3072 MB heap per Node process, at most two Nx tasks in parallel), and the Jest projects' targets with today's caps (`JEST_MAX_WORKERS=2`, `JEST_IDLE_MEMORY=1GB`).
+
+_From 1332-angular-vitest._
+
+### 1332-FR-017 — The constitution MUST be amended to 5.2.0 (MINOR) in this PR: Principles II and IV name Vitest through the Angular build system for the Angular projects and, since ST-1338 merged first, Vitest on each other project's own configuration, so no project is left on Jest; the Sync Impact Report, the Enforcement table rows for `post-edit-check.sh` and `stop-test-gate.sh`, and `constitution-card.md` follow, and `constitution-card.spec.mjs` passes.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-018 — Every line in `AGENTS.md` and `CLAUDE.local.md` that names Jest MUST be true at the PR head: it names both runners or states the per-project split; `CLAUDE.local.md` MUST NOT grow past its context baseline.
+
+_From 1332-angular-vitest._
+
+### 1332-FR-019 — The NestJS projects' Vitest configuration, `test` targets and specs MUST stay as on `main` (ST-1338 moved them). The `scripts` specs that assert the tooling this task changes (`mutation.spec.ts`, `mutation-plan.spec.ts`, `mutation-setup.spec.ts`, `ci-workflow.spec.ts`, `ci-workflow.adversary.spec.ts`, `ci-workflow.shards.adversary.spec.ts`, `test-suites.spec.ts`) may change (an adversary spec keeps every test title), plus the new `angular-vitest.adversary.spec.ts`, `mutation.angular.adversary.spec.ts` and `vitest-shared.spec.ts`. The Jest packages only the five projects used (`jest-preset-angular`, `jest-environment-jsdom`) MUST be removed; the rest of the Jest stack stays for ST-1304, which drops it (decision 2026-11-02: no project runs on Jest after ST-1338, so its removal is that story's scope).
+
+_From 1332-angular-vitest._
+
+### 1332-FR-020 — The change MUST alter no product behaviour: no file under the five projects' `src` other than `*.spec.ts`, the test setup and `*.testing.ts` helpers, and `apps/web/src/server/telemetry/telemetry.ts` changes (it takes the observability library as a defaulted argument so its specs pass a double, since the unit-test build bundles the library where no module mock reaches; decided for the owner 2026-11-02, behaviour unchanged), and the web app's build output is unchanged, measured as `nx build web` passing with a `dist` file list equal to `main`'s.
+
+_From 1332-angular-vitest._
 
 ## Retired
 
@@ -3255,3 +3312,7 @@ _From 1338-nest-vitest._
 - `976-FR-001` — superseded by `1338-FR-006` (2026-10-31)
 - `431-FR-002` — superseded by `1338-FR-008` (2026-10-31)
 - `1159-FR-011` — superseded by `1338-FR-009` (2026-10-31)
+- `421-FR-003` — superseded by `1332-FR-001` (2026-11-02)
+- `431-FR-001` — superseded by `1332-FR-010` (2026-11-02)
+- `1338-FR-008` — superseded by `1332-FR-008` (2026-11-02)
+- `1338-FR-002` — superseded by `1332-FR-001` (2026-11-02)
