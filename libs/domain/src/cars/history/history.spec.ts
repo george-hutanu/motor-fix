@@ -31,15 +31,6 @@ describe('the jobs a MotorFix repair names', () => {
 // @traces 026-FR-002 026-FR-003 026-FR-005 026-FR-008
 describe('the review state of a MotorFix repair', () => {
   const actor = { accountId: 'andrei' } as Actor;
-  const reasons = [
-    null,
-    'email_not_confirmed',
-    'already_reviewed',
-    'review_removed',
-    'job_not_done',
-    'own_garage',
-    'not_found',
-  ] as const;
   const stateFor = async (reason: ReviewRefusal | null) => {
     const judge = vi
       .fn()
@@ -56,15 +47,12 @@ describe('the review state of a MotorFix repair', () => {
     ['job_not_done', 'none'],
     ['own_garage', 'none'],
     ['not_found', 'none'],
-  ] as const)('answers %s with %s', async (reason, state) => {
-    expect(await stateFor(reason)).toBe(state);
-  });
-
-  it('reaches expired from no reason the eligibility gives today', async () => {
-    const states = await Promise.all(reasons.map(stateFor));
-
-    expect(states).not.toContain('expired');
-  });
+  ] as const)(
+    'answers %s with %s, so no reason reaches expired',
+    async (reason, state) => {
+      expect(await stateFor(reason)).toBe(state);
+    },
+  );
 });
 
 // @traces 026-FR-002 026-FR-003 026-FR-004
