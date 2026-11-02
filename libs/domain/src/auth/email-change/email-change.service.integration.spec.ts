@@ -72,7 +72,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   await redis.flushdb();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -302,10 +302,11 @@ describe('an address that cannot be asked for', () => {
 
   it('keeps no pending change when the e-mail cannot be sent', async () => {
     const id = await signedUp();
-    jest
-      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-      .mockRejectedValue(new Error('Redis did not answer'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(
+      app.get(NotificationsService),
+      'sendAccountEmail',
+    ).mockRejectedValue(new Error('Redis did not answer'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const res = await ask(id, NEW).expect(503);
 
@@ -321,14 +322,15 @@ describe('an address that cannot be asked for', () => {
   it('keeps the change, and logs, when only the notice to the old address cannot be sent', async () => {
     const id = await signedUp();
     const send = app.get(NotificationsService).sendAccountEmail;
-    jest
-      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-      .mockImplementation(async function (this: unknown, message) {
-        if (message.purpose === 'email_change_notice')
-          throw new Error('Redis did not answer');
-        return send.call(this, message);
-      });
-    const error = jest
+    vi.spyOn(
+      app.get(NotificationsService),
+      'sendAccountEmail',
+    ).mockImplementation(async function (this: unknown, message) {
+      if (message.purpose === 'email_change_notice')
+        throw new Error('Redis did not answer');
+      return send.call(this, message);
+    });
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 
@@ -354,10 +356,11 @@ describe('the hourly limit', () => {
 
   it('does not count a link that could not be sent', async () => {
     const id = await signedUp();
-    jest
-      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-      .mockRejectedValueOnce(new Error('Redis did not answer'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(
+      app.get(NotificationsService),
+      'sendAccountEmail',
+    ).mockRejectedValueOnce(new Error('Redis did not answer'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await ask(id, 'nou0@example.test').expect(503);
 
     for (let i = 1; i <= 5; i++) {
@@ -375,7 +378,7 @@ describe('the hourly limit', () => {
   it('is skipped, and logged, when Redis is down', async () => {
     const id = await signedUp();
     const client = app.get<Redis>(AUTH_REDIS);
-    jest.spyOn(client, 'multi').mockImplementation(() => {
+    vi.spyOn(client, 'multi').mockImplementation(() => {
       const chain = {
         exec: () => Promise.reject(new Error('Connection is closed.')),
         expire: () => chain,
@@ -383,7 +386,7 @@ describe('the hourly limit', () => {
       };
       return chain as unknown as ReturnType<Redis['multi']>;
     });
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 

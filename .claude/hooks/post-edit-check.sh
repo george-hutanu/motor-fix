@@ -13,10 +13,12 @@
 #        foo.ts       -> foo.spec.ts when it exists, else nothing
 #      run on its project's runner: Vitest with the project's own config for
 #      the five Angular projects (apps/web, libs/ui-cockpit, libs/overlays,
-#      libs/i18n, libs/media; web's server specs on vitest-node.config.ts),
-#      the root jest config for every other project; unless the runner took
-#      5 s or more on it in the last 7 days (spec-durations.mjs keeps the
-#      runner's own time per spec); a slow spec is left to the Stop gate
+#      libs/i18n, libs/media; web's node specs on vitest-node.config.ts) or,
+#      in another project with a vitest.config.mts, with the nearest one above
+#      the spec; the root jest config for every other project; unless the
+#      runner took 5 s or more on it in the last 7 days (spec-durations.mjs
+#      keeps the runner's own time per spec); a slow spec is left to the Stop
+#      gate
 #
 # A tool that is not installed yet (before the Nx scaffold lands) is skipped,
 # not failed: the gate exists to catch broken edits, not a missing toolchain.
@@ -35,7 +37,7 @@ set -uo pipefail
 # a project on Jest.
 vitest_config() {
   case "$1" in
-    apps/web/src/server/*|apps/web/src/app/app.config.spec.ts) echo apps/web/vitest-node.config.ts ;;
+    apps/web/src/server/*|apps/web/src/app/app.config.spec.ts|apps/web/src/app/app.config.server.adversary.spec.ts) echo apps/web/vitest-node.config.ts ;;
     apps/web/*) echo apps/web/vitest.config.ts ;;
     libs/ui-cockpit/*|libs/overlays/*|libs/i18n/*|libs/media/*)
       lib="${1#libs/}"
@@ -96,10 +98,17 @@ durations=".claude/scripts/lib/spec-durations.mjs"
 should=0
 [ -f "$durations" ] && { node "$durations" should "$test_file"; should=$?; }
 if [ "$should" -eq 1 ]; then
-  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run after this edit: its runner took 5 s or more on it in the last 7 days. The Stop gate runs it (vitest --changed or jest --onlyChanged) before the turn ends.\"}}"
+  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run after this edit: its runner took 5 s or more on it in the last 7 days. The Stop gate runs it before the turn ends.\"}}"
   exit 0
 fi
 config="$(vitest_config "$test_file")"
+# Another project on Vitest names it in the nearest vitest.config.mts above the
+# spec; the rest are Jest's.
+if [ -z "$config" ]; then
+  project="$(dirname "$test_file")"
+  while [ "$project" != "." ] && [ "$project" != "/" ] && [ ! -f "$project/vitest.config.mts" ]; do project="$(dirname "$project")"; done
+  [ "$project" != "." ] && [ "$project" != "/" ] && config="$project/vitest.config.mts"
+fi
 if [ -n "$config" ]; then
   [ -x node_modules/.bin/vitest ] || exit 0
 else

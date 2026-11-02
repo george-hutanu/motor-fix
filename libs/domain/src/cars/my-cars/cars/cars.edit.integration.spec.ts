@@ -62,7 +62,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -631,12 +631,12 @@ describe('what an edit writes beside the car', () => {
   it('changes nothing and hands nothing on when the history cannot be written', async () => {
     const { auth } = await driver();
     const car = await saved(auth);
-    jest
-      .spyOn(AuditService.prototype, 'recordChanges')
-      .mockRejectedValue(new Error('history unavailable'));
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValue(new Error('history unavailable'));
+    vi.spyOn(AuditService.prototype, 'recordChanges').mockRejectedValue(
+      new Error('history unavailable'),
+    );
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValue(
+      new Error('history unavailable'),
+    );
 
     const res = await edit(auth, car.id, {
       odometerKm: 151000,

@@ -25,7 +25,7 @@ beforeEach(async () => {
   await world.reset();
   ({ mark, since } = await world.marks());
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 afterAll(() => prisma.$disconnect());
 
 // A transfer of a new car of a new seller, expiring at `expiresAt`.
@@ -113,10 +113,10 @@ describe('the daily transfer expiry', () => {
   it('expires the others when one fails, and expires it on the next run', async () => {
     const first = await transfer(new Date(NOW.getTime() - DAY_MS));
     const second = await transfer(new Date(NOW.getTime() - 2 * DAY_MS));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const record = AuditService.prototype.record;
     let failed = false;
-    jest.spyOn(AuditService.prototype, 'record').mockImplementation(function (
+    vi.spyOn(AuditService.prototype, 'record').mockImplementation(function (
       this: AuditService,
       tx,
       entry,
@@ -141,7 +141,7 @@ describe('the daily transfer expiry', () => {
   it('leaves a transfer the seller cancelled meanwhile cancelled, writing nothing for it', async () => {
     const past = await transfer(new Date(NOW.getTime() - DAY_MS));
     const findMany = prisma.carTransfer.findMany.bind(prisma.carTransfer);
-    jest.spyOn(prisma.carTransfer, 'findMany').mockImplementationOnce((async (
+    vi.spyOn(prisma.carTransfer, 'findMany').mockImplementationOnce((async (
       args: unknown,
     ) => {
       const rows = await findMany(args as never);
@@ -164,7 +164,7 @@ describe('the daily transfer expiry', () => {
     await transfer(new Date(NOW.getTime() - DAY_MS));
     await transfer(new Date(NOW.getTime() - DAY_MS));
     const lines: string[] = [];
-    jest.spyOn(Logger.prototype, 'log').mockImplementation((message) => {
+    vi.spyOn(Logger.prototype, 'log').mockImplementation((message) => {
       lines.push(String(message));
     });
 

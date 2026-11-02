@@ -1,4 +1,4 @@
-<header class="intro">
+<header class="intro" [class.tight]="tight()">
   @if (answer(); as answer) {
     <!-- Re-created for another brand, whose name blurs in once it lands. -->
     <h1 class="title" [class.rising]="rising()">@for (shown of [answer.brand]; track shown.id) {<span class="titled">{{ voice.copy.list | t: { brand: unbroken(shown.name) } }}</span>}</h1>
@@ -52,7 +52,7 @@
     (picked)="picked($event)"
   />
 }
-<mf-results-sheet [forcedFull]="mapFailed()">
+<mf-results-sheet [forcedFull]="mapFailed() || filteredEmptyShown()">
   @if (brand() && state() !== 'placeless') {
     <div class="brands">
       <mf-brand-chips
@@ -70,14 +70,14 @@
             {{ 'public.results.filters.button' | t }}
           }
         </button>
-        @for (filter of activeFilters(); track filter.key) {
+        @for (chip of chips(); track chip.key) {
           <button
             type="button"
             class="chip filter"
-            [attr.data-filter]="filter.key"
-            [attr.aria-label]="'public.results.filters.remove' | t: { name: (filter.label | t) }"
-            (click)="toggle(filter.key)"
-          >{{ filter.label | t }} <span aria-hidden="true">×</span></button>
+            [attr.data-filter]="chip.key"
+            [attr.aria-label]="'public.results.filters.remove' | t: { name: (chip.label | t: chip.params) }"
+            (click)="remove(chip.key)"
+          >{{ chip.label | t: chip.params }} <span aria-hidden="true">×</span></button>
         }
       </div>
       <mf-sort-control [sort]="sortShown()" [placeKnown]="!!near()" (pick)="changeSort($event)" />

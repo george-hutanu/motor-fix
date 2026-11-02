@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { LegalCheckService } from './legal-check.service';
 import type { Actor } from '../../../auth/policy';
@@ -20,21 +21,21 @@ const actor = (role: Actor['role'], garage: string | null = garageId): Actor =>
 const service = (garage: unknown = null) =>
   new LegalCheckService(
     {
-      garage: { findUnique: jest.fn().mockResolvedValue(garage) },
-      rarActivity: { findMany: jest.fn().mockResolvedValue([]) },
+      garage: { findUnique: vi.fn().mockResolvedValue(garage) },
+      rarActivity: { findMany: vi.fn().mockResolvedValue([]) },
     } as unknown as PrismaClient,
     {
-      documentCycleOf: jest.fn().mockResolvedValue(null),
+      documentCycleOf: vi.fn().mockResolvedValue(null),
     } as unknown as DocumentCycleService,
   );
 
 // @traces 210-FR-013
 describe('a refused legal check read', () => {
-  let warn: jest.SpyInstance;
+  let warn: MockInstance;
   beforeEach(() => {
-    warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it.each(['receptionist', 'mechanic'] as const)(
     'writes one forbidden line for a %s of the garage',
@@ -106,7 +107,7 @@ const failedRecheck = {
 
 // @traces 1354-FR-001 1354-FR-002
 describe('the legal check read of a suspended garage', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('answers with its status and its latest re-check', async () => {
     const answer = await service(
@@ -134,7 +135,7 @@ describe('the legal check read of a suspended garage', () => {
   });
 
   it('is not found for a draft garage', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
     await expect(
       service(garage({ status: 'draft' })).read(actor('garage'), garageId),
     ).rejects.toMatchObject({ status: 404 });

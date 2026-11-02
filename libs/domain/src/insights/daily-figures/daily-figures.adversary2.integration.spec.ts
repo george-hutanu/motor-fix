@@ -27,7 +27,7 @@ beforeEach(async () => {
   await redis.flushdb();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 async function seen(garageId: string, day: string, keys: string[]) {
   await redis.pfadd(`insights:pv:${garageId}:${day}`, ...keys);
@@ -128,7 +128,7 @@ describe('the gaps the night job reports', () => {
   });
 
   it('logs each gap as a warning naming the day and no garage', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const g = await world.garage('Atelier Dinamo');

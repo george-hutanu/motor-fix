@@ -230,4 +230,27 @@ describe('a gallery written again, and its history', () => {
     expect(await gallery()).toEqual([b, a]);
     expect(await entries(seen)).toEqual([]);
   });
+
+  // @traces 1249-FR-009
+  it("keeps a kept photo's caption when the gallery is written again", async () => {
+    const [a, b] = [keyOf(), keyOf()];
+    await save([a, b]);
+    await prisma.garagePhoto.updateMany({
+      data: { caption: 'Hala de vopsitorie' },
+      where: { fileKey: a, garageId },
+    });
+
+    await save([b, a]);
+
+    expect(
+      await prisma.garagePhoto.findMany({
+        orderBy: { position: 'asc' },
+        select: { caption: true, fileKey: true },
+        where: { garageId },
+      }),
+    ).toEqual([
+      { caption: null, fileKey: b },
+      { caption: 'Hala de vopsitorie', fileKey: a },
+    ]);
+  });
 });

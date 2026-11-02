@@ -231,8 +231,8 @@ describe('GET /quote-requests/garages', () => {
     await placed('Service Mărăști', car.brandId, [46.78, 23.62], {
       jobTypeIds: [oil.id],
     });
-    const raw = jest.spyOn(client(), '$queryRaw');
-    const listed = jest.spyOn(client().garage, 'findMany');
+    const raw = vi.spyOn(client(), '$queryRaw');
+    const listed = vi.spyOn(client().garage, 'findMany');
     try {
       const res = await candidates(
         `carId=${car.id}&near=${BUCHAREST}&jobTypeIds=${oil.id}`,

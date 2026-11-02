@@ -11,8 +11,8 @@ const solid = (width: number, height: number) =>
   sharp({ create: { background: '#369', channels: 3, height, width } });
 
 // Each test encodes every responsive variant (AVIF, WebP, JPEG): seconds
-// apiece on a loaded CI runner, past Jest's 5 s default.
-jest.setTimeout(60_000);
+// apiece on a loaded CI runner, past the runner's 5 s default.
+vi.setConfig({ hookTimeout: 60_000, testTimeout: 60_000 });
 
 describe('processing a photo, hostile inputs', () => {
   const store = new S3TestStore();

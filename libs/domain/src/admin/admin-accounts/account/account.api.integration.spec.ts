@@ -87,7 +87,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   published.length = 0;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -458,9 +458,10 @@ describe('POST /admin/accounts/:id/reset-access', () => {
     const { auth } = await admin();
     const id = await person();
     await signIn().expect(200);
-    jest
-      .spyOn(NotificationsService.prototype, 'sendAccountEmail')
-      .mockRejectedValueOnce(new Error('queue down'));
+    vi.spyOn(
+      NotificationsService.prototype,
+      'sendAccountEmail',
+    ).mockRejectedValueOnce(new Error('queue down'));
     const failed = await actions('reset_access', 'email_failed');
 
     const res = await act(id, 'reset-access', auth);
@@ -569,9 +570,10 @@ describe('POST /admin/accounts/:id/suspend', () => {
   it('keeps the suspension when the e-mail is refused, counting email_failed', async () => {
     const { auth } = await admin();
     const id = await person();
-    jest
-      .spyOn(NotificationsService.prototype, 'sendAccountEmail')
-      .mockRejectedValueOnce(new Error('queue down'));
+    vi.spyOn(
+      NotificationsService.prototype,
+      'sendAccountEmail',
+    ).mockRejectedValueOnce(new Error('queue down'));
     const failed = await actions('suspend', 'email_failed');
 
     const res = await act(id, 'suspend', auth, { reason: REASON });
@@ -663,7 +665,7 @@ describe('POST /admin/accounts/:id/suspend', () => {
     const { auth } = await admin();
     const id = await person();
     const lines: unknown[] = [];
-    jest.spyOn(Logger.prototype, 'log').mockImplementation((line: unknown) => {
+    vi.spyOn(Logger.prototype, 'log').mockImplementation((line: unknown) => {
       lines.push(line);
     });
 
@@ -681,7 +683,7 @@ describe('POST /admin/accounts/:id/suspend', () => {
     const id = await person();
     await act(id, 'suspend', auth, { reason: REASON }).expect(200);
     const lines: unknown[] = [];
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation((line: unknown) => {
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation((line: unknown) => {
       lines.push(line);
     });
 
@@ -725,7 +727,7 @@ describe('the clean-up after a suspension', () => {
         }),
       ],
     }).compile();
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     const handler = worker.get(AccountClosed);
     const job = {
       data: {

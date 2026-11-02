@@ -70,7 +70,7 @@ afterAll(async () => {
 let slugs: string[];
 
 beforeEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
   await purgeTags(other, ['search']);
   await prisma.brand.createMany({
@@ -144,14 +144,14 @@ describe('warming the cache after a deploy', () => {
     expect(await profileWarm(slugs[3] as string)).toBe(0);
     expect(await other.exists('v5:home:dacia:-', 'v5:home:ford:-')).toBe(2);
 
-    const read = jest.spyOn(PublicGaragesService.prototype, 'bySlug');
+    const read = vi.spyOn(PublicGaragesService.prototype, 'bySlug');
     await warmCache(app, release);
     expect(read).not.toHaveBeenCalled();
     expect(await other.pttl(`v1:warm:${release}`)).toBeGreaterThan(86_000_000);
   }, 60_000);
 
   it('warms nothing without a release', async () => {
-    const read = jest.spyOn(PublicGaragesService.prototype, 'bySlug');
+    const read = vi.spyOn(PublicGaragesService.prototype, 'bySlug');
 
     await warmCache(app, 'dev');
 
@@ -159,12 +159,12 @@ describe('warming the cache after a deploy', () => {
   });
 
   it('skips the reads that fail, with one warning, and warms the rest', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    jest
-      .spyOn(PublicGaragesService.prototype, 'bySlug')
-      .mockRejectedValue(new Error('database gone'));
+    vi.spyOn(PublicGaragesService.prototype, 'bySlug').mockRejectedValue(
+      new Error('database gone'),
+    );
 
     await expect(
       warmCache(app, `rel-${randomUUID()}`),

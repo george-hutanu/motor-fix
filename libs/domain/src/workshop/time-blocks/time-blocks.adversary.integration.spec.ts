@@ -1,5 +1,6 @@
 import { todayInBucharest } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { addDays, atLocal } from '../../bucharest';
 import { outboxMark } from '../../events/outbox.testing';
@@ -64,11 +65,11 @@ const ended = (s: Setting, over: object = {}) =>
     },
   });
 
-let warn: jest.SpyInstance;
+let warn: MockInstance;
 beforeEach(() => {
-  warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+  warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 427-FR-004
 describe('what a block accepts, pushed', () => {

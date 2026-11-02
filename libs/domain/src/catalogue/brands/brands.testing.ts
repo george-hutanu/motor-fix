@@ -6,7 +6,7 @@ import type { Redis } from 'ioredis';
 export function raceListWrite(cache: Redis, change: () => Promise<unknown>) {
   const set = cache.set.bind(cache);
   const race = { raced: false };
-  const write = jest
+  const write = vi
     .spyOn(cache, 'set')
     .mockImplementation(async (...args: Parameters<Redis['set']>) => {
       if (race.raced || !String(args[0]).startsWith('brands:active:'))

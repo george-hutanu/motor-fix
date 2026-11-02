@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { RESPONSE_INIT } from '@angular/core';
+import { RESPONSE_INIT, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -10,6 +10,24 @@ import type { Mock } from 'vitest';
 
 import { TransferPage } from './transfer';
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
+import { Consent } from '../../consent/consent';
+import { Session } from '../../dashboard/session';
+import { SignInDialog } from '../../sign-in/sign-in-dialog';
+
+const pageStubs = () => [
+  {
+    provide: Session,
+    useValue: {
+      current: signal(null),
+      load: async () => null,
+      reload: async () => undefined,
+      roleHint: signal(null),
+      switchRole: async () => null,
+    },
+  },
+  { provide: SignInDialog, useValue: { gate: async () => false } },
+  { provide: Consent, useValue: { track: () => undefined } },
+];
 
 const refusal = (status: number, code?: string) =>
   new HttpErrorResponse({
@@ -37,6 +55,7 @@ async function open(
   response = {};
   TestBed.configureTestingModule({
     providers: [
+      ...pageStubs(),
       provideRouter([
         {
           component: TransferPage,
@@ -119,6 +138,7 @@ describe('the public transfer page under odd answers', () => {
     response = {};
     TestBed.configureTestingModule({
       providers: [
+        ...pageStubs(),
         provideRouter([
           { component: TransferPage, path: ':lang/transfer/:token' },
           { children: [], path: ':lang' },

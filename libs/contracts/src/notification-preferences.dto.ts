@@ -71,6 +71,36 @@ export class UpdateNotificationPreferenceDto {
   garageId!: string | null;
 }
 
+// Why a message went by another channel than the one it was meant for.
+const FALLBACK_REASONS = [
+  'no_device',
+  'phone_not_verified',
+  'sms_cap_reached',
+  'send_failed',
+] as const;
+
+export type FallbackReason = (typeof FALLBACK_REASONS)[number];
+
+export class NotificationFallbackDto {
+  @ApiProperty({
+    description: 'The channel it was meant for',
+    enum: OUTSIDE_CHANNELS,
+  })
+  from!: OutsideChannel;
+
+  @ApiProperty({
+    description: 'The channel it went by',
+    enum: OUTSIDE_CHANNELS,
+  })
+  to!: OutsideChannel;
+
+  @ApiProperty({ enum: FALLBACK_REASONS })
+  reason!: FallbackReason;
+
+  @ApiProperty({ format: 'date-time', type: String })
+  at!: string;
+}
+
 export class NotificationPreferenceDto extends UpdateNotificationPreferenceDto {
   @ApiProperty({ description: 'Sent whatever the person chooses' })
   alwaysSent!: boolean;
@@ -82,6 +112,15 @@ export class NotificationPreferenceDto extends UpdateNotificationPreferenceDto {
     isArray: true,
   })
   channels!: OutsideChannel[];
+
+  @ApiProperty({
+    description:
+      'A driver entry: the last message of the type that went by another channel than the chosen one since it was chosen, else null; a staff entry has none',
+    nullable: true,
+    required: false,
+    type: NotificationFallbackDto,
+  })
+  fallback?: NotificationFallbackDto | null;
 }
 
 export class SmsUsageDto {

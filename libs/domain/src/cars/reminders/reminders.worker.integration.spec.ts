@@ -42,7 +42,7 @@ beforeEach(async () => {
 });
 
 describe('the reminders schedule at start-up', () => {
-  const run = jest.fn(async () => 0);
+  const run = vi.fn(async () => 0);
   const scheduler = (iso: string) => {
     const s = new RemindersScheduler(queue, bucharestDaily(9), {
       run,
@@ -51,7 +51,9 @@ describe('the reminders schedule at start-up', () => {
     return s;
   };
 
-  beforeEach(() => run.mockClear());
+  beforeEach(() => {
+    run.mockClear();
+  });
 
   it('runs a missed day at once when it starts at 11:20, then waits for tomorrow', async () => {
     await scheduler('2026-11-10T09:20:00Z').start();
@@ -97,7 +99,7 @@ describe('the reminders schedule at start-up', () => {
       return 0;
     });
     const task = (name: string) => ({
-      run: jest.fn(async () => {
+      run: vi.fn(async () => {
         order.push(name);
       }),
     });
@@ -138,7 +140,9 @@ describe('the reminders schedule at start-up', () => {
   });
 
   it('logs an error when a run fails for good, not before', () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const s = scheduler('2026-11-10T07:00:00Z');
     const job = (attemptsMade: number) =>
       ({
@@ -156,7 +160,9 @@ describe('the reminders schedule at start-up', () => {
 
   // @traces 092-FR-006
   it('logs a car event that fails for good with its id and kind, not before', () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const s = scheduler('2026-11-10T07:00:00Z');
     const job = (attemptsMade: number) =>
       ({
@@ -177,8 +183,8 @@ describe('the reminders schedule at start-up', () => {
 
   // @traces 297-FR-007
   it('writes one job_failed entry when a run or a car event fails for good, not before', () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    const write = jest.spyOn(systemLog, 'write').mockResolvedValue('written');
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const write = vi.spyOn(systemLog, 'write').mockResolvedValue('written');
     const s = scheduler('2026-11-10T07:00:00Z');
     const job = (name: string, attemptsMade: number, attempts: number) =>
       ({
@@ -215,7 +221,7 @@ describe('the reminders schedule at start-up', () => {
         },
       ],
     ]);
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 });
 
@@ -337,7 +343,7 @@ describe('the reminders worker and the car events', () => {
 
     const driver = await account('gabriela', ['driver'], { email: null });
     const carId = await car(driver);
-    const run = jest.spyOn(app.get(RemindersService), 'run');
+    const run = vi.spyOn(app.get(RemindersService), 'run');
     expect(CAR_REMINDERS_CONSUMER.kinds).toEqual([
       'car.added',
       'car.updated',

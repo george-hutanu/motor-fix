@@ -36,8 +36,9 @@ function sources(dir: string): string[] {
   );
 }
 
-// The Angular projects run on Vitest; what follows about a Jest config holds
-// for the others.
+// The Angular projects (vitest.config.ts) and the Nest projects on Vitest
+// (vitest.config.mts) hand Stryker their Vitest config; what follows about a
+// Jest config holds for the others.
 const onJest = mutated.filter((root) =>
   existsSync(join(repo, root, 'jest.config.cts')),
 );
@@ -120,10 +121,12 @@ describe('mutation setup', () => {
   });
 
   // Each test runner would take its own database turn; one at a time keeps
-  // the turns from queueing past Stryker's timeout.
+  // the turns from queueing past Stryker's timeout. libs/domain gives each
+  // worker its own database instead.
   const withDatabase = mutated.filter(
     (root) =>
       root !== 'scripts' &&
+      root !== 'libs/domain' &&
       sources(`${root}/src`).some((file) =>
         file.endsWith('.integration.spec.ts'),
       ),
@@ -131,7 +134,7 @@ describe('mutation setup', () => {
 
   it('finds the projects whose specs use the database', () => {
     expect(withDatabase).toEqual(
-      expect.arrayContaining(['apps/api', 'libs/domain']),
+      expect.arrayContaining(['apps/api', 'apps/mcp']),
     );
   });
 

@@ -14,7 +14,7 @@ describe('the reset request limit', () => {
   } as unknown as Redis;
 
   it('admits every request when Redis does not answer', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const attempts = new Attempts(down);
@@ -145,7 +145,7 @@ describe('the caller as a log line may name it', () => {
 
 describe('a failed sign-in', () => {
   it('logs a failure whose 15 minutes Redis refused to set', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const chain = {
@@ -255,7 +255,7 @@ describe('the limits on sending a sign-in code', () => {
   });
 
   it('counts the number alone when the address cannot be read', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const { redis, sent } = countingRedis();
@@ -270,7 +270,7 @@ describe('the limits on sending a sign-in code', () => {
   });
 
   it('admits and logs, without the number, when Redis does not answer', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const down = {
@@ -364,7 +364,7 @@ describe('the hourly limit on links and codes for a contact change', () => {
   });
 
   it('admits and logs when Redis does not answer', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 
@@ -414,7 +414,7 @@ describe('the limit on wrong current passwords', () => {
   });
 
   it('logs a failure whose 15 minutes Redis refused to set', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const chain = {
@@ -436,7 +436,7 @@ describe('the limit on wrong current passwords', () => {
   });
 
   it('lets every try through and logs when Redis does not answer', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const attempts = new Attempts(down);

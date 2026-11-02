@@ -32,14 +32,14 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());
 
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
 });
@@ -61,7 +61,7 @@ async function start() {
   notifications.now = () => NIGHT;
   return {
     fanOut: app.get(NoShowFanOut),
-    notify: jest.spyOn(notifications, 'notify'),
+    notify: vi.spyOn(notifications, 'notify'),
   };
 }
 

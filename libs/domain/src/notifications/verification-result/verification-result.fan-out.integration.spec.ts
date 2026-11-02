@@ -58,7 +58,7 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -69,8 +69,8 @@ afterAll(async () => {
 beforeEach(async () => {
   // Brevo's address answers nothing, so every message stays as the fan-out
   // built it until a test sends it itself.
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
   await jobs.obliterate({ force: true });
@@ -312,7 +312,7 @@ describe('the approved message each owner gets', () => {
 
   // @traces 209-FR-015
   it('follows the test environment’s automatic approval of a submitted garage, naming no admin', async () => {
-    const handled = jest.spyOn(VerificationResultFanOut.prototype, 'handle');
+    const handled = vi.spyOn(VerificationResultFanOut.prototype, 'handle');
     const { file, owner } = await staffedGarage();
     await prisma.verificationFile.delete({ where: { id: file.id } });
     await start(true);
@@ -518,7 +518,7 @@ describe('one message per decision', () => {
   });
 
   it('builds the message from the event the relay queued, once when relayed twice', async () => {
-    const handled = jest.spyOn(VerificationResultFanOut.prototype, 'handle');
+    const handled = vi.spyOn(VerificationResultFanOut.prototype, 'handle');
     const { file, owner } = await staffedGarage();
     const { event } = await decided(file.id, { outcome: 'approved' });
     await start(true);
@@ -577,7 +577,7 @@ describe('what the fan-out reports', () => {
   });
 
   it('logs one line with the file, the decision and how many owners, and never the note or an address', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const { file, slug } = await staffedGarage();

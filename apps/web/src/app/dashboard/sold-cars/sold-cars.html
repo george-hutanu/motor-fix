@@ -1,0 +1,8 @@
+@if (cars().length) {
+  <section aria-labelledby="sold-cars-title">
+    <h2 id="sold-cars-title">{{ 'driver.cars.sold.title' | t }}</h2>
+    @for (car of cars(); track car.id) {
+      <mf-sold-car [car]="car" (gone)="gone.emit()" />
+    }
+  </section>
+}

@@ -8,8 +8,8 @@ import {
   GarageSearchQueryDto,
 } from './garage-search.dto';
 import { bucharestClock } from './open-status';
+import { SEARCH_MIN_RATINGS, SEARCH_PRICE_CEILINGS } from './search-choices';
 import { filtersKey, filtersOf, type SearchFilters } from './search-filters';
-import { SEARCH_MIN_RATINGS, SEARCH_PRICE_CEILINGS } from './search-place';
 
 const AT = new Date('2026-10-30T07:15:00Z');
 

@@ -33,7 +33,7 @@ describe('get_my_account', () => {
       name: 'Ana Maria Popescu',
       roles: ['driver', 'garage'],
     });
-    const activeAccount = jest.fn(async () => loaded);
+    const activeAccount = vi.fn(async () => loaded);
     const result = await callTool(
       [getMyAccount],
       caller({ roles: ['driver', 'garage'] }, ['motorfix.read']),

@@ -13,7 +13,7 @@ import { dirname, join, resolve } from "node:path";
 import { isEntryPoint } from "./entry.mjs";
 
 const SPECIFIER =
-  /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*|\bjest\.(?:mock|requireActual)\s*\(\s*)(['"])(\.{1,2}\/[^'"\n]*)\1/g;
+  /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*|\bjest\.(?:mock|requireActual)\s*\(\s*|\bvi\.(?:mock|importActual)\s*(?:<[^>]*>)?\(\s*)(['"])(\.{1,2}\/[^'"\n]*)\1/g;
 const TYPE_ONLY = /\bimport\s+type\s[^;]*?\bfrom\s*['"][^'"\n]*['"]/g;
 // Comments are dropped before matching: a commented-out import is not loaded.
 const COMMENTS = /\/\*[\s\S]*?\*\/|(^|[^:\\])\/\/.*$/gm;

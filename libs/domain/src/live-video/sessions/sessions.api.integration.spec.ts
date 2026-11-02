@@ -70,9 +70,9 @@ async function nothingWritten(jobId: string) {
 }
 
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1250-FR-002 1250-FR-007 1250-FR-011
 describe('starting a live stream on a job', () => {
@@ -247,8 +247,8 @@ describe('a start that is refused', () => {
 
   it('keeps one session when two starts race, and deletes the loser’s input', async () => {
     const s = await setting();
-    const create = jest.spyOn(fake(), 'createInput');
-    const close = jest.spyOn(fake(), 'deleteInput');
+    const create = vi.spyOn(fake(), 'createInput');
+    const close = vi.spyOn(fake(), 'deleteInput');
 
     const answers = await Promise.all([
       start(s.live, s.costel),
@@ -277,17 +277,17 @@ describe('a start that is refused', () => {
 
   it('deletes the input and writes nothing when the session cannot be saved, logging an input it could not delete', async () => {
     const s = await setting();
-    const warn = jest.mocked(Logger.prototype.warn);
+    const warn = vi.mocked(Logger.prototype.warn);
     const service = provider(LiveSessionsService) as unknown as {
       audit: AuditPort;
     };
-    jest
-      .spyOn(service.audit, 'record')
-      .mockRejectedValueOnce(new Error('audit down'));
-    const create = jest.spyOn(fake(), 'createInput');
-    jest
-      .spyOn(fake(), 'deleteInput')
-      .mockRejectedValueOnce(new Error('close failed'));
+    vi.spyOn(service.audit, 'record').mockRejectedValueOnce(
+      new Error('audit down'),
+    );
+    const create = vi.spyOn(fake(), 'createInput');
+    vi.spyOn(fake(), 'deleteInput').mockRejectedValueOnce(
+      new Error('close failed'),
+    );
 
     const res = await start(s.live, s.costel);
 
@@ -345,9 +345,9 @@ describe('a start that is refused', () => {
     'answers 503 when %s, offering photos and clips instead',
     async (_name, impl) => {
       const s = await setting();
-      jest
-        .spyOn(fake(), 'createInput')
-        .mockImplementation(async () => impl() as never);
+      vi.spyOn(fake(), 'createInput').mockImplementation(
+        async () => impl() as never,
+      );
       await prisma.account.update({
         data: { language: 'en' },
         where: { id: s.dinamo.owner },
@@ -373,7 +373,7 @@ describe('a start that is refused', () => {
 
   it('logs a refused start by ids and code alone', async () => {
     const s = await setting('done');
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 

@@ -1,4 +1,7 @@
-import { databaseTurn, TURN_WAIT_MS } from './database-turn.testing';
+import {
+  databaseTurn,
+  TURN_WAIT_MS,
+} from './database-turn/database-turn.testing';
 import type { PrismaClient } from '../generated/prisma/client';
 
 type TurnGlobal = {
@@ -9,9 +12,7 @@ type TurnGlobal = {
 export function serialDatabase(databaseUrl: string) {
   const releaseLast = (globalThis as TurnGlobal).releaseDatabaseTurnLast;
   if (!releaseLast)
-    throw new Error(
-      'serialDatabase needs testEnvironment database-turn.environment.cjs',
-    );
+    throw new Error('serialDatabase needs setup file database-turn.setup.ts');
   const turn = databaseTurn(databaseUrl);
   beforeAll(turn.take, TURN_WAIT_MS);
   // Given back after every afterAll of the spec, not before them.

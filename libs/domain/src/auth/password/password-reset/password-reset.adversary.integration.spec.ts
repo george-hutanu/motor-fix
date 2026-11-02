@@ -88,7 +88,7 @@ beforeEach(async () => {
   published.length = 0;
   maintenance = false;
   resets.now = () => new Date();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -129,12 +129,12 @@ function holdResetEmails(): () => void {
     release = resolve;
   });
   holds.push(release);
-  jest
-    .spyOn(notifications, 'sendAccountEmail')
-    .mockImplementation(async (input) => {
+  vi.spyOn(notifications, 'sendAccountEmail').mockImplementation(
+    async (input) => {
       await held;
       return send(input);
-    });
+    },
+  );
   return release;
 }
 
@@ -224,10 +224,11 @@ describe('answering a reset request before the link is issued', () => {
     const listener = (reason: unknown) => unhandled.push(reason);
     process.on('unhandledRejection', listener);
     try {
-      jest
-        .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-        .mockRejectedValue(new Error('queue down for andrei@example.test'));
-      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      vi.spyOn(
+        app.get(NotificationsService),
+        'sendAccountEmail',
+      ).mockRejectedValue(new Error('queue down for andrei@example.test'));
+      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
       await ask('andrei@example.test').expect(202);
       await resets.drain();
       // Long enough for a wrong outcome to show.
@@ -245,12 +246,13 @@ describe('answering a reset request before the link is issued', () => {
     process.on('unhandledRejection', listener);
     let status = 0;
     try {
-      jest
-        .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-        .mockImplementation(() => {
-          throw new Error('thrown before any promise');
-        });
-      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      vi.spyOn(
+        app.get(NotificationsService),
+        'sendAccountEmail',
+      ).mockImplementation(() => {
+        throw new Error('thrown before any promise');
+      });
+      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
       status = (await ask('andrei@example.test')).status;
       await resets.drain();
       // Long enough for a wrong outcome to show.
@@ -267,13 +269,13 @@ describe('answering a reset request before the link is issued', () => {
     const unhandled: unknown[] = [];
     const listener = (reason: unknown) => unhandled.push(reason);
     process.on('unhandledRejection', listener);
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const appPrisma = app.get<PrismaClient>(PRISMA);
-    jest
-      .spyOn(appPrisma.account, 'findUnique')
-      .mockRejectedValue(new Error('database gone for andrei@example.test'));
+    vi.spyOn(appPrisma.account, 'findUnique').mockRejectedValue(
+      new Error('database gone for andrei@example.test'),
+    );
     let status = 0;
     try {
       status = (await ask('andrei@example.test')).status;
@@ -291,10 +293,11 @@ describe('answering a reset request before the link is issued', () => {
 
   it('resolves shutdown after an issuing failed', async () => {
     await person();
-    jest
-      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-      .mockRejectedValue(new Error('queue down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(
+      app.get(NotificationsService),
+      'sendAccountEmail',
+    ).mockRejectedValue(new Error('queue down'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await ask('andrei@example.test').expect(202);
     await expect(resets.beforeApplicationShutdown()).resolves.toBeUndefined();
     await expect(resets.beforeApplicationShutdown()).resolves.toBeUndefined();
@@ -306,13 +309,13 @@ describe('answering a reset request before the link is issued', () => {
     const notifications = app.get(NotificationsService);
     const send = notifications.sendAccountEmail.bind(notifications);
     let calls = 0;
-    jest
-      .spyOn(notifications, 'sendAccountEmail')
-      .mockImplementation(async (input) => {
+    vi.spyOn(notifications, 'sendAccountEmail').mockImplementation(
+      async (input) => {
         if (++calls === 1) throw new Error('first one fails');
         return send(input);
-      });
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      },
+    );
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await ask('one@example.test').expect(202);
     await ask('two@example.test').expect(202);
     await expect(resets.beforeApplicationShutdown()).resolves.toBeUndefined();
@@ -323,11 +326,11 @@ describe('answering a reset request before the link is issued', () => {
     const id = await person();
     for (let i = 0; i < 3; i++) await ask('andrei@example.test').expect(202);
     await resets.drain();
-    const send = jest.spyOn(app.get(NotificationsService), 'sendAccountEmail');
+    const send = vi.spyOn(app.get(NotificationsService), 'sendAccountEmail');
     const tokens = await prisma.accountToken.count({
       where: { accountId: id },
     });
-    const lookup = jest.spyOn(
+    const lookup = vi.spyOn(
       app.get<PrismaClient>(PRISMA).account,
       'findUnique',
     );
@@ -349,7 +352,7 @@ describe('answering a reset request before the link is issued', () => {
       await ask(`nobody${i}@example.test`, from).expect(202);
     }
     await resets.drain();
-    const send = jest.spyOn(app.get(NotificationsService), 'sendAccountEmail');
+    const send = vi.spyOn(app.get(NotificationsService), 'sendAccountEmail');
     await ask('andrei@example.test', from).expect(202);
     await resets.drain();
     expect(send).not.toHaveBeenCalled();
@@ -375,7 +378,7 @@ describe('answering a reset request before the link is issued', () => {
 
   it('refuses an invalid body with 400 without issuing anything', async () => {
     await person();
-    const send = jest.spyOn(app.get(NotificationsService), 'sendAccountEmail');
+    const send = vi.spyOn(app.get(NotificationsService), 'sendAccountEmail');
     await http()
       .post('/auth/password-reset')
       .set('X-Forwarded-For', address())

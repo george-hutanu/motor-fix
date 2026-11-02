@@ -48,7 +48,7 @@ export async function timersArmedBy<T>(
     };
   };
   const realTimeout = globalThis.setTimeout;
-  const timeouts = jest.spyOn(globalThis, 'setTimeout').mockImplementation(((
+  const timeouts = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((
     handler: (...args: unknown[]) => void,
     ms?: number,
     ...args: unknown[]
@@ -65,7 +65,7 @@ export async function timersArmedBy<T>(
     );
   }) as typeof setTimeout);
   const realAbort = AbortSignal.timeout.bind(AbortSignal);
-  const aborts = jest
+  const aborts = vi
     .spyOn(AbortSignal, 'timeout')
     .mockImplementation((ms: number) => {
       const signal = realAbort(ms);
@@ -86,8 +86,10 @@ function calledFrom(files: string[]): boolean {
   Error.stackTraceLimit = 50;
   const frames = (new Error().stack ?? '').split('\n').slice(1);
   Error.stackTraceLimit = limit;
-  // The spy's own frames come first, up to jest-mock's.
-  const own = frames.findLastIndex((frame) => frame.includes('jest-mock'));
+  // The spy's own frames come first, up to Vitest's spy chunk.
+  const own = frames.findLastIndex((frame) =>
+    /vitest[\\/]dist[\\/]chunks[\\/]spy\./.test(frame),
+  );
   for (const frame of frames.slice(own + 1)) {
     if (files.some((file) => frame.includes(file))) return true;
     if (frame.includes('node_modules')) return false;

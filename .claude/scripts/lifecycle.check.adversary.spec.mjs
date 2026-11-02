@@ -187,7 +187,7 @@ describe('lifecycle check: the affected tests are measured from the merge base',
     step(['check'], h.io);
     const cmd = h.calls.find((c) => c.startsWith('sh scripts/heavy.sh'));
     assert.match(cmd, /--base=0123abcd(\s|$)/);
-    assert.match(cmd, /JEST_SUITE=unit/);
+    assert.match(cmd, /TEST_SUITE=unit/);
     assert.match(cmd, /nx affected -t typecheck test/);
   });
 });

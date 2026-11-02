@@ -60,6 +60,9 @@
             </section>
           }
         }
+        @case ('sched') {
+          <mf-lift-schedule data-section="sched" [view]="section.view" />
+        }
         @case ('reviews') {
           <mf-garage-reviews-panel data-section="reviews" [limit]="5" />
         }

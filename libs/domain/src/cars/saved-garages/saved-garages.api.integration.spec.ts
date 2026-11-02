@@ -62,7 +62,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -206,9 +206,9 @@ describe('saving a garage', () => {
   it('leaves no row and no event when the history cannot be written', async () => {
     const { auth, id } = await driver();
     const garageId = await garage();
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValue(new Error('history unavailable'));
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValue(
+      new Error('history unavailable'),
+    );
 
     const res = await save(auth, garageId);
 

@@ -24,9 +24,7 @@
       }
     },
     "test": {
-      "options": {
-        "passWithNoTests": true
-      }
+      "command": "vitest run --config apps/worker/vitest.config.mts"
     },
     "test:mutation": {},
     "typecheck": {

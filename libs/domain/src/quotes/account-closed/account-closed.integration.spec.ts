@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import type { MockInstance } from 'vitest';
 
 import { ACCOUNT_CLOSED_CONSUMER, AccountClosed } from './account-closed';
 import { AccountClosedModule } from './account-closed.module';
@@ -35,20 +36,20 @@ const NOW = new Date();
 const SECOND = 1000;
 
 let app: TestingModule | undefined;
-let log: jest.SpyInstance;
+let log: MockInstance;
 
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());
 
 beforeEach(async () => {
-  log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
 });
@@ -617,7 +618,7 @@ describe('one request failing', () => {
     ];
     const [failing, ...others] = requests;
     const original = AccountClosed.prototype.closeIn;
-    jest.spyOn(AccountClosed.prototype, 'closeIn').mockImplementation(function (
+    vi.spyOn(AccountClosed.prototype, 'closeIn').mockImplementation(function (
       this: AccountClosed,
       tx,
       id,

@@ -13,6 +13,9 @@
         "{workspaceRoot}/vitest.shared.ts",
         "{workspaceRoot}/apps/web/src/**/*",
         {
+          "env": "TEST_SUITE"
+        },
+        {
           "externalDependencies": [
             "vitest",
             "@angular/build",

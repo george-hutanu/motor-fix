@@ -12,6 +12,9 @@
         "cwd": "libs/domain"
       }
     },
+    "test": {
+      "command": "vitest run --config libs/domain/vitest.config.mts"
+    },
     "test:mutation": {},
     "typecheck": {
       "cache": true,

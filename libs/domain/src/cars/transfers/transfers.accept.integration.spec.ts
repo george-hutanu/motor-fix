@@ -51,7 +51,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -404,14 +404,14 @@ describe('POST /car-transfers/:token/accept', () => {
     [
       'the history',
       () =>
-        jest
+        vi
           .spyOn(AuditService.prototype, 'recordChanges')
           .mockRejectedValue(new Error('history unavailable')),
     ],
     [
       'the event',
       () =>
-        jest
+        vi
           .spyOn(outbox, 'record')
           .mockRejectedValue(new Error('outbox unavailable')),
     ],
@@ -419,7 +419,7 @@ describe('POST /car-transfers/:token/accept', () => {
     const { car, token, transferId } = await offered();
     const before = await snapshot(car.id, transferId);
     const maria = await buyer();
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     fail();
 
     const res = await accept(maria.auth, token);
@@ -803,7 +803,7 @@ describe('what an accept counts and logs', () => {
     const maria = await buyer();
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug'] as const) {
-      jest.spyOn(Logger.prototype, level).mockImplementation(((
+      vi.spyOn(Logger.prototype, level).mockImplementation(((
         message: unknown,
       ) => {
         lines.push(String(message));

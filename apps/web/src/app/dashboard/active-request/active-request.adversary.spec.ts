@@ -29,6 +29,7 @@ const activeRequest = (
   ],
   mechanicName: null,
   range: null,
+  saveSuggestion: null,
   stage: 'sent',
   ...over,
 });

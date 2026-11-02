@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 // @traces 1000-FR-002 1000-FR-003 1000-FR-004
 
 import type { Telemetry } from './start';
@@ -8,44 +9,43 @@ const signals: StopSignal[] = ['SIGINT', 'SIGTERM'];
 const instrumented: { disable(): void }[] = [];
 const added: ((signal: StopSignal) => void)[] = [];
 
-function start() {
+async function start() {
   const memory = inMemory();
   let telemetry: Telemetry | undefined;
-  const listeners = addedListeners(() =>
-    jest.isolateModules(() => {
-      const setup = require('./start') as typeof import('./start');
-      telemetry = setup.startTelemetry(
-        'api',
-        {
-          APP_ENV: 'staging',
-          OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example.com/otlp',
-        },
-        memory,
-      );
-      instrumented.push(...setup.startedInstrumentations());
-    }),
-  );
+  vi.resetModules();
+  const setup = await import('./start');
+  const listeners = addedListeners(() => {
+    telemetry = setup.startTelemetry(
+      'api',
+      {
+        APP_ENV: 'staging',
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example.com/otlp',
+      },
+      memory,
+    );
+    instrumented.push(...setup.startedInstrumentations());
+  });
   added.push(listeners.SIGINT, listeners.SIGTERM);
   return { listeners, memory, telemetry: telemetry as unknown as Telemetry };
 }
 
 function listenersSeen(counts: Partial<Record<StopSignal, number>>) {
   const real = process.listenerCount.bind(process);
-  return jest.spyOn(process, 'listenerCount').mockImplementation((event) => {
+  return vi.spyOn(process, 'listenerCount').mockImplementation((event) => {
     const count = counts[event as StopSignal];
     return count === undefined ? real(event) : count;
   });
 }
 
-let kill: jest.SpyInstance;
+let kill: MockInstance;
 
 beforeEach(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => undefined);
-  kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   for (const instrumentation of instrumented.splice(0)) {
     instrumentation.disable();
   }
@@ -55,8 +55,8 @@ afterEach(() => {
 });
 
 describe('the stop signal at its edges', () => {
-  it('detaches the handler at once, before the shutdown has settled', () => {
-    const { listeners } = start();
+  it('detaches the handler at once, before the shutdown has settled', async () => {
+    const { listeners } = await start();
     listenersSeen({ SIGTERM: 1 });
 
     listeners.SIGTERM('SIGTERM');
@@ -66,7 +66,7 @@ describe('the stop signal at its edges', () => {
   });
 
   it('treats a count of zero as the last listener', async () => {
-    const { listeners, telemetry } = start();
+    const { listeners, telemetry } = await start();
     listenersSeen({ SIGINT: 0 });
 
     listeners.SIGINT('SIGINT');
@@ -77,8 +77,8 @@ describe('the stop signal at its edges', () => {
   });
 
   it('shuts down once and raises each signal once when the other stop signal arrives during the shutdown', async () => {
-    const { listeners, memory, telemetry } = start();
-    const spanShutdown = jest.spyOn(memory.spanExporter, 'shutdown');
+    const { listeners, memory, telemetry } = await start();
+    const spanShutdown = vi.spyOn(memory.spanExporter, 'shutdown');
     listenersSeen({ SIGINT: 1, SIGTERM: 1 });
 
     listeners.SIGTERM('SIGTERM');
@@ -96,16 +96,16 @@ describe('the stop signal at its edges', () => {
   });
 
   it('raises the signal after the span, metric and log exporters have all failed', async () => {
-    const { listeners, memory, telemetry } = start();
-    jest
-      .spyOn(memory.spanExporter, 'shutdown')
-      .mockRejectedValue(new Error('spans down'));
-    jest
-      .spyOn(memory.metricReader, 'shutdown')
-      .mockRejectedValue(new Error('metrics down'));
-    jest
-      .spyOn(memory.logExporter, 'shutdown')
-      .mockRejectedValue(new Error('logs down'));
+    const { listeners, memory, telemetry } = await start();
+    vi.spyOn(memory.spanExporter, 'shutdown').mockRejectedValue(
+      new Error('spans down'),
+    );
+    vi.spyOn(memory.metricReader, 'shutdown').mockRejectedValue(
+      new Error('metrics down'),
+    );
+    vi.spyOn(memory.logExporter, 'shutdown').mockRejectedValue(
+      new Error('logs down'),
+    );
     listenersSeen({ SIGTERM: 1 });
 
     listeners.SIGTERM('SIGTERM');
@@ -116,8 +116,8 @@ describe('the stop signal at its edges', () => {
   });
 
   it('raises the signal after a flush that rejects ahead of the shutdown', async () => {
-    const { listeners, memory, telemetry } = start();
-    jest.spyOn(memory.spanExporter, 'export').mockImplementation(() => {
+    const { listeners, memory, telemetry } = await start();
+    vi.spyOn(memory.spanExporter, 'export').mockImplementation(() => {
       throw new Error('export blew up');
     });
     listenersSeen({ SIGTERM: 1 });
@@ -129,7 +129,7 @@ describe('the stop signal at its edges', () => {
   });
 
   it('acts on a later signal once the other listener has gone, after ignoring an earlier one', async () => {
-    const { listeners, telemetry } = start();
+    const { listeners, telemetry } = await start();
     const count = listenersSeen({ SIGTERM: 2 });
 
     listeners.SIGTERM('SIGTERM');
@@ -146,7 +146,7 @@ describe('the stop signal at its edges', () => {
   });
 
   it('leaves a listener added during the shutdown registered', async () => {
-    const { listeners, telemetry } = start();
+    const { listeners, telemetry } = await start();
     const late = () => undefined;
     listenersSeen({ SIGTERM: 1 });
 
@@ -161,7 +161,7 @@ describe('the stop signal at its edges', () => {
   });
 
   it('keeps the other stop signal untouched when one is handled', async () => {
-    const { listeners, telemetry } = start();
+    const { listeners, telemetry } = await start();
     listenersSeen({ SIGTERM: 1 });
 
     listeners.SIGTERM('SIGTERM');

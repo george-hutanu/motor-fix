@@ -172,7 +172,6 @@ function quoteRequest(
   });
 }
 
-// @traces 092-FR-001
 describe('withoutIds', () => {
   it('masks an id that holds a model name by chance, and keeps the model', () => {
     const text = JSON.stringify({
@@ -184,6 +183,7 @@ describe('withoutIds', () => {
   });
 });
 
+// @traces 092-FR-001
 describe('PATCH /cars/:id with fields it cannot take', () => {
   it.each(['brandId', 'model', 'year', 'odometerKm', 'fuel'])(
     'refuses an explicit null for the required %s and changes nothing',

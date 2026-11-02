@@ -19,17 +19,19 @@ import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 import { NearQueryDto } from './near.dto';
 import { inRomania } from './place-section';
 import {
+  SEARCH_MIN_RATINGS,
+  SEARCH_PRICE_CEILINGS,
+  type SearchMinRating,
+  type SearchPriceCeiling,
+} from './search-choices';
+import {
   bboxSideKm,
   parseBbox,
   SEARCH_BBOX_MAX_KM,
   SEARCH_IDS_MAX,
-  SEARCH_MIN_RATINGS,
   SEARCH_PINS_MAX,
-  SEARCH_PRICE_CEILINGS,
   SEARCH_RADII,
   SEARCH_SORTS,
-  type SearchMinRating,
-  type SearchPriceCeiling,
   type SearchRadius,
   type SearchSort,
 } from './search-place';

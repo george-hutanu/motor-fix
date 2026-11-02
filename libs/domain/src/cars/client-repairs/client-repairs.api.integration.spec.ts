@@ -472,7 +472,7 @@ describe('PATCH /garage/client-repairs/:id', () => {
     const s = await scene();
     const row = await s.repair();
     const port = provider<EventPort>(EVENT_PORT);
-    const spy = jest
+    const spy = vi
       .spyOn(port, 'record')
       .mockRejectedValueOnce(new Error('outbox down'));
 

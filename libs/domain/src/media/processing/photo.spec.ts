@@ -17,7 +17,7 @@ const plain = (format: 'png' | 'webp', width: number, height: number) =>
     .toFormat(format)
     .toBuffer();
 
-jest.setTimeout(30_000);
+vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
 
 // @traces 333-FR-006
 describe('converting a job photo', () => {

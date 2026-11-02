@@ -86,7 +86,7 @@ beforeEach(async () => {
   mark = await outboxMark(prisma);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
@@ -1091,7 +1091,7 @@ describe('the history and the live channel of a schedule', () => {
   });
 
   it('writes nothing when the event cannot be recorded', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const { dinamo, elena, owner } = await world();
     await prisma.$executeRawUnsafe(
       `CREATE FUNCTION refuse_schedule_event() RETURNS trigger AS $$

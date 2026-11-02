@@ -30,10 +30,10 @@ const logger = new Logger('LiveInputs');
 let provider: FakeLiveVideo;
 beforeEach(() => {
   provider = new FakeLiveVideo();
-  jest.spyOn(logger, 'log').mockImplementation(() => undefined);
-  jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'log').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // Costel live on Andrei's job at Atelier Dinamo, recording discarded.
 async function live() {
@@ -110,7 +110,7 @@ describe('the worker module closing the input from the relayed live.stopped', ()
   });
 
   it('a committed system stop reaches the live-inputs worker through the relay and Valkey, and the input is closed', async () => {
-    const close = jest.spyOn(FakeLiveVideo.prototype, 'closeInput');
+    const close = vi.spyOn(FakeLiveVideo.prototype, 'closeInput');
     const app = await Test.createTestingModule({
       imports: [
         LiveInputsModule.registerWorker({

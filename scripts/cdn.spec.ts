@@ -14,7 +14,7 @@ const HEARTBEAT_SECONDS = 25;
 const ENV = {
   BUNNY_API_KEY: 'key-123',
   BUNNY_PULL_ZONE_ID: '42',
-  // The file by its own path: the pre-commit hook runs Jest from scripts/.
+  // The file by its own path, whichever directory the runner starts in.
   CDN_CONFIG: FILE,
   CDN_ORIGIN_HOST: 'web-staging.up.railway.app',
   CDN_ORIGIN_URL: 'https://web-staging.up.railway.app',
@@ -141,8 +141,8 @@ beforeEach(() => {
   const capture = (...args: unknown[]) => {
     lines.push(args.map(String).join(' '));
   };
-  jest.spyOn(console, 'log').mockImplementation(capture);
-  jest.spyOn(console, 'error').mockImplementation(capture);
+  vi.spyOn(console, 'log').mockImplementation(capture);
+  vi.spyOn(console, 'error').mockImplementation(capture);
 });
 
 afterEach(() => {
@@ -151,7 +151,7 @@ afterEach(() => {
     expect(line).not.toContain('key-123');
     expect(line).not.toContain('edge-secret');
   }
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const glob = (pattern: string) =>

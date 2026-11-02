@@ -516,7 +516,7 @@ async function main(argv) {
     } catch (error) {
       notes.push(`Visual diff skipped: ${String(error.message).split("\n")[0]}`);
     }
-    const visual = visualOutcome({ meta, shots: shotsDiff, web });
+    const visual = visualOutcome({ meta, shots: shotsDiff, web, stale: trust?.options.stale ?? false });
     notes.push(...visual.notes);
     findings.push(...visual.findings);
     if (visual.visual) writeFileSync(join(out, "visual.json"), JSON.stringify(visual.visual, null, 2));

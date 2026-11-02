@@ -4,6 +4,7 @@ import {
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
   type DocumentKind,
+  type FallbackReason,
   type OutsideChannel,
   RECHECK_RESULTS,
   type RecheckResult,
@@ -22,7 +23,7 @@ import {
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
 import type { Outcome } from '../admin/system-log/system-log';
-import type { FallbackReason, SentChannel } from '../notifications/routing';
+import type { SentChannel } from '../notifications/routing';
 import { TEMPLATES } from '../notifications/templates/registry';
 import {
   ACCOUNT_CLOSED_SERIES,

@@ -20,7 +20,7 @@ function account(overrides: Record<string, unknown> = {}): LoadedAccount {
 }
 
 function loaderFinding(found: LoadedAccount | null) {
-  const findUnique = jest.fn().mockResolvedValue(found);
+  const findUnique = vi.fn().mockResolvedValue(found);
   const prisma = { account: { findUnique } } as unknown as PrismaClient;
   return { findUnique, loader: new AccountLoader(prisma) };
 }

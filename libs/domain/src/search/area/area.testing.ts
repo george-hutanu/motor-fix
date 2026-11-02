@@ -16,9 +16,9 @@ function idListsIn(value: unknown): string[][] {
 // the raw statements it ran, so a case can tell an area read from a read
 // of ids an earlier area read found.
 export function watchGarageReads(prisma: PrismaClient) {
-  const count = jest.spyOn(prisma.garage, 'count');
-  const findMany = jest.spyOn(prisma.garage, 'findMany');
-  const raw = jest.spyOn(prisma, '$queryRaw');
+  const count = vi.spyOn(prisma.garage, 'count');
+  const findMany = vi.spyOn(prisma.garage, 'findMany');
+  const raw = vi.spyOn(prisma, '$queryRaw');
   return {
     counted: () => count.mock.calls.flatMap(([args]) => idListsIn(args)),
     listed: () => findMany.mock.calls.flatMap(([args]) => idListsIn(args)),

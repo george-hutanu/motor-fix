@@ -197,6 +197,32 @@ export function shardScope(
   };
 }
 
+/**
+ * The specs one shard's Vitest run collects: its folders' globs for a named
+ * shard, and for rest every spec outside them, listed, since Vitest's
+ * testFiles take no negation.
+ */
+export function shardTestFiles(
+  repo: string,
+  root: string,
+  shards: Record<string, string[]>,
+  shard: string,
+): string[] {
+  if (shard !== REST) {
+    const folders = shards[shard];
+    if (!folders) throw new Error(`${root} has no shard ${shard}`);
+    return folders.map((f) => glob(root, f, '.spec.ts'));
+  }
+  const src = join(repo, root, 'src');
+  if (!existsSync(src)) return [];
+  const all = Object.values(shards).flat();
+  return walk(src)
+    .filter((file) => /\.(spec|test)\.ts$/.test(file))
+    .filter((file) => !all.some((f) => holds(f, file)))
+    .map((file) => `${root}/src/${file}`)
+    .sort();
+}
+
 /** The named shards' folders of a project, or null for an unsharded one. */
 export function shardsOf(
   file: ShardFile,

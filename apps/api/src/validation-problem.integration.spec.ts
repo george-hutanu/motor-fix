@@ -1,5 +1,6 @@
 // @traces 472-FR-001 472-FR-002
 // @traces 357-FR-009
+// @traces 400-FR-001
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
@@ -58,5 +59,22 @@ describe('a signed-in request that fails validation', () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toMatchObject({ code: 'validation_failed', status: 400 });
+  });
+
+  it('answers validation_failed for a receptionist removal whose ids are not uuids', async () => {
+    for (const path of [
+      `/api/v1/garages/not-a-uuid/members/${randomUUID()}`,
+      `/api/v1/garages/${randomUUID()}/members/not-a-uuid`,
+    ]) {
+      const res = await request(app.getHttpServer())
+        .delete(path)
+        .set('Authorization', bearer);
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({
+        code: 'validation_failed',
+        status: 400,
+      });
+    }
   });
 });

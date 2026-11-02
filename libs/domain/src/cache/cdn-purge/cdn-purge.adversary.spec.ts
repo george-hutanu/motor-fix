@@ -1,6 +1,7 @@
 // @traces 430-FR-003 430-FR-004 430-FR-010
 import { Logger } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
+import type { Mock, MockInstance } from 'vitest';
 
 import { CdnPurgeSender, cdnPurgeHook } from './cdn-purge';
 
@@ -9,12 +10,12 @@ const CONFIG = { apiKey: 'key-123', pullZoneId: '42' };
 function fakeRedis(initial: string[] = []) {
   const set = new Set(initial);
   return {
-    sadd: jest.fn(async (_key: string, ...members: string[]) => {
+    sadd: vi.fn(async (_key: string, ...members: string[]) => {
       for (const m of members) set.add(m);
       return members.length;
     }),
     set,
-    spop: jest.fn(async (_key: string, count: number) => {
+    spop: vi.fn(async (_key: string, count: number) => {
       const taken = [...set].slice(0, count);
       for (const m of taken) set.delete(m);
       return taken;
@@ -23,27 +24,25 @@ function fakeRedis(initial: string[] = []) {
 }
 
 const answering = (...statuses: number[]) =>
-  jest.fn(async (_url: string | URL | Request, _init?: RequestInit) => {
+  vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => {
     const status = statuses.shift() ?? 204;
     return new Response(null, { status });
   });
 
-let add: jest.Mock;
-let warn: jest.SpyInstance;
+let add: Mock;
+let warn: MockInstance;
 
 beforeEach(() => {
-  add = jest.fn();
-  jest.spyOn(metrics, 'getMeter').mockReturnValue({
+  add = vi.fn();
+  vi.spyOn(metrics, 'getMeter').mockReturnValue({
     createCounter: () => ({ add }),
   } as unknown as ReturnType<typeof metrics.getMeter>);
-  warn = jest
-    .spyOn(Logger.prototype, 'warn')
-    .mockImplementation(() => undefined);
+  warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
-  jest.useRealTimers();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // Whether the hook puts the tag in the purge set.
@@ -190,7 +189,7 @@ describe('CdnPurgeSender under hostile input', () => {
 
   it('never logs the key or the text of a failure that contains it', async () => {
     const redis = fakeRedis(['search']);
-    const send = jest.fn(async () => {
+    const send = vi.fn(async () => {
       throw new Error('connect failed for AccessKey key-123');
     });
 
@@ -204,7 +203,7 @@ describe('CdnPurgeSender under hostile input', () => {
 
   it('puts back a tag when the call throws something that is not an Error', async () => {
     const redis = fakeRedis(['search']);
-    const send = jest.fn(async () => {
+    const send = vi.fn(async () => {
       throw 'boom';
     });
 
@@ -235,36 +234,36 @@ describe('CdnPurgeSender under hostile input', () => {
   });
 
   it('ticks once per five seconds when started twice', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const redis = fakeRedis();
     const sender = new CdnPurgeSender(redis, CONFIG, answering());
 
     sender.start();
     sender.start();
-    await jest.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     await sender.stop();
 
     expect(redis.spop).toHaveBeenCalledTimes(1);
   });
 
   it('keeps ticking after a tick that found Redis down', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const redis = fakeRedis();
     redis.spop.mockRejectedValueOnce(new Error('down'));
     const sender = new CdnPurgeSender(redis, CONFIG, answering());
 
     sender.start();
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     await sender.stop();
 
     expect(redis.spop).toHaveBeenCalledTimes(2);
   });
 
   it('waits for the send in flight when stopped', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const redis = fakeRedis(['search']);
     let release: () => void = () => undefined;
-    const send = jest.fn(
+    const send = vi.fn(
       () =>
         new Promise<Response>((done) => {
           release = () => done(new Response(null, { status: 204 }));
@@ -272,13 +271,13 @@ describe('CdnPurgeSender under hostile input', () => {
     );
     const sender = new CdnPurgeSender(redis, CONFIG, send);
     sender.start();
-    await jest.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(5_000);
 
     let stopped = false;
     const stopping = sender.stop().then(() => {
       stopped = true;
     });
-    await jest.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     expect(stopped).toBe(false);
 
     release();
@@ -294,14 +293,14 @@ describe('CdnPurgeSender under hostile input', () => {
   });
 
   it('ticks again after a stop and a start', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const redis = fakeRedis();
     const sender = new CdnPurgeSender(redis, CONFIG, answering());
 
     sender.start();
     await sender.stop();
     sender.start();
-    await jest.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     await sender.stop();
 
     expect(redis.spop).toHaveBeenCalledTimes(1);

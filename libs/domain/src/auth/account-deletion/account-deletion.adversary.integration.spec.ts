@@ -98,7 +98,7 @@ beforeEach(async () => {
   await redis.flushdb();
   brevo.reset();
   published.length = 0;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -602,10 +602,10 @@ describe('every refusal leaves the account as it was', () => {
     await everything(id);
     const before = await snapshot(id);
     const failed = await deletions('failed');
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValue(new Error('audit down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValue(
+      new Error('audit down'),
+    );
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const res = await remove(phone, { confirmation: EMAIL });
 
@@ -620,10 +620,10 @@ describe('every refusal leaves the account as it was', () => {
     const phone = await device();
     const before = await snapshot(id);
     const failed = await deletions('failed');
-    jest
-      .spyOn(SignInService.prototype, 'sessionFamily')
-      .mockRejectedValue(new Error('store down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(SignInService.prototype, 'sessionFamily').mockRejectedValue(
+      new Error('store down'),
+    );
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const res = await remove(phone, { confirmation: EMAIL });
 
@@ -928,11 +928,11 @@ describe('no personal value outside the account row', () => {
   it('keeps the e-mail, name, phone and city out of every log line', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(args.map(String).join(' '));
-        });
+        },
+      );
     }
     await person();
     const phone = await device();
@@ -1042,11 +1042,12 @@ describe('the farewell e-mail of an unusual account', () => {
   it('does not undo the deletion when the queue refuses the e-mail', async () => {
     const id = await person();
     const phone = await device();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    jest
-      .spyOn(NotificationsService.prototype, 'sendAccountEmail')
-      .mockRejectedValue(new Error('queue down'));
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(
+      NotificationsService.prototype,
+      'sendAccountEmail',
+    ).mockRejectedValue(new Error('queue down'));
 
     const res = await remove(phone, { confirmation: EMAIL });
 

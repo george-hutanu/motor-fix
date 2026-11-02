@@ -54,11 +54,11 @@ function setup(
   } = {},
 ) {
   const tx = {
-    $executeRawUnsafe: jest.fn(async () => 0),
-    assistantApproval: { updateManyAndReturn: jest.fn(async () => []) },
-    assistantConfirmation: { updateManyAndReturn: jest.fn(async () => []) },
+    $executeRawUnsafe: vi.fn(async () => 0),
+    assistantApproval: { updateManyAndReturn: vi.fn(async () => []) },
+    assistantConfirmation: { updateManyAndReturn: vi.fn(async () => []) },
     assistantGrant: {
-      findUniqueOrThrow: jest.fn(
+      findUniqueOrThrow: vi.fn(
         async () =>
           over.grant ?? { canAct: true, canRead: true, revokedAt: null },
       ),
@@ -66,15 +66,15 @@ function setup(
   };
   const locks = [...(over.locks ?? [])];
   const approvals = {
-    close: jest.fn(async () => true),
-    get: jest.fn(async () => shown()),
-    lockForDecision: jest.fn(
+    close: vi.fn(async () => true),
+    get: vi.fn(async () => shown()),
+    lockForDecision: vi.fn(
       async () =>
         (locks.length ? locks.shift() : undefined) ??
         locked({ arguments: over.lockArguments ?? ARGS }),
     ),
   };
-  const handler = jest.fn(over.handler ?? (async () => ({ ok: true })));
+  const handler = vi.fn(over.handler ?? (async () => ({ ok: true })));
   const tool = { ...bookFixture, ...over.tool, handler } as ToolDefinition;
   const ctx = {
     ...context({ maintenance: false }),

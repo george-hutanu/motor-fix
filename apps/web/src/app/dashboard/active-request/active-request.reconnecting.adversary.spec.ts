@@ -23,6 +23,7 @@ const base: ActiveRequestDto = {
   jobs: [],
   mechanicName: null,
   range: null,
+  saveSuggestion: null,
   stage: 'sent',
 };
 

@@ -391,13 +391,11 @@ describe('report decisions under hostile conditions', () => {
   // @traces 069-FR-003
   it('rolls back the reports, the file and the suspension when the audit write fails', async () => {
     const audit = new AuditService();
-    jest
-      .spyOn(audit, 'record')
-      .mockImplementation(async (...args: unknown[]) => {
-        const entry = args[1] as { kind?: string } | undefined;
-        if (entry?.kind === 'report_decided') throw new Error('audit down');
-        return undefined as never;
-      });
+    vi.spyOn(audit, 'record').mockImplementation(async (...args: unknown[]) => {
+      const entry = args[1] as { kind?: string } | undefined;
+      if (entry?.kind === 'report_decided') throw new Error('audit down');
+      return undefined as never;
+    });
     const failing = new ReportDecisionService(
       prisma,
       verification(),

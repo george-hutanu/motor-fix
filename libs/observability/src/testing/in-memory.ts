@@ -58,8 +58,9 @@ export async function counterTotal(
     .reduce((total, point) => total + point.value, 0);
 }
 
-// Jest loads modules through its own registry, which the instrumentations'
-// require hooks never see: apply their patches to the modules Jest loaded.
+// The test runner loads modules where the instrumentations' require hooks
+// never see them (Jest's own registry, Vitest's native import): apply their
+// patches to the modules it loaded.
 // Call after startTelemetry and before the app is built.
 export function patchForJest(): void {
   for (const instrumentation of startedInstrumentations()) {

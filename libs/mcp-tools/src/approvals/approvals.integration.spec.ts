@@ -40,7 +40,7 @@ afterAll(async () => {
   await turn.release();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const consents = {
   create: [
@@ -104,7 +104,7 @@ async function yes(who: Caller) {
 // @traces 1254-FR-002 1254-FR-012
 describe('a tool needing in-app approval through confirm_action', () => {
   it('saves one pending approval with its event and runs nothing of the action', async () => {
-    const handler = jest.spyOn(bookFixture, 'handler');
+    const handler = vi.spyOn(bookFixture, 'handler');
     const who = await driver();
     const { confirm, confirmationId } = await yes(who);
 
@@ -219,7 +219,7 @@ describe('approving in the app', () => {
   it('runs the action once with the approval as key, via the assistant', async () => {
     const who = await driver();
     const id = await pending(who);
-    const handler = jest
+    const handler = vi
       .spyOn(bookFixture, 'handler')
       .mockImplementation(async (actor, input, _ctx, step) => {
         await writes(actor, input, step);
@@ -262,7 +262,7 @@ describe('approving in the app', () => {
   it('runs once on a double tap; the second answers not pending', async () => {
     const who = await driver();
     const id = await pending(who);
-    const handler = jest.spyOn(bookFixture, 'handler');
+    const handler = vi.spyOn(bookFixture, 'handler');
 
     const answers = await Promise.all([approve(who, id), approve(who, id)]);
 
@@ -273,12 +273,12 @@ describe('approving in the app', () => {
   it('fails with the code and writes nothing of the action when the use case refuses', async () => {
     const who = await driver();
     const id = await pending(who);
-    jest
-      .spyOn(bookFixture, 'handler')
-      .mockImplementation(async (actor, input, _ctx, step) => {
+    vi.spyOn(bookFixture, 'handler').mockImplementation(
+      async (actor, input, _ctx, step) => {
         await writes(actor, input, step);
         throw new ToolRefusal('quote_expired');
-      });
+      },
+    );
 
     const result = await approve(who, id);
 
@@ -292,7 +292,7 @@ describe('approving in the app', () => {
   it('refuses without running anything', async () => {
     const who = await driver();
     const id = await pending(who);
-    const handler = jest.spyOn(bookFixture, 'handler');
+    const handler = vi.spyOn(bookFixture, 'handler');
 
     const result = await approvals.refuse(who.account.id, id, {
       id: who.account.id,

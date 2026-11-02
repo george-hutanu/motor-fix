@@ -20,7 +20,7 @@ function sender(
   sendWhatsApp: Brevo['sendWhatsApp'] = async () => 'wa-1',
   send: Brevo['send'] = async () => 'em-1',
 ) {
-  const brevo = { send: jest.fn(send), sendWhatsApp: jest.fn(sendWhatsApp) };
+  const brevo = { send: vi.fn(send), sendWhatsApp: vi.fn(sendWhatsApp) };
   return {
     brevo,
     email: testConfig('http://brevo.test'),
@@ -56,17 +56,17 @@ function client(
   ready: () => Promise<unknown> = async () => undefined,
 ) {
   const queue = {
-    add: jest.fn(async () => {
+    add: vi.fn(async () => {
       await add();
       return {
         remove: async () => undefined,
-        waitUntilFinished: jest.fn(wait),
+        waitUntilFinished: vi.fn(wait),
       };
     }),
-    close: jest.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
     getBackend: () => ({ publishEvent: async () => '1-0' }),
   };
-  const events = { close: jest.fn(), waitUntilReady: jest.fn(ready) };
+  const events = { close: vi.fn(), waitUntilReady: vi.fn(ready) };
   return { queue, send: new DirectSend(queue as never, () => events as never) };
 }
 
@@ -74,15 +74,15 @@ const code = (s: DirectSend) =>
   s.whatsapp('SIGN_IN_CODE', 'ro', { code: '123456', minutes: 10 }, TO);
 
 afterEach(() => {
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 // @traces 1379-FR-004
 describe('sendDirect age guard boundary', () => {
   it('sends a job exactly as old as the wait cap', async () => {
     const now = 1_800_000_000_000;
-    jest.spyOn(Date, 'now').mockReturnValue(now);
+    vi.spyOn(Date, 'now').mockReturnValue(now);
     const s = sender();
 
     expect(
@@ -93,7 +93,7 @@ describe('sendDirect age guard boundary', () => {
 
   it('answers stale one millisecond past the cap and calls nothing', async () => {
     const now = 1_800_000_000_000;
-    jest.spyOn(Date, 'now').mockReturnValue(now);
+    vi.spyOn(Date, 'now').mockReturnValue(now);
     const s = sender();
 
     expect(
@@ -264,37 +264,37 @@ describe('DirectSend failure paths', () => {
   });
 
   it('keeps no timer pending after an answer', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const c = client(async () => undefined);
 
     expect(await code(c.send)).toBeNull();
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('keeps no timer pending after a failure', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const c = client(async () => {
       throw new Error('down');
     });
 
     expect(await code(c.send)).toBe('queue_unavailable');
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('gives two concurrent sends a job each with their own answer', async () => {
     const results = [null, 'blocked'];
     const queue = {
-      add: jest.fn(async () => {
+      add: vi.fn(async () => {
         const result = results.shift();
         return {
           remove: async () => undefined,
           waitUntilFinished: async () => result,
         };
       }),
-      close: jest.fn(),
+      close: vi.fn(),
       getBackend: () => ({ publishEvent: async () => '1-0' }),
     };
-    const events = { close: jest.fn(), waitUntilReady: async () => undefined };
+    const events = { close: vi.fn(), waitUntilReady: async () => undefined };
     const s = new DirectSend(queue as never, () => events as never);
 
     const [a, b] = await Promise.all([code(s), code(s)]);

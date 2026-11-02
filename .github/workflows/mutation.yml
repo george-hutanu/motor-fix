@@ -4,6 +4,10 @@ name: Mutation
 # heavy for either. Runs every 3 days and on demand, one job per project, or
 # per shard of a project split in scripts/mutation-shards.json, then a
 # summary job that holds each project's combined score to its floor.
+# The Nest projects run Stryker's Vitest runner on their vitest.config.mts,
+# the Angular ones its Jest runner. libs/domain gives each Stryker worker a
+# database of its own (libs/domain/mutation-db.setup.ts), so it needs no
+# concurrency: 1.
 on:
   schedule:
     - cron: '0 2 */3 * *'
@@ -98,7 +102,7 @@ jobs:
           restore-keys: |
             mutation/${{ matrix.id }}/${{ github.ref_name }}/
             mutation/${{ matrix.id }}/
-      # Through npx, which applies .npmrc's --experimental-vm-modules: Jest
+      # Through npx, which applies .npmrc's --experimental-vm-modules: the Angular projects' Jest
       # cannot load the ESM-only Angular and Nest packages without it.
       # Streamed, so a job cancelled at its limit still shows Stryker's progress.
       - name: Mutation score

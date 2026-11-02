@@ -696,10 +696,10 @@ describe('a confirmation the person can no longer give', () => {
 
 // @traces 365-FR-015
 describe('what the MCP endpoint reports', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('observes a tool call with the tool, the caller and the request id', async () => {
-    const observed = jest.spyOn(metrics, 'observeToolCall');
+    const observed = vi.spyOn(metrics, 'observeToolCall');
     const { id } = await newAccount();
     const client = await connect(await tokenFor(id), {
       'x-request-id': 'observed-call-1',
@@ -727,7 +727,7 @@ describe('what the MCP endpoint reports', () => {
 
   // @traces 374-FR-014
   it('observes each garage read under its own tool name', async () => {
-    const observed = jest.spyOn(metrics, 'observeToolCall');
+    const observed = vi.spyOn(metrics, 'observeToolCall');
     const { id } = await newOwner();
     const client = await connect(await tokenFor(id));
 
@@ -749,7 +749,7 @@ describe('what the MCP endpoint reports', () => {
 
   // @traces 374-FR-014
   it('logs each garage read as one line with its outcome and no input', async () => {
-    const lines = jest.spyOn(Logger.prototype, 'log');
+    const lines = vi.spyOn(Logger.prototype, 'log');
     const { id } = await newOwner();
     const client = await connect(await tokenFor(id));
 
@@ -805,7 +805,7 @@ describe('what the MCP endpoint reports', () => {
   });
 
   it('counts a revoked grant, a suspended account and a missing account by reason', async () => {
-    const counted = jest.spyOn(metrics, 'recordAuthFailure');
+    const counted = vi.spyOn(metrics, 'recordAuthFailure');
     const revoked = await newAccount();
     const revokedToken = await tokenFor(revoked.id);
     await initialize(revokedToken);

@@ -1,23 +1,24 @@
 import { ProxyTracerProvider, trace } from '@opentelemetry/api';
+import type { MockInstance } from 'vitest';
 
 import { startTelemetry } from './start';
 
-jest.mock('@opentelemetry/sdk-trace-node', () => {
+vi.mock('@opentelemetry/sdk-trace-node', () => {
   throw new Error('the trace SDK was loaded');
 });
-jest.mock('@opentelemetry/sdk-metrics', () => {
+vi.mock('@opentelemetry/sdk-metrics', () => {
   throw new Error('the metrics SDK was loaded');
 });
-jest.mock('@opentelemetry/sdk-logs', () => {
+vi.mock('@opentelemetry/sdk-logs', () => {
   throw new Error('the logs SDK was loaded');
 });
 
 const headers = 'Authorization=Basic dG9wc2VjcmV0';
 
 describe('startTelemetry with a bad configuration', () => {
-  let error: jest.SpyInstance;
+  let error: MockInstance;
   beforeEach(() => {
-    error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    error = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
   afterEach(() => error.mockRestore());
 

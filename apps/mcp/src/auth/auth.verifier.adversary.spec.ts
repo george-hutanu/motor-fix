@@ -319,7 +319,7 @@ describe('the assistant token verifier under hostile tokens', () => {
   // unknown key ids cannot hammer the identity server.
   it('accepts a token signed with a key published after a rotation once the minute has passed', async () => {
     const start = Date.now();
-    const clock = jest.spyOn(Date, 'now').mockReturnValue(start);
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(start);
     try {
       await verifier.verifyAccessToken(await realm.sign());
       await realm.rotate();

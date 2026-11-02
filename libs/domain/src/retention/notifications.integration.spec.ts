@@ -168,10 +168,14 @@ describe('the notification batches', () => {
 
 // @traces 1156-FR-001
 describe('the notification period read at call time', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('follows a changed period with no other edit', async () => {
-    jest.replaceProperty(RETENTION.notifications, 'days', 30 as never);
+    const days = RETENTION.notifications.days;
+    onTestFinished(() => {
+      (RETENTION.notifications as { days: number }).days = days;
+    });
+    (RETENTION.notifications as { days: number }).days = 30;
     const ana = await data.account('ana');
     await notification(ana, ago(now, 31));
     const young = await notification(ana, ago(now, 29));

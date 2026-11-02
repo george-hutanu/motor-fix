@@ -18,7 +18,7 @@ const ZERO = {
 };
 
 const figuresOf = (answer: Partial<Figures> = {}) =>
-  jest.fn(async () => ({
+  vi.fn(async () => ({
     current: ZERO,
     period: { from: '2026-10-05', to: '2026-10-11' },
     ...answer,
@@ -106,7 +106,7 @@ describe('get_stats under hostile calls', () => {
     ['a to without a from', { to: '2026-10-03' }],
     ['a period beside a lone from', { from: '2026-10-01', period: 'month' }],
   ])('refuses %s with validation', async (_c, args) => {
-    const get = jest.fn(async () => {
+    const get = vi.fn(async () => {
       throw new BadRequestException({ code: 'validation', message: 'no' });
     });
     const result = await call(args, get);
@@ -117,7 +117,7 @@ describe('get_stats under hostile calls', () => {
     ['a to before the from', { from: '2026-10-05', to: '2026-10-04' }],
     ['a span of 367 days', { from: '2025-01-01', to: '2026-01-02' }],
   ])('relays the read’s refusal of %s as validation', async (_c, args) => {
-    const get = jest.fn(async () => {
+    const get = vi.fn(async () => {
       throw new BadRequestException({ code: 'validation', message: 'no' });
     });
     const result = await call(args, get);
@@ -163,7 +163,7 @@ describe('get_stats under hostile calls', () => {
     });
     const result = await call(
       {},
-      jest.fn(() => Promise.reject(down)),
+      vi.fn(() => Promise.reject(down)),
     );
     expect(result.structuredContent).toMatchObject({
       code: 'service_unavailable',

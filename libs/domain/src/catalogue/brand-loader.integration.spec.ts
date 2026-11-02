@@ -446,11 +446,11 @@ describe('BrandLoader', () => {
   // must not fail on it.
   it('stores a changed list and warns when Redis is down at load', async () => {
     // A client whose every call fails as an unreachable server's does; a real
-    // one pointed at a closed port keeps Jest from exiting.
+    // one pointed at a closed port keeps the runner from exiting.
     const down = {
       incr: () => Promise.reject(new Error('connect ECONNREFUSED 127.0.0.1:1')),
     } as unknown as Redis;
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 
@@ -483,7 +483,7 @@ describe('BrandLoader and a brand an admin changed', () => {
     });
 
   const quietly = () =>
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
   it('keeps its name, slug, state, your form and rank whatever the file says', async () => {
     await loader.load(FILE);

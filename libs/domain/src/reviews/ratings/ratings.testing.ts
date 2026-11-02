@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import type { MockInstance } from 'vitest';
 
 import { ReviewRatings } from './ratings';
 import { ReviewRatingsModule } from './ratings.module';
@@ -23,12 +24,12 @@ export function ratingsHarness() {
 
   let app: TestingModule | undefined;
   let handler: ReviewRatings;
-  let warn: jest.SpyInstance;
+  let warn: MockInstance;
   let driverId: string;
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-    warn = jest
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     await world.reset();
@@ -55,7 +56,7 @@ export function ratingsHarness() {
   afterEach(async () => {
     await app?.close();
     app = undefined;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   afterAll(() => prisma.$disconnect());

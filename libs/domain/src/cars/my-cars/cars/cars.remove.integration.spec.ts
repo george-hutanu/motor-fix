@@ -67,7 +67,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -409,9 +409,9 @@ describe('what a removal writes beside the car', () => {
   it('removes nothing and hands nothing on when the history cannot be written', async () => {
     const { auth } = await driver();
     const car = await saved(auth);
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValue(new Error('history unavailable'));
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValue(
+      new Error('history unavailable'),
+    );
 
     const res = await remove(auth, car.id);
 
@@ -427,7 +427,7 @@ describe('the reminders of a removed car', () => {
   it('are gone once car.removed is relayed, and the daily run sends nothing for it', async () => {
     const { auth, id } = await driver();
     const car = await saved(auth);
-    const notify = jest.fn();
+    const notify = vi.fn();
     const notifications = {
       notify,
       now: () => new Date(),
@@ -460,7 +460,7 @@ describe('the reminders of a removed car', () => {
   it('sends nothing for a removed car whose reminder is still stored', async () => {
     const { auth, id } = await driver();
     const car = await saved(auth);
-    const notify = jest.fn();
+    const notify = vi.fn();
     const reminders = new RemindersService(prisma, {
       notify,
       now: () => new Date(),

@@ -314,7 +314,7 @@ describe('a run that fails part-way', () => {
     notifications.now = MORNING('2026-11-10');
     const notify = notifications.notify.bind(notifications);
     let calls = 0;
-    const spy = jest
+    const spy = vi
       .spyOn(notifications, 'notify')
       .mockImplementation(async (input) => {
         calls += 1;

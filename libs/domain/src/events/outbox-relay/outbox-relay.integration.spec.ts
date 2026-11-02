@@ -101,7 +101,7 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe(
     'TRUNCATE outbox_event, account, garage CASCADE',
   );
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 267-FR-010
@@ -357,10 +357,10 @@ describe('the relay', () => {
   });
 
   it('logs an error when the oldest waiting event is older than 30 seconds, at most once in 30 seconds', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const redis = new FakeRedis();
     redis.down = true;
     await prisma.outboxEvent.create({
@@ -382,7 +382,7 @@ describe('the relay', () => {
   });
 
   it('logs nothing about lag for a fresh event', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     await recorded(1);
@@ -408,7 +408,7 @@ describe('the relay loop', () => {
   });
 
   it('keeps polling after a failed batch', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const redis = new FakeRedis();
     redis.down = true;
     const relay = new OutboxRelay(prisma, redis);
@@ -501,7 +501,7 @@ describe('handing the purged tags to the CDN', () => {
         subjectId: garageId,
       },
     });
-    const hook = jest.fn();
+    const hook = vi.fn();
 
     await new OutboxRelay(prisma, new FakeRedis(), [], hook).relay();
 
@@ -513,16 +513,16 @@ describe('handing the purged tags to the CDN', () => {
   });
 
   it('starts the purge sender with the relay when the CDN is configured, and stops it on shutdown', async () => {
-    const start = jest
+    const start = vi
       .spyOn(CdnPurgeSender.prototype, 'start')
       .mockImplementation(() => undefined);
-    const stop = jest
+    const stop = vi
       .spyOn(CdnPurgeSender.prototype, 'stop')
       .mockResolvedValue(undefined);
-    jest
-      .spyOn(OutboxRelay.prototype, 'start')
-      .mockImplementation(() => undefined);
-    jest.spyOn(OutboxRelay.prototype, 'stop').mockResolvedValue(undefined);
+    vi.spyOn(OutboxRelay.prototype, 'start').mockImplementation(
+      () => undefined,
+    );
+    vi.spyOn(OutboxRelay.prototype, 'stop').mockResolvedValue(undefined);
 
     const app = await Test.createTestingModule({
       imports: [
@@ -541,11 +541,11 @@ describe('handing the purged tags to the CDN', () => {
   });
 
   it('starts no purge sender without the CDN', async () => {
-    const start = jest.spyOn(CdnPurgeSender.prototype, 'start');
-    jest
-      .spyOn(OutboxRelay.prototype, 'start')
-      .mockImplementation(() => undefined);
-    jest.spyOn(OutboxRelay.prototype, 'stop').mockResolvedValue(undefined);
+    const start = vi.spyOn(CdnPurgeSender.prototype, 'start');
+    vi.spyOn(OutboxRelay.prototype, 'start').mockImplementation(
+      () => undefined,
+    );
+    vi.spyOn(OutboxRelay.prototype, 'stop').mockResolvedValue(undefined);
 
     const app = await Test.createTestingModule({
       imports: [OutboxRelayModule.register({ databaseUrl, redisUrl })],

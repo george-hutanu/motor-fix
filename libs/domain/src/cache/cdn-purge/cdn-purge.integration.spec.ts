@@ -12,9 +12,9 @@ const CONFIG = { apiKey: 'key-123', pullZoneId: '42' };
 
 afterAll(() => redis.disconnect());
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // Each test its own set, so suites sharing the database never meet.
 const ownKey = () => `cdn:purge:test:${randomUUID()}`;
@@ -33,7 +33,7 @@ describe('the CDN purge queue in Redis', () => {
       'search',
     ]);
 
-    const send = jest.fn(async () => new Response(null, { status: 204 }));
+    const send = vi.fn(async () => new Response(null, { status: 204 }));
     await new CdnPurgeSender(redis, CONFIG, send, key).tick();
 
     expect(send).toHaveBeenCalledTimes(2);
@@ -44,7 +44,7 @@ describe('the CDN purge queue in Redis', () => {
     const key = ownKey();
     await cdnPurgeHook(redis, key)('garage:g-2');
 
-    const refuse = jest.fn(async () => new Response(null, { status: 503 }));
+    const refuse = vi.fn(async () => new Response(null, { status: 503 }));
     await new CdnPurgeSender(redis, CONFIG, refuse, key).tick();
 
     expect(await redis.smembers(key)).toEqual(['garage:g-2']);

@@ -41,8 +41,9 @@ features:
   - 011-dashboard-sections
   - 1316-swr-resource-store
   - 1389-reported-reviews-admin
-  - 154-free-slots
+  - 395-job-lock
   - 059-profile-direct-requests
+  - 154-free-slots
 ---
 
 # Capability: Live updates

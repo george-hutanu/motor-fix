@@ -64,7 +64,7 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
   const keys = await redis.keys('auth:*');
   if (keys.length) await redis.del(...keys);
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -752,8 +752,8 @@ describe('the hourly limit', () => {
     await signUp(body({ password: 'x' }), from);
     const [key] = await redis.keys('auth:signup:*');
     await redis.set(key ?? '', 'not-a-number', 'EX', 100);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const res = await signUp(body(), from);
 
@@ -847,7 +847,7 @@ describe('Redis that never answers', () => {
   });
 
   it('signs up within a few seconds, and logs the failure', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const hung = await start(`redis://127.0.0.1:${port}`);
@@ -870,11 +870,11 @@ describe('the log of refused attempts', () => {
   it('holds no name, e-mail, password or address for a bad body and a limit refusal', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(JSON.stringify(args));
-        });
+        },
+      );
     }
     const from = '192.0.2.252';
 

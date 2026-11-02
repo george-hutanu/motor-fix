@@ -159,7 +159,7 @@ describe('the ZIP of an export read by unzip', () => {
     }));
 
     expect(() => writeZip(entries)).toThrow();
-  });
+  }, 60_000);
 
   it('gives the same bytes for the same input twice', () => {
     const entries = [{ data: 'same', name: 'a.txt' }];

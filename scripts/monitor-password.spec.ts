@@ -39,7 +39,7 @@ function fakeSession() {
 
 describe('applyMonitorPassword', () => {
   it('skips without connecting when MONITOR_DATABASE_PASSWORD is unset', async () => {
-    const open = jest.fn();
+    const open = vi.fn();
 
     await expect(
       applyMonitorPassword({ DATABASE_URL: 'postgresql://x/y' }, open),
@@ -50,7 +50,7 @@ describe('applyMonitorPassword', () => {
   });
 
   it('treats an empty password as unset', async () => {
-    const open = jest.fn();
+    const open = vi.fn();
 
     await applyMonitorPassword(
       { DATABASE_URL: 'postgresql://x/y', MONITOR_DATABASE_PASSWORD: '' },
@@ -61,7 +61,7 @@ describe('applyMonitorPassword', () => {
 
   it('sends only a SCRAM-SHA-256 verifier, never the password, and closes the session', async () => {
     const { calls, session } = fakeSession();
-    const open = jest.fn(() => session);
+    const open = vi.fn(() => session);
 
     const message = await applyMonitorPassword(
       {
@@ -117,7 +117,7 @@ describe('applyMonitorPassword', () => {
 
   it('refuses a set password with no DATABASE_URL', async () => {
     await expect(
-      applyMonitorPassword({ MONITOR_DATABASE_PASSWORD: 'p' }, jest.fn()),
+      applyMonitorPassword({ MONITOR_DATABASE_PASSWORD: 'p' }, vi.fn()),
     ).rejects.toThrow('DATABASE_URL');
   });
 });

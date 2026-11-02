@@ -39,7 +39,13 @@ async function render(cars: CarDto[]) {
   open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
-      { provide: CarsService, useValue: { carsControllerList: list } },
+      {
+        provide: CarsService,
+        useValue: {
+          carHistoryControllerSold: async () => ({ items: [] }),
+          carsControllerList: list,
+        },
+      },
       { provide: Overlays, useValue: { open } },
       ...heldForDriver(),
       provideRouter([]),

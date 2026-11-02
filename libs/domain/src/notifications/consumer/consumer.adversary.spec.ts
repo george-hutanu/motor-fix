@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { NotificationsConsumer } from './consumer';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -16,25 +17,23 @@ const unreachable = (reason = 'provider_503'): KeyStatus => ({
   reason,
 });
 
-let warn: jest.SpyInstance;
-let error: jest.SpyInstance;
+let warn: MockInstance;
+let error: MockInstance;
 
 beforeEach(() => {
-  warn = jest
-    .spyOn(Logger.prototype, 'warn')
-    .mockImplementation(() => undefined);
-  error = jest
+  warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  error = vi
     .spyOn(Logger.prototype, 'error')
     .mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const build = (
   keyStatus: (signal?: AbortSignal) => Promise<KeyStatus>,
   email: Record<string, string> = {},
   phone: Record<string, string> = { PHONE_SENDING: 'off', WHATSAPP_SENDER: '' },
 ) => {
-  const fn = jest.fn(keyStatus);
+  const fn = vi.fn(keyStatus);
   const processor = new NotificationsProcessor(
     {} as PrismaClient,
     {} as NotificationsService,
@@ -301,7 +300,7 @@ describe('the start-up key check against a real Brevo stand-in', () => {
 
 // @traces 520-FR-002 520-FR-003 520-FR-004
 describe('the notifications consumer at its edges', () => {
-  const worker = () => ({ close: jest.fn(async () => undefined) });
+  const worker = () => ({ close: vi.fn(async () => undefined) });
 
   it('is not ready before it starts', () => {
     const consumer = new NotificationsConsumer(
@@ -312,7 +311,7 @@ describe('the notifications consumer at its edges', () => {
   });
 
   it('opens one consumer when started twice', async () => {
-    const open = jest.fn(async () => worker());
+    const open = vi.fn(async () => worker());
     const consumer = new NotificationsConsumer(async () => true, open);
     await consumer.start();
     await consumer.start();
@@ -343,7 +342,7 @@ describe('the notifications consumer at its edges', () => {
   });
 
   it('opens nothing when closed before it starts', async () => {
-    const open = jest.fn(async () => worker());
+    const open = vi.fn(async () => worker());
     const consumer = new NotificationsConsumer(async () => true, open);
     await consumer.close();
     await consumer.start();
@@ -371,7 +370,7 @@ describe('the notifications consumer at its edges', () => {
   });
 
   it('stays not ready and rejects when the check throws', async () => {
-    const open = jest.fn(async () => worker());
+    const open = vi.fn(async () => worker());
     const consumer = new NotificationsConsumer(async () => {
       throw new Error('boom');
     }, open);
@@ -394,7 +393,7 @@ describe('the notifications consumer at its edges', () => {
   it('reports not ready the moment it closes, even if the worker closes slowly', async () => {
     let release!: () => void;
     const w = {
-      close: jest.fn(() => new Promise<void>((resolve) => (release = resolve))),
+      close: vi.fn(() => new Promise<void>((resolve) => (release = resolve))),
     };
     const consumer = new NotificationsConsumer(
       async () => true,
@@ -434,7 +433,7 @@ describe('the notifications consumer at its edges', () => {
           stop.release = () => resolve({ outcome: 'passed' });
         }),
     );
-    const open = jest.fn(async () => worker());
+    const open = vi.fn(async () => worker());
     const consumer = new NotificationsConsumer(
       (signal) => processor.ready(signal),
       open,
@@ -453,7 +452,7 @@ describe('the notifications consumer at its edges', () => {
       outcome: 'refused',
       status: 401,
     }));
-    const open = jest.fn(async () => worker());
+    const open = vi.fn(async () => worker());
     const consumer = new NotificationsConsumer(
       (signal) => processor.ready(signal),
       open,

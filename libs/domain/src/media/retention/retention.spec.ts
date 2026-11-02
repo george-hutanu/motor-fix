@@ -7,11 +7,11 @@ import {
 } from './retention';
 
 const deps = () => {
-  const logger = { error: jest.fn(), log: jest.fn() };
+  const logger = { error: vi.fn(), log: vi.fn() };
   return { deps: { logger } as unknown as MediaRetentionDeps, logger };
 };
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 333-FR-013
 describe('the nightly media run', () => {
@@ -20,8 +20,8 @@ describe('the nightly media run', () => {
   });
 
   it('runs its steps in order, and a step that throws stops none after it', async () => {
-    const add = jest.fn();
-    jest.spyOn(metrics, 'getMeter').mockReturnValue({
+    const add = vi.fn();
+    vi.spyOn(metrics, 'getMeter').mockReturnValue({
       createCounter: () => ({ add }),
     } as never);
     const { deps: d, logger } = deps();

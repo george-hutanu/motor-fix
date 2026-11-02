@@ -550,7 +550,7 @@ describe('a blocked interval among the overlaps', () => {
 // @traces 427-FR-007
 describe("the rows a block's change is judged against", () => {
   it('keeps the bookings, whose segments hold no block, beside the other blocks', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
+    const findMany = vi.fn().mockResolvedValue([]);
     const tx = { bookingSegment: { findMany } } as never;
 
     await new ScheduleService().assertFree(tx, {

@@ -57,9 +57,9 @@ afterAll(async () => {
 
 beforeEach(() => {
   seen = [];
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const json =
   (status: number, body: unknown): Answer =>
@@ -157,7 +157,7 @@ describe('the Cloudflare live video provider', () => {
 
   it('never logs the api token', async () => {
     answer = json(403, { success: false });
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 

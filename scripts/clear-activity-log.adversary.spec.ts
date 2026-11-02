@@ -157,14 +157,14 @@ describe('clearActivityLog before connecting', () => {
     ['socket host', { DATABASE_URL: 'postgresql://localhost/db?host=/tmp' }],
     ['userinfo trick', { DATABASE_URL: 'postgresql://localhost@evil.com/db' }],
   ])('never opens a session for a %s URL', async (_, source) => {
-    const open = jest.fn();
+    const open = vi.fn();
     await expect(clearActivityLog(source, open)).rejects.toThrow();
     expect(open).not.toHaveBeenCalled();
   });
 
   it('opens exactly one session with the URL it was given', async () => {
     const { session } = fakeSession();
-    const open = jest.fn(() => session);
+    const open = vi.fn(() => session);
     await clearActivityLog({ DATABASE_URL: LOCAL }, open);
     expect(open).toHaveBeenCalledTimes(1);
     expect(open).toHaveBeenCalledWith(LOCAL);

@@ -20,7 +20,7 @@ const ZERO = {
 };
 
 const figuresOf = (answer: Partial<Figures> = {}) =>
-  jest.fn(async () => ({
+  vi.fn(async () => ({
     current: ZERO,
     period: { from: '2026-10-05', to: '2026-10-11' },
     ...answer,

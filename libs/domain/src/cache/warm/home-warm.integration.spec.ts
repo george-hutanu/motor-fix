@@ -94,7 +94,7 @@ beforeEach(async () => {
     ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];
   if (keys.length) await redis.del(...keys);
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -319,8 +319,8 @@ describe('a driver’s sign-in', () => {
   });
 
   it('signs in and reads from the database while Redis is down', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const down = await start('redis://127.0.0.1:1');
     try {
       const andrei = await driver();
@@ -431,7 +431,7 @@ describe('the app’s shutdown', () => {
     let closing: Promise<void> | undefined;
     try {
       const andrei = await driver();
-      const list = jest
+      const list = vi
         .spyOn(second.get(CarsService), 'list')
         .mockImplementation(async () => {
           listCalled.resolve();
@@ -440,14 +440,14 @@ describe('the app’s shutdown', () => {
         });
       const database = second.get(PRISMA);
       const disconnect = database.$disconnect.bind(database);
-      jest.spyOn(database, '$disconnect').mockImplementation(() => {
+      vi.spyOn(database, '$disconnect').mockImplementation(() => {
         order.push('disconnect');
         storesClosing.resolve();
         return disconnect();
       });
       const store: Redis = second.get(AUTH_REDIS);
       const evaluate = store.eval.bind(store);
-      jest.spyOn(store, 'eval').mockImplementation((...args) => {
+      vi.spyOn(store, 'eval').mockImplementation((...args) => {
         const script = String(args[0]);
         order.push(
           script.includes('ZADD')
@@ -463,12 +463,13 @@ describe('the app’s shutdown', () => {
       const warm: Partial<BeforeApplicationShutdown> = second.get(HOME_WARM);
       const wait = warm.beforeApplicationShutdown?.bind(warm);
       if (wait) {
-        jest
-          .spyOn(warm as BeforeApplicationShutdown, 'beforeApplicationShutdown')
-          .mockImplementation((signal) => {
-            waitBegan.resolve();
-            return wait(signal);
-          });
+        vi.spyOn(
+          warm as BeforeApplicationShutdown,
+          'beforeApplicationShutdown',
+        ).mockImplementation((signal) => {
+          waitBegan.resolve();
+          return wait(signal);
+        });
       }
 
       expect((await signIn(andrei.email, PASSWORD, second)).status).toBe(200);

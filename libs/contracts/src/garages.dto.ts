@@ -13,6 +13,7 @@ import {
   type Facility,
   type WeeklyHours,
 } from './garage-hours';
+import { GARAGE_PHOTO_CAPTION_MAX } from './garage-profile-limits';
 import { CourtesyCarDto, PaymentMethodsDto } from './garage-settings.dto';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 import { NearQueryDto } from './near.dto';
@@ -110,6 +111,12 @@ export class PublicPriceRowDto {
 export class PublicGaragePhotoDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
+
+  @ApiPropertyOptional({
+    description: "The owner's caption, when the photo has one",
+    maxLength: GARAGE_PHOTO_CAPTION_MAX,
+  })
+  caption?: string;
 
   @ApiProperty({
     description: 'The thumbnail copy (400 px), signed for an hour',

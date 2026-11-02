@@ -532,7 +532,7 @@ describe('the system log entries of a run', () => {
     const backup = async () => at;
     tick();
     await run({ backup });
-    const read = jest
+    const read = vi
       .spyOn(prisma.systemLogEntry, 'findFirst')
       .mockRejectedValueOnce(new Error('log down'));
     tick();
@@ -596,7 +596,7 @@ describe('the system log entries of a run', () => {
     last = hours(30);
     tick();
     await run({ backup });
-    const read = jest
+    const read = vi
       .spyOn(prisma.systemLogEntry, 'findFirst')
       .mockRejectedValue(new Error('log down'));
     tick();
@@ -660,7 +660,9 @@ describe('the worker job', () => {
   ])(
     'does not start when STATUS_THRESHOLDS is %s, and says so once',
     async (_, value) => {
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
       try {
         const app = await boot(value);
         await app.close();

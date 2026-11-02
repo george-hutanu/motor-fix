@@ -290,13 +290,17 @@ export async function diffShots(currentDir, baselineDir, outDir, { cell = 16, to
 
 /**
  * The report's notes and findings from the diff: `meta` is baseline.json, `shots` diffShots' answer (null without a baseline).
- * A changed screen on a PR that touches no web file was not meant: a medium finding citing its diff.
+ * A changed screen on a PR that touches no web file was not meant: a medium finding citing its diff, unless
+ * the baseline is `stale` (trustBaseline: the web code changed between its commit and this PR's base), when
+ * the change is main's and no finding is raised.
  */
-export function visualOutcome({ meta, shots, web }) {
+export function visualOutcome({ meta, shots, web, stale = false }) {
   if (!meta || meta.none || !shots) return { notes: [`No baseline: ${meta?.none ?? "none was downloaded"}; every shot is new.`], findings: [], visual: null };
   const by = (s) => Object.values(shots).filter((v) => v.status === s).length;
   const notes = [`Visual: ${by("changed")} changed, ${by("identical")} identical, ${by("new")} new against run ${meta.run} of ${short(meta.sha)}.`];
-  const findings = web
+  if (!web && stale && by("changed"))
+    notes.push("The web code changed between the baseline run and this PR's base, so a changed shot is main's, not this PR's: no visual finding this lap.");
+  const findings = web || stale
     ? []
     : Object.entries(shots)
         .filter(([, v]) => v.status === "changed")

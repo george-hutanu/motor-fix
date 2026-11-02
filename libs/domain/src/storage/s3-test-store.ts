@@ -11,7 +11,10 @@ import { crc32 } from 'node:zlib';
 import type { StorageEnv } from '@motor-fix/contracts';
 
 // The entry point of @motor-fix/domain/testing: the database turn-taking too.
-export { databaseTurn, TURN_WAIT_MS } from '../auth/database-turn.testing';
+export {
+  databaseTurn,
+  TURN_WAIT_MS,
+} from '../auth/database-turn/database-turn.testing';
 export { PRISMA } from '../auth/prisma';
 export { quotesWorld } from '../quotes/quotes.testing';
 

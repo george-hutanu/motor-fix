@@ -1,5 +1,6 @@
 import type { MechanicsSection } from '@motor-fix/contracts';
 import type { HttpException } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { GarageMechanicsService } from './garage-mechanics.service';
 import type { AuditEntry, AuditPort } from '../../audit/audit.port';
@@ -85,7 +86,7 @@ function fakeDb(
   raw: unknown[] = [],
 ) {
   const empty = (method: string) =>
-    jest.fn(async () => {
+    vi.fn(async () => {
       if (method === 'findMany' || method === 'groupBy') return [];
       if (method === 'count') return 0;
       if (method.startsWith('find')) return null;
@@ -100,7 +101,7 @@ function fakeDb(
         if (key === '$transaction')
           return (work: (tx: unknown) => unknown) => work(db);
         if (key === '$queryRaw' || key === '$executeRaw')
-          return jest.fn(async () => raw);
+          return vi.fn(async () => raw);
         const name = String(key);
         if (!tables.has(name)) {
           const given = models[name] ?? {};
@@ -120,7 +121,7 @@ function fakeDb(
     },
   );
   return db as unknown as Prisma.TransactionClient & {
-    [model: string]: Record<string, jest.Mock>;
+    [model: string]: Record<string, Mock>;
   };
 }
 
@@ -130,13 +131,13 @@ const listed = (
 ) => {
   const prisma = fakeDb({
     garage: {
-      findUniqueOrThrow: jest.fn(async () => ({
+      findUniqueOrThrow: vi.fn(async () => ({
         status: 'approved',
         teamOnProfile: true,
       })),
     },
     garageBrand: {
-      findMany: jest.fn(async () =>
+      findMany: vi.fn(async () =>
         brands.map((brand) => ({
           brand,
           brandId: brand.id,
@@ -145,8 +146,8 @@ const listed = (
         })),
       ),
     },
-    garageFeature: { findUnique: jest.fn(async () => null) },
-    mechanic: { findMany: jest.fn(async () => rows) },
+    garageFeature: { findUnique: vi.fn(async () => null) },
+    mechanic: { findMany: vi.fn(async () => rows) },
   });
   return {
     list: (actor: Actor) =>
@@ -387,26 +388,24 @@ const ELENA = '00000000-0000-4000-8000-00000000e1e1';
 
 function writer(stored: Record<string, unknown> = card({ id: ELENA })) {
   const audit = {
-    record: jest.fn(async () => undefined),
-    recordChanges: jest.fn(async () => undefined),
-    recordMany: jest.fn(async () => undefined),
+    record: vi.fn(async () => undefined),
+    recordChanges: vi.fn(async () => undefined),
+    recordMany: vi.fn(async () => undefined),
   };
-  const events = { record: jest.fn(async () => undefined) };
-  const notifications = { notify: jest.fn(async () => undefined) };
-  const create = jest.fn(async ({ data }: { data: Record<string, unknown> }) =>
+  const events = { record: vi.fn(async () => undefined) };
+  const notifications = { notify: vi.fn(async () => undefined) };
+  const create = vi.fn(async ({ data }: { data: Record<string, unknown> }) =>
     card({ ...data, id: ELENA }),
   );
   let current = stored;
-  const update = jest.fn(
-    async ({ data }: { data: Record<string, unknown> }) => {
-      current = { ...current, ...data };
-      return { count: 1 };
-    },
-  );
-  const found = jest.fn(async () => current);
+  const update = vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+    current = { ...current, ...data };
+    return { count: 1 };
+  });
+  const found = vi.fn(async () => current);
   const db = fakeDb(
     {
-      garageFeature: { findUnique: jest.fn(async () => null) },
+      garageFeature: { findUnique: vi.fn(async () => null) },
       mechanic: {
         create,
         findFirst: found,

@@ -32,6 +32,7 @@ import {
 import { moveBooking, moveRequest } from '../../quotes/transitions';
 import { invalidTransition, type TransitionActor } from '../../transitions';
 import { GarageJobsService } from '../garage-jobs/garage-jobs.service';
+import { type Hold, JobLockService } from '../job-lock/job-lock.service';
 import { moveJob } from '../transitions';
 
 type Tx = Prisma.TransactionClient;
@@ -54,6 +55,7 @@ interface LockedJob {
   booking_mechanic: string | null;
   final_price_bani: number | null;
   handed_over_at: Date | null;
+  updated_at: Date;
 }
 
 // Each verb's stages it starts from, where it goes, what it is called and
@@ -113,11 +115,22 @@ export class JobStagesService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     private readonly jobs: GarageJobsService,
+    private readonly locks: JobLockService,
   ) {}
 
-  move(actor: Actor, jobId: string, verb: Verb): Promise<JobDto> {
-    return this.write(actor, jobId, verb, async (tx, job) => {
-      this.judge(actor, job, verb);
+  move(
+    actor: Actor,
+    jobId: string,
+    verb: Verb,
+    basedOn?: string,
+  ): Promise<JobDto> {
+    const permit = (job: LockedJob) => {
+      if (actor.role !== 'garage' && !this.own(actor, job)) {
+        throw this.forbidden();
+      }
+    };
+    return this.write(actor, jobId, verb, basedOn, permit, async (tx, job) => {
+      this.judge(job, verb);
       const { kind, request, to } = VERBS[verb];
       const ports = { audit: this.audit, events: this.events };
       const pausedJobIds =
@@ -151,12 +164,9 @@ export class JobStagesService {
     });
   }
 
-  // The owner or the job's mechanic, from the verb's own stage; a finish
-  // before the start and a start before the reception have their own codes.
-  private judge(actor: Actor, job: LockedJob, verb: Verb) {
-    if (actor.role !== 'garage' && !this.own(actor, job)) {
-      throw this.forbidden();
-    }
+  // From the verb's own stage; a finish before the start and a start before
+  // the reception have their own codes.
+  private judge(job: LockedJob, verb: Verb) {
     const { from, to } = VERBS[verb];
     if (verb === 'finish' && job.status === 'to_do') {
       throw this.refuse(job, 'job_not_started', 'Lucrarea nu a început');
@@ -178,167 +188,211 @@ export class JobStagesService {
 
   // A reading at the reception: the job keeps the latest, every reading is
   // kept on the car, and the car shows its newest, a lower one included.
-  receive(actor: Actor, jobId: string, km: number): Promise<JobDto> {
-    return this.write(actor, jobId, 'receive', async (tx, job) => {
+  receive(
+    actor: Actor,
+    jobId: string,
+    km: number,
+    basedOn?: string,
+  ): Promise<JobDto> {
+    const permit = (job: LockedJob) => {
       const desk = actor.role === 'garage' || actor.role === 'receptionist';
       if (!desk && !this.own(actor, job)) {
         throw this.forbidden();
       }
-      if (CLOSED.includes(job.status)) {
-        throw this.refuse(job, 'job_closed', 'Lucrarea este închisă');
-      }
-      if (job.status === 'paused') {
-        throw this.refuse(job, 'invalid_state', 'Reia lucrarea mai întâi');
-      }
-      const by = {
-        actorId: actor.accountId,
-        actorRole: actor.role,
-        carId: job.car_id,
-        garageId: job.garage_id,
-      };
-      await tx.job.update({
-        data: { odometerKm: km, receivedAt: job.received_at ?? new Date() },
-        where: { id: job.id },
-      });
-      // The car is locked before its reading is written, as a driver's edit does.
-      await this.followCar(tx, by, job.car_id, km);
-      await tx.odometerReading.create({
-        data: {
+    };
+    return this.write(
+      actor,
+      jobId,
+      'receive',
+      basedOn,
+      permit,
+      async (tx, job) => {
+        if (CLOSED.includes(job.status)) {
+          throw this.refuse(job, 'job_closed', 'Lucrarea este închisă');
+        }
+        if (job.status === 'paused') {
+          throw this.refuse(job, 'invalid_state', 'Reia lucrarea mai întâi');
+        }
+        const by = {
+          actorId: actor.accountId,
+          actorRole: actor.role,
           carId: job.car_id,
-          km,
-          readOn: today(),
-          source: 'reception',
-          sourceId: job.id,
-        },
-      });
-      await this.audit.record(tx, {
-        ...by,
-        action: 'update',
-        field: 'odometer_km',
-        jobId: job.id,
-        newValue: km,
-        oldValue: job.odometer_km,
-        subjectId: job.id,
-        subjectType: 'job',
-      });
-      await this.events.record(tx, {
-        audience: audience(job),
-        kind: 'job.received',
-        payload: { odometerKm: km },
-        subjectId: job.id,
-      });
-    });
+          garageId: job.garage_id,
+        };
+        await tx.job.update({
+          data: { odometerKm: km, receivedAt: job.received_at ?? new Date() },
+          where: { id: job.id },
+        });
+        // The car is locked before its reading is written, as a driver's edit does.
+        await this.followCar(tx, by, job.car_id, km);
+        await tx.odometerReading.create({
+          data: {
+            carId: job.car_id,
+            km,
+            readOn: today(),
+            source: 'reception',
+            sourceId: job.id,
+          },
+        });
+        await this.audit.record(tx, {
+          ...by,
+          action: 'update',
+          field: 'odometer_km',
+          jobId: job.id,
+          newValue: km,
+          oldValue: job.odometer_km,
+          subjectId: job.id,
+          subjectType: 'job',
+        });
+        await this.events.record(tx, {
+          audience: audience(job),
+          kind: 'job.received',
+          payload: { odometerKm: km },
+          subjectId: job.id,
+        });
+      },
+    );
   }
 
   // The handover: the owner or the desk records the price the driver paid
   // for a done job, which completes its booking. A mechanic never does,
   // whatever their final-price flag says.
-  handover(actor: Actor, jobId: string, price: number): Promise<JobDto> {
-    return this.write(actor, jobId, 'handover', async (tx, job) => {
-      this.judgePrice(actor, job);
-      if (job.status !== 'done') {
-        throw this.refuse(
-          job,
-          'job_not_done',
-          'Marchează întâi lucrarea ca gata',
-        );
-      }
-      if (job.handed_over_at) {
-        this.logger.warn(
-          `job stage refused: already_handed_over job=${job.id}`,
-        );
-        throw new HttpException(
-          {
-            code: 'already_handed_over',
-            finalPriceBani: job.final_price_bani,
-            message: 'Mașina a fost deja predată',
-          },
-          HttpStatus.CONFLICT,
-        );
-      }
-      if (job.booking_status !== 'completed') {
-        await moveBooking(
-          tx,
-          { audit: this.audit, events: this.events },
-          {
-            actor,
-            event: {
-              audience: {
-                driverAccountId: job.driver_id,
-                garageId: job.garage_id,
-                mechanicId: job.booking_mechanic,
-                type: 'booking',
-              },
-              kind: 'booking.completed',
+  handover(
+    actor: Actor,
+    jobId: string,
+    price: number,
+    basedOn?: string,
+  ): Promise<JobDto> {
+    const permit = (job: LockedJob) => this.judgePrice(actor, job);
+    return this.write(
+      actor,
+      jobId,
+      'handover',
+      basedOn,
+      permit,
+      async (tx, job) => {
+        if (job.status !== 'done') {
+          throw this.refuse(
+            job,
+            'job_not_done',
+            'Marchează întâi lucrarea ca gata',
+          );
+        }
+        if (job.handed_over_at) {
+          this.logger.warn(
+            `job stage refused: already_handed_over job=${job.id}`,
+          );
+          throw new HttpException(
+            {
+              code: 'already_handed_over',
+              finalPriceBani: job.final_price_bani,
+              message: 'Mașina a fost deja predată',
             },
-            id: job.booking_id,
-            to: 'completed',
+            HttpStatus.CONFLICT,
+          );
+        }
+        if (job.booking_status !== 'completed') {
+          await moveBooking(
+            tx,
+            { audit: this.audit, events: this.events },
+            {
+              actor,
+              event: {
+                audience: {
+                  driverAccountId: job.driver_id,
+                  garageId: job.garage_id,
+                  mechanicId: job.booking_mechanic,
+                  type: 'booking',
+                },
+                kind: 'booking.completed',
+              },
+              id: job.booking_id,
+              to: 'completed',
+            },
+          );
+        }
+        const now = new Date();
+        await tx.job.update({
+          data: {
+            finalPriceBani: price,
+            finalPriceRecordedById: actor.accountId,
+            handedOverAt: now,
           },
-        );
-      }
-      const now = new Date();
-      await tx.job.update({
-        data: {
-          finalPriceBani: price,
-          finalPriceRecordedById: actor.accountId,
-          handedOverAt: now,
-        },
-        where: { id: job.id },
-      });
-      await this.audit.recordMany(tx, [
-        priceEntry(actor, job, 'final_price_bani', null, price),
-        priceEntry(actor, job, 'handed_over_at', null, now.toISOString()),
-      ]);
-      await this.events.record(tx, {
-        audience: audience(job),
-        kind: 'job.handed_over',
-        payload: { by: actor.accountId, finalPriceBani: price },
-        subjectId: job.id,
-      });
-    });
+          where: { id: job.id },
+        });
+        await this.audit.recordMany(tx, [
+          priceEntry(actor, job, 'final_price_bani', null, price),
+          priceEntry(actor, job, 'handed_over_at', null, now.toISOString()),
+        ]);
+        await this.events.record(tx, {
+          audience: audience(job),
+          kind: 'job.handed_over',
+          payload: { by: actor.accountId, finalPriceBani: price },
+          subjectId: job.id,
+        });
+      },
+    );
   }
 
   // A correction of the recorded price, within 48 hours of the handover, as
   // often as needed; the same price again changes nothing.
-  correct(actor: Actor, jobId: string, price: number): Promise<JobDto> {
-    return this.write(actor, jobId, 'correct', async (tx, job) => {
-      this.judgePrice(actor, job);
-      if (!job.handed_over_at) {
-        throw this.refuse(
-          job,
-          'not_handed_over',
-          'Mașina nu a fost încă predată',
+  correct(
+    actor: Actor,
+    jobId: string,
+    price: number,
+    basedOn?: string,
+  ): Promise<JobDto> {
+    const permit = (job: LockedJob) => this.judgePrice(actor, job);
+    return this.write(
+      actor,
+      jobId,
+      'correct',
+      basedOn,
+      permit,
+      async (tx, job) => {
+        if (!job.handed_over_at) {
+          throw this.refuse(
+            job,
+            'not_handed_over',
+            'Mașina nu a fost încă predată',
+          );
+        }
+        const closes =
+          job.handed_over_at.getTime() + FINAL_PRICE_CORRECTION_HOURS * HOUR;
+        if (Date.now() >= closes) {
+          throw this.refuse(
+            job,
+            'correction_window_closed',
+            'Prețul final nu mai poate fi corectat',
+          );
+        }
+        if (price === job.final_price_bani) return;
+        await tx.job.update({
+          data: { finalPriceBani: price, finalPriceCorrectedAt: new Date() },
+          where: { id: job.id },
+        });
+        await this.audit.record(
+          tx,
+          priceEntry(
+            actor,
+            job,
+            'final_price_bani',
+            job.final_price_bani,
+            price,
+          ),
         );
-      }
-      const closes =
-        job.handed_over_at.getTime() + FINAL_PRICE_CORRECTION_HOURS * HOUR;
-      if (Date.now() >= closes) {
-        throw this.refuse(
-          job,
-          'correction_window_closed',
-          'Prețul final nu mai poate fi corectat',
-        );
-      }
-      if (price === job.final_price_bani) return;
-      await tx.job.update({
-        data: { finalPriceBani: price, finalPriceCorrectedAt: new Date() },
-        where: { id: job.id },
-      });
-      await this.audit.record(
-        tx,
-        priceEntry(actor, job, 'final_price_bani', job.final_price_bani, price),
-      );
-      await this.events.record(tx, {
-        audience: audience(job),
-        kind: 'job.final_price_corrected',
-        payload: {
-          by: actor.accountId,
-          newBani: price,
-          oldBani: job.final_price_bani,
-        },
-        subjectId: job.id,
-      });
-    });
+        await this.events.record(tx, {
+          audience: audience(job),
+          kind: 'job.final_price_corrected',
+          payload: {
+            by: actor.accountId,
+            newBani: price,
+            oldBani: job.final_price_bani,
+          },
+          subjectId: job.id,
+        });
+      },
+    );
   }
 
   // The owner and the desk record the final price; a mechanic never does.
@@ -422,23 +476,36 @@ export class JobStagesService {
     return busy.map((other) => other.id);
   }
 
-  // Locks the job, runs the change, counts the call either way and answers
-  // the job as the garage reads it once the transaction has committed.
+  // Locks the job's row, checks the caller may change it, then that no one
+  // else holds it and that the caller read its latest version, and only then
+  // runs the change; counts the call either way and answers the job as the
+  // garage reads it once the transaction has committed.
   private async write(
     actor: Actor,
     jobId: string,
     action: JobStageAction,
+    basedOn: string | undefined,
+    permit: (job: LockedJob) => void,
     change: (tx: Tx, job: LockedJob) => Promise<void>,
   ): Promise<JobDto> {
     requireCapability(actor, 'garage.own_jobs');
+    const met: { job?: LockedJob; hold?: Hold } = {};
     try {
-      await this.prisma.$transaction(async (tx) =>
-        change(tx, await this.lock(tx, actor, jobId)),
-      );
+      await this.prisma.$transaction(async (tx) => {
+        const job = await this.lock(tx, actor, jobId);
+        met.job = job;
+        permit(job);
+        met.hold = await this.locks.hold(tx, actor, job, basedOn);
+        await change(tx, job);
+        await this.locks.settle(tx, job.id);
+      });
     } catch (error) {
       if (error instanceof HttpException) countJobStageMove(action, 'refused');
-      throw error;
+      throw await this.locks.refused(actor, met.job, met.hold, error, () =>
+        this.jobs.get(actor, jobId),
+      );
     }
+    if (met.job) await this.locks.after(actor, met.job, met.hold);
     countJobStageMove(action, 'ok');
     return this.jobs.get(actor, jobId);
   }
@@ -450,7 +517,7 @@ export class JobStagesService {
              m.account_id AS mechanic_account, b.request_id, j.status,
              j.received_at, j.odometer_km, j.booking_id,
              b.status AS booking_status, b.mechanic_id AS booking_mechanic,
-             j.final_price_bani, j.handed_over_at
+             j.final_price_bani, j.handed_over_at, j.updated_at
       FROM job j
       JOIN booking b ON b.id = j.booking_id
       LEFT JOIN mechanic m ON m.id = j.mechanic_id

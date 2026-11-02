@@ -265,6 +265,8 @@ export type { SavedGaragesControllerList$Params as SavedGaragesControllerList$Pa
 export { savedGaragesControllerList as savedGaragesControllerList } from './fn/saved-garages/saved-garages-controller-list';
 export type { SavedGaragesControllerIds$Params as SavedGaragesControllerIds$Params } from './fn/saved-garages/saved-garages-controller-ids';
 export { savedGaragesControllerIds as savedGaragesControllerIds } from './fn/saved-garages/saved-garages-controller-ids';
+export type { SaveSuggestionsControllerDismiss$Params as SaveSuggestionsControllerDismiss$Params } from './fn/saved-garages/save-suggestions-controller-dismiss';
+export { saveSuggestionsControllerDismiss as saveSuggestionsControllerDismiss } from './fn/saved-garages/save-suggestions-controller-dismiss';
 export type { DashboardLayoutsControllerRead$Params as DashboardLayoutsControllerRead$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export { dashboardLayoutsControllerRead as dashboardLayoutsControllerRead } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export type { DashboardLayoutsControllerSave$Params as DashboardLayoutsControllerSave$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-save';
@@ -379,6 +381,8 @@ export type { MechanicScheduleControllerRemoveDayOff$Params as MechanicScheduleC
 export { mechanicScheduleControllerRemoveDayOff as mechanicScheduleControllerRemoveDayOff } from './fn/garages/mechanic-schedule-controller-remove-day-off';
 export type { GarageMembersControllerList$Params as GarageMembersControllerList$Params } from './fn/garages/garage-members-controller-list';
 export { garageMembersControllerList as garageMembersControllerList } from './fn/garages/garage-members-controller-list';
+export type { GarageMembersControllerRemove$Params as GarageMembersControllerRemove$Params } from './fn/garages/garage-members-controller-remove';
+export { garageMembersControllerRemove as garageMembersControllerRemove } from './fn/garages/garage-members-controller-remove';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
@@ -403,6 +407,18 @@ export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerByS
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
 export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
+export type { OwnerPhotosControllerList$Params as OwnerPhotosControllerList$Params } from './fn/garages/owner-photos-controller-list';
+export { ownerPhotosControllerList as ownerPhotosControllerList } from './fn/garages/owner-photos-controller-list';
+export type { OwnerPhotosControllerSave$Params as OwnerPhotosControllerSave$Params } from './fn/garages/owner-photos-controller-save';
+export { ownerPhotosControllerSave as ownerPhotosControllerSave } from './fn/garages/owner-photos-controller-save';
+export type { OwnerPhotosControllerUploadAddress$Params as OwnerPhotosControllerUploadAddress$Params } from './fn/garages/owner-photos-controller-upload-address';
+export { ownerPhotosControllerUploadAddress as ownerPhotosControllerUploadAddress } from './fn/garages/owner-photos-controller-upload-address';
+export type { OwnerPhotosControllerConfirm$Params as OwnerPhotosControllerConfirm$Params } from './fn/garages/owner-photos-controller-confirm';
+export { ownerPhotosControllerConfirm as ownerPhotosControllerConfirm } from './fn/garages/owner-photos-controller-confirm';
+export type { OwnerPhotosControllerUpload$Params as OwnerPhotosControllerUpload$Params } from './fn/garages/owner-photos-controller-upload';
+export { ownerPhotosControllerUpload as ownerPhotosControllerUpload } from './fn/garages/owner-photos-controller-upload';
+export type { OwnerPhotosControllerRemoveUpload$Params as OwnerPhotosControllerRemoveUpload$Params } from './fn/garages/owner-photos-controller-remove-upload';
+export { ownerPhotosControllerRemoveUpload as ownerPhotosControllerRemoveUpload } from './fn/garages/owner-photos-controller-remove-upload';
 export type { OwnerDocumentsControllerUploadUrl$Params as OwnerDocumentsControllerUploadUrl$Params } from './fn/garages/owner-documents-controller-upload-url';
 export { ownerDocumentsControllerUploadUrl as ownerDocumentsControllerUploadUrl } from './fn/garages/owner-documents-controller-upload-url';
 export type { OwnerDocumentsControllerSubmit$Params as OwnerDocumentsControllerSubmit$Params } from './fn/garages/owner-documents-controller-submit';
@@ -429,6 +445,10 @@ export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';
 export { garageJobsControllerGet as garageJobsControllerGet } from './fn/garage-jobs/garage-jobs-controller-get';
+export type { JobLockControllerTake$Params as JobLockControllerTake$Params } from './fn/garage-jobs/job-lock-controller-take';
+export { jobLockControllerTake as jobLockControllerTake } from './fn/garage-jobs/job-lock-controller-take';
+export type { JobLockControllerRelease$Params as JobLockControllerRelease$Params } from './fn/garage-jobs/job-lock-controller-release';
+export { jobLockControllerRelease as jobLockControllerRelease } from './fn/garage-jobs/job-lock-controller-release';
 export type { JobStagesControllerStart$Params as JobStagesControllerStart$Params } from './fn/garage-jobs/job-stages-controller-start';
 export { jobStagesControllerStart as jobStagesControllerStart } from './fn/garage-jobs/job-stages-controller-start';
 export type { JobStagesControllerPause$Params as JobStagesControllerPause$Params } from './fn/garage-jobs/job-stages-controller-pause';

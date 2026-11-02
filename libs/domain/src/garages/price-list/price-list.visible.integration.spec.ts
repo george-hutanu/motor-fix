@@ -460,7 +460,7 @@ describe('what a hide or show records', () => {
   it('keeps neither the flag, the entry nor the event when the entry cannot be written', async () => {
     const w = await world();
     const audit = app.get<AuditPort>(AUDIT_PORT);
-    const failing = jest
+    const failing = vi
       .spyOn(audit, 'record')
       .mockRejectedValueOnce(new Error('the entry write failed'));
 

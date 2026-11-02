@@ -33,7 +33,7 @@ describe('which address search the api uses', () => {
 });
 
 describe('the places module', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const providerOf = (config: Parameters<typeof PlacesModule.register>[0]) => {
     const found = PlacesModule.register(config).providers?.find(
@@ -46,7 +46,7 @@ describe('the places module', () => {
   };
 
   it('answers unavailable with no search configured, and says so once at boot', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 
@@ -60,7 +60,7 @@ describe('the places module', () => {
   });
 
   it('names the search it chose without its key', () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
 

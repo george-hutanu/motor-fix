@@ -201,10 +201,9 @@ describe('the repository against the split rules', () => {
   });
 
   // @traces 438-FR-001
-  it('has a Jest config in every project that holds an integration spec', () => {
+  it('has a Vitest config in every project that holds an integration spec', () => {
     const without = projects.filter(
-      (p) =>
-        !readdirSync(join(root, p)).some((n) => n.startsWith('jest.config.')),
+      (p) => !readdirSync(join(root, p)).includes('vitest.config.mts'),
     );
 
     expect(without).toEqual([]);
@@ -250,7 +249,9 @@ describe('the repository against the split rules', () => {
         const p = projectDir(f);
         return (
           p !== undefined &&
-          readdirSync(p).some((n) => n.startsWith('jest.config.'))
+          readdirSync(p).some(
+            (n) => n === 'vitest.config.mts' || n.startsWith('jest.config.'),
+          )
         );
       })
       .filter((f) => re.test(readFileSync(f, 'utf8')))

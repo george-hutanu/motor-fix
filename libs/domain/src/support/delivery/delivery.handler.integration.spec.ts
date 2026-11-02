@@ -146,7 +146,9 @@ describe('delivering a support message', () => {
 
   it('makes the usual promise when the away date has passed, and logs it', async () => {
     const { id } = await store();
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
 
     await delivery({ awayUntil: '2026-01-01', email: SUPPORT }).handle(job(id));
 
@@ -197,7 +199,9 @@ describe('delivering a support message', () => {
 
   it('with no support address, marks it unconfigured, logs SUPPORT_EMAIL, and still acknowledges', async () => {
     const { id, reference } = await store();
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const before = await emails('support', 'unconfigured');
 
     await delivery({}).handle(job(id));

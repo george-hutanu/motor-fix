@@ -469,7 +469,7 @@ describe('the event a hard bounce records', () => {
 });
 
 describe('a hard bounce', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('fails the e-mail row, marks the address and falls back to push', async () => {
     const andrei = await account('andrei');
@@ -533,9 +533,9 @@ describe('a hard bounce', () => {
     const andrei = await account('andrei');
     await withDevice(andrei);
     await sentEmail(andrei, 'evt-b', '<b@relay>');
-    jest
-      .spyOn(queue, 'add')
-      .mockRejectedValueOnce(new Error('Redis unavailable'));
+    vi.spyOn(queue, 'add').mockRejectedValueOnce(
+      new Error('Redis unavailable'),
+    );
 
     await expect(service.recordBounce('<b@relay>')).rejects.toThrow(
       'Redis unavailable',
@@ -945,5 +945,66 @@ describe('e-mails to a listing draft', () => {
       service.sendToDraft('QUOTE_RECEIVED' as never, id, link),
     ).rejects.toThrow(/QUOTE_RECEIVED/);
     expect(await draftRows(id)).toEqual([]);
+  });
+});
+
+// @traces 1374-FR-002
+// @traces 1374-FR-007
+describe('the fallback a hard bounce keeps', () => {
+  it('records the e-mail going by push, with the push row', async () => {
+    const andrei = await account('andrei');
+    await withDevice(andrei);
+    await sentEmail(andrei, 'evt-b', '<b@relay>');
+    await service.recordBounce('<b@relay>');
+    expect(
+      await prisma.notificationFallback.findMany({
+        select: { at: true, from: true, reason: true, to: true, type: true },
+        where: { accountId: andrei },
+      }),
+    ).toEqual([
+      {
+        at: new Date(DAY),
+        from: 'email',
+        reason: 'send_failed',
+        to: 'push',
+        type: 'QUOTE_RECEIVED',
+      },
+    ]);
+  });
+
+  it('records nothing when the push fallback is not written', async () => {
+    const andrei = await account('andrei');
+    await sentEmail(andrei, 'evt-b', '<b@relay>');
+    await service.recordBounce('<b@relay>');
+    expect(
+      await prisma.notificationFallback.count({ where: { accountId: andrei } }),
+    ).toBe(0);
+  });
+});
+
+// @traces 1374-FR-003
+describe('the fallback a listing draft keeps', () => {
+  it('records nothing for a failed e-mail to a draft, which has no account', async () => {
+    const draft = await prisma.listingDraft.create({
+      data: {
+        email: 'owner@example.test',
+        language: 'en',
+        step: 2,
+        updatedAt: new Date(DAY),
+      },
+    });
+    await service.sendToDraft(
+      'LISTING_CONTINUE_LINK',
+      draft.id,
+      'https://motorfix.test/en/list-your-garage?draft=secret',
+    );
+    const rows = await prisma.notification.findMany({
+      where: { listingDraftId: draft.id },
+    });
+    await service.fail(rows, 'sending_off', true);
+    expect(await prisma.notificationFallback.count()).toBe(0);
+    expect(
+      await prisma.notification.count({ where: { listingDraftId: draft.id } }),
+    ).toBe(1);
   });
 });

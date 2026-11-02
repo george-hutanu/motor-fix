@@ -4,8 +4,8 @@
     "erasableSyntaxOnly": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "types": ["jest", "node"]
+    "types": ["vitest/globals", "node"]
   },
   "extends": "../tsconfig.base.json",
-  "include": ["*.ts"]
+  "include": ["*.ts", "vitest.config.mts"]
 }

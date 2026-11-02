@@ -2,13 +2,14 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { Logger } from '@nestjs/common';
+import type { MockedFunction } from 'vitest';
 
 import { IssuerProbe } from './auth.probe';
 import { setIssuerUp } from '../metrics/metrics';
 
-jest.mock('../metrics/metrics', () => ({ setIssuerUp: jest.fn() }));
+vi.mock('../metrics/metrics', () => ({ setIssuerUp: vi.fn() }));
 
-const up = setIssuerUp as jest.MockedFunction<typeof setIssuerUp>;
+const up = setIssuerUp as MockedFunction<typeof setIssuerUp>;
 
 describe('the identity server probe', () => {
   let server: Server;
@@ -23,11 +24,11 @@ describe('the identity server probe', () => {
     lines = [];
     up.mockReset();
     for (const level of ['log', 'warn', 'error'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push([level, ...args]);
-        });
+        },
+      );
     }
     server = createServer((req, res) => {
       paths.push(req.url ?? '');
@@ -38,8 +39,8 @@ describe('the identity server probe', () => {
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
-    jest.useRealTimers();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
     await new Promise((resolve) => server.close(resolve));
   });
 
@@ -72,8 +73,18 @@ describe('the identity server probe', () => {
   });
 
   it('gives up after ten seconds and reports it down', async () => {
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
-    jest.spyOn(globalThis, 'fetch').mockImplementation(
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+        'hrtime',
+        'performance',
+      ],
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
       (_url, init) =>
         new Promise((_resolve, reject) => {
           init?.signal?.addEventListener('abort', () =>
@@ -83,9 +94,9 @@ describe('the identity server probe', () => {
     );
 
     const done = probe().probe();
-    await jest.advanceTimersByTimeAsync(9_999);
+    await vi.advanceTimersByTimeAsync(9_999);
     expect(up).not.toHaveBeenCalled();
-    await jest.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1);
     await done;
 
     expect(up.mock.calls).toEqual([[false]]);
@@ -109,20 +120,30 @@ describe('the identity server probe', () => {
   });
 
   it('probes at start, every minute after, and stops when the module goes', async () => {
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
-    const fetched = jest
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+        'hrtime',
+        'performance',
+      ],
+    });
+    const fetched = vi
       .spyOn(globalThis, 'fetch')
       .mockImplementation(async () => new Response('{}'));
     const checker = probe();
 
     checker.onModuleInit();
     expect(fetched).toHaveBeenCalledTimes(1);
-    await jest.advanceTimersByTimeAsync(0);
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(fetched).toHaveBeenCalledTimes(2);
 
     checker.onModuleDestroy();
-    await jest.advanceTimersByTimeAsync(180_000);
+    await vi.advanceTimersByTimeAsync(180_000);
     expect(fetched).toHaveBeenCalledTimes(2);
   });
 });

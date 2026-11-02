@@ -4,9 +4,9 @@ type Db = Parameters<typeof garageOptions>[0];
 
 function db(rows: { key: string; enabled: boolean }[], liftCount = 3) {
   return {
-    garage: { findUniqueOrThrow: jest.fn().mockResolvedValue({ liftCount }) },
-    garageFeature: { findMany: jest.fn().mockResolvedValue(rows) },
-    mechanic: { findMany: jest.fn().mockResolvedValue([]) },
+    garage: { findUniqueOrThrow: vi.fn().mockResolvedValue({ liftCount }) },
+    garageFeature: { findMany: vi.fn().mockResolvedValue(rows) },
+    mechanic: { findMany: vi.fn().mockResolvedValue([]) },
   };
 }
 

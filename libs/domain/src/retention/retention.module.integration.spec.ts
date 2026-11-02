@@ -21,7 +21,7 @@ serialDatabase(databaseUrl);
 const prisma = createPrisma(databaseUrl);
 const data = retentionFixtures(prisma);
 const jobs = new Queue(RETENTION_QUEUE, { connection: { url: redisUrl } });
-const storage = { deleteObject: jest.fn(async () => undefined) };
+const storage = { deleteObject: vi.fn(async () => undefined) };
 const now = new Date('2026-10-24T10:00:00.000Z');
 
 const logger = () => {
@@ -100,7 +100,7 @@ describe('the nightly run', () => {
 // @traces 1156-FR-010
 describe('what a run tells', () => {
   it('logs and counts every kind, 0 included, with no row content', async () => {
-    const added = jest.spyOn(counters, 'countRetention');
+    const added = vi.spyOn(counters, 'countRetention');
     const ana = await data.account('ana');
     await prisma.signInCode.create({
       data: {

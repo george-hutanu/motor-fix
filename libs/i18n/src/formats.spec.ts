@@ -17,6 +17,7 @@ import {
   formatLei,
   formatLeiRange,
   formatLeiSpan,
+  formatLongDay,
   formatMonthYear,
   formatNum,
   formatPct,
@@ -944,5 +945,32 @@ describe('de', () => {
     expect(new Intl.PluralRules('ro').select(count) === 'other').toBe(
       want !== '',
     );
+  });
+});
+
+// @traces 1394-FR-003
+describe('the long day', () => {
+  it('writes the Bucharest day with its whole month name and year', () => {
+    const instant = new Date('2026-10-31T10:00:00Z');
+    expect(formatLongDay(instant, 'ro')).toBe('31 octombrie 2026');
+    expect(formatLongDay(instant, 'en')).toBe('31 October 2026');
+  });
+
+  it('takes the day Bucharest is in, not the UTC one, around midnight', () => {
+    expect(formatLongDay('2026-10-31T22:30:00Z', 'ro')).toBe(
+      '1 noiembrie 2026',
+    );
+    expect(formatLongDay('2026-12-31T21:59:00Z', 'en')).toBe(
+      '31 December 2026',
+    );
+  });
+
+  it('reads a calendar day as that day', () => {
+    expect(formatLongDay('2026-03-09', 'ro')).toBe('9 martie 2026');
+  });
+
+  it('shows the missing-value dash for anything but a date', () => {
+    expect(formatLongDay('soon', 'ro')).toBe('—');
+    expect(formatLongDay(null, 'en')).toBe('—');
   });
 });

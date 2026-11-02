@@ -103,7 +103,9 @@ describe('the reminder at its boundary', () => {
   });
 
   it('claims nothing and sends nothing when the public address is not set', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const bare = new ListingDraftSweep(
       prisma,
       notifications,
@@ -124,7 +126,9 @@ describe('the reminder at its boundary', () => {
   });
 
   it('leaves no token and no claim behind when the send fails', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const failing = new ListingDraftSweep(
       prisma,
       {

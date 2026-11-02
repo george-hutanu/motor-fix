@@ -1,4 +1,5 @@
 import { SeverityNumber } from '@opentelemetry/api-logs';
+import type { MockInstance } from 'vitest';
 
 import { logEntry } from './log';
 import { startTelemetry } from '../setup/start';
@@ -11,17 +12,17 @@ const started = startTelemetry(
   memory,
 );
 
-let out: jest.SpyInstance;
-let err: jest.SpyInstance;
+let out: MockInstance;
+let err: MockInstance;
 
 beforeEach(async () => {
-  out = jest.spyOn(console, 'log').mockImplementation(() => {});
-  err = jest.spyOn(console, 'error').mockImplementation(() => {});
+  out = vi.spyOn(console, 'log').mockImplementation(() => {});
+  err = vi.spyOn(console, 'error').mockImplementation(() => {});
   await started?.flush();
   memory.logExporter.reset();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 afterAll(() => started?.shutdown());
 
 async function records() {
@@ -29,7 +30,7 @@ async function records() {
   return memory.logExporter.getFinishedLogRecords();
 }
 
-const written = (spy: jest.SpyInstance) =>
+const written = (spy: MockInstance) =>
   spy.mock.calls.map(([line]) => String(line));
 
 describe('logEntry under hostile input', () => {

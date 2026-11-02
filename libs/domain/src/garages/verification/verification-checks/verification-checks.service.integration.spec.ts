@@ -855,7 +855,7 @@ describe('the company check', () => {
 describe('the register checks at launch', () => {
   // @traces 203-FR-005
   it('are recorded by hand, with no outside register called', async () => {
-    const fetch = jest.spyOn(globalThis, 'fetch');
+    const fetch = vi.spyOn(globalThis, 'fetch');
     try {
       await record('company', { evidence: { name: NAME }, result: 'ok' });
       await record('caen', {
@@ -1211,7 +1211,7 @@ describe('the RAR check', () => {
   });
 
   it('calls no outside register', async () => {
-    const fetch = jest.spyOn(globalThis, 'fetch');
+    const fetch = vi.spyOn(globalThis, 'fetch');
     try {
       await record('rar', RAR_OK);
       expect(fetch).not.toHaveBeenCalled();
@@ -1444,7 +1444,9 @@ describe('what a record reports', () => {
 
   // @traces 203-FR-010
   it('logs one line with the file, the kind, the result and the admin, never the detail', async () => {
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     await record('rar', { detail: 'Autorizație secretă', result: 'failed' });
 

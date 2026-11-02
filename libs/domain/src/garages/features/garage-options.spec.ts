@@ -6,10 +6,10 @@ const cards = [{ id: 'c1', name: 'Ștefan Ilie' }];
 function db(rows: { key: string; enabled: boolean }[]) {
   return {
     garage: {
-      findUniqueOrThrow: jest.fn().mockResolvedValue({ liftCount: 3 }),
+      findUniqueOrThrow: vi.fn().mockResolvedValue({ liftCount: 3 }),
     },
-    garageFeature: { findMany: jest.fn().mockResolvedValue(rows) },
-    mechanic: { findMany: jest.fn().mockResolvedValue(cards) },
+    garageFeature: { findMany: vi.fn().mockResolvedValue(rows) },
+    mechanic: { findMany: vi.fn().mockResolvedValue(cards) },
   };
 }
 

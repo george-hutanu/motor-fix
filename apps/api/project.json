@@ -41,9 +41,7 @@
       }
     },
     "test": {
-      "options": {
-        "passWithNoTests": true
-      }
+      "command": "vitest run --config apps/api/vitest.config.mts"
     },
     "test:mutation": {},
     "typecheck": {

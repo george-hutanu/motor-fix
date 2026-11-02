@@ -62,6 +62,8 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
       position: 0,
     },
   ],
+  lastForcedUnlock: null,
+  lock: null,
   mechanicId: 'mechanic-1',
   mechanicName: 'Mihai Dumitru',
   noShowAt: null,
@@ -81,6 +83,7 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
   ],
   stepsDone: 1,
   stepsTotal: 3,
+  updatedAt: '2026-10-08T09:00:00.000Z',
   workedSeconds: 0,
   ...over,
 });

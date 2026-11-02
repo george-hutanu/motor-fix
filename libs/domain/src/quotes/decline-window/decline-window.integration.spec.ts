@@ -49,7 +49,7 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -58,8 +58,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
   await jobs.obliterate({ force: true });
@@ -381,7 +381,7 @@ describe('closing the decline window', () => {
   });
 
   it('logs one line with the recipient id and nothing about the driver or the garage', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const { recipient } = await declined();
@@ -430,7 +430,7 @@ describe('a decline-window job that failed for good', () => {
   });
 
   it('writes one job_failed entry, on its last attempt only', async () => {
-    const write = jest.spyOn(systemLog, 'write').mockResolvedValue('written');
+    const write = vi.spyOn(systemLog, 'write').mockResolvedValue('written');
     await start();
     const worker = workerOf(app as TestingModule);
 

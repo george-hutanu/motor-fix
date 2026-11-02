@@ -18,13 +18,13 @@ function setup(
   cname: Record<string, string[]> = {},
 ) {
   const printed: string[] = [];
-  const send = jest.fn((_mail: unknown) => Promise.resolve('<id@brevo>'));
+  const send = vi.fn((_mail: unknown) => Promise.resolve('<id@brevo>'));
   const miss = () => Object.assign(new Error('none'), { code: 'ENOTFOUND' });
   const resolver = {
-    resolveCname: jest.fn((name: string) =>
+    resolveCname: vi.fn((name: string) =>
       cname[name] ? Promise.resolve(cname[name]) : Promise.reject(miss()),
     ),
-    resolveTxt: jest.fn((name: string) =>
+    resolveTxt: vi.fn((name: string) =>
       txt[name] ? Promise.resolve(txt[name]) : Promise.reject(miss()),
     ),
   };

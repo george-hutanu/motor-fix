@@ -87,7 +87,7 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE sign_in_code');
   await redis.flushdb();
   brevo.reset();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   maintenanceOn = false;
   Object.assign(phoneConfig, configAsBuilt);
 });
@@ -587,7 +587,7 @@ describe('both routes', () => {
   it('logs neither the number nor the code over a whole sign-in', async () => {
     const lines: unknown[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest.spyOn(Logger.prototype, level).mockImplementation((...args) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation((...args) => {
         lines.push(args);
       });
     }
@@ -621,7 +621,7 @@ const wrongFor = (code: string) => (code === '000000' ? '000001' : '000000');
 function redisDown() {
   const auth = app.get<Redis>(AUTH_REDIS, { strict: false });
   for (const method of ['multi', 'mget', 'del'] as const) {
-    jest.spyOn(auth, method).mockImplementation(() => {
+    vi.spyOn(auth, method).mockImplementation(() => {
       throw new Error('Redis down');
     });
   }
@@ -630,7 +630,7 @@ function redisDown() {
 function logged() {
   const lines: string[] = [];
   for (const level of ['log', 'warn', 'error'] as const) {
-    jest.spyOn(Logger.prototype, level).mockImplementation((...args) => {
+    vi.spyOn(Logger.prototype, level).mockImplementation((...args) => {
       lines.push(JSON.stringify(args));
     });
   }

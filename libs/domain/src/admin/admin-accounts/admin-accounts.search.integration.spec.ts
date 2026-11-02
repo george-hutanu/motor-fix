@@ -420,7 +420,7 @@ describe('paging a search', () => {
   // @traces 002-FR-006
   it("reads a page's matches and their number in one statement, so both see the same accounts", async () => {
     for (let n = 0; n < 3; n++) await person(`Marin ${n}`);
-    const read = jest.spyOn(prisma, '$queryRaw');
+    const read = vi.spyOn(prisma, '$queryRaw');
     try {
       const page = await service.page(undefined, NOW, { q: 'marin' });
       expect(page.items).toHaveLength(3);

@@ -1,27 +1,30 @@
 import { observeDataStores } from '@motor-fix/observability';
+import type { MockInstance } from 'vitest';
 
 import { DataStoreMetricsModule } from './data-store-metrics.module';
 
 // A limit no other reading uses, so the test proves the module reads the
 // one the observability library defines rather than a copy of its own.
-jest.mock('@motor-fix/observability', () => ({
+vi.mock('@motor-fix/observability', () => ({
   KEYCLOAK_LIMIT_MS: 4_321,
-  observeDataStores: jest.fn(() => () => undefined),
-  telemetryStarted: jest.fn(() => true),
+  observeDataStores: vi.fn(() => () => undefined),
+  telemetryStarted: vi.fn(() => true),
 }));
-jest.mock('../store/store', () => ({
-  borrowStore: jest.fn(() => ({ info: jest.fn() })),
-  returnStore: jest.fn(async () => undefined),
+vi.mock('../store/store', () => ({
+  borrowStore: vi.fn(() => ({ info: vi.fn() })),
+  returnStore: vi.fn(async () => undefined),
 }));
-jest.mock('pg', () => ({
-  Pool: jest.fn().mockImplementation(() => ({
-    end: jest.fn(async () => undefined),
-    on: jest.fn(),
-    query: jest.fn(),
-  })),
+vi.mock('pg', () => ({
+  Pool: vi.fn(
+    class {
+      end = vi.fn(async () => undefined);
+      on = vi.fn();
+      query = vi.fn();
+    },
+  ),
 }));
 
-const observe = jest.mocked(observeDataStores);
+const observe = vi.mocked(observeDataStores);
 const URL = 'http://keycloak.railway.internal:9000/metrics';
 
 type Stores = Parameters<typeof observeDataStores>[0];
@@ -49,7 +52,7 @@ function started(keycloakMetricsUrl?: string): Stores {
 // An answer streaming the body; cancel watches the body being let go.
 const answer = (status: number, body = '') => {
   const stream = new Blob([body]).stream();
-  const cancel = jest.spyOn(stream, 'cancel');
+  const cancel = vi.spyOn(stream, 'cancel');
   const response = {
     body: stream,
     headers: new Headers(),
@@ -59,12 +62,12 @@ const answer = (status: number, body = '') => {
   return { cancel, response };
 };
 
-let fetch: jest.SpyInstance;
+let fetch: MockInstance;
 beforeEach(() => {
   observe.mockClear();
-  fetch = jest.spyOn(globalThis, 'fetch');
+  fetch = vi.spyOn(globalThis, 'fetch');
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1178-FR-005
 // @traces 1178-FR-007
@@ -84,7 +87,7 @@ describe('the Keycloak reading in the data-store readings', () => {
   );
 
   it('fetches the address once a reading, asking for text within the shared Keycloak limit, and returns the body', async () => {
-    const timeout = jest.spyOn(AbortSignal, 'timeout');
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
     fetch.mockResolvedValue(answer(200, 'jvm_memory_used_bytes 1').response);
     const stores = started(URL);
 

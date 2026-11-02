@@ -219,10 +219,8 @@ describe('publishing a review', () => {
     const posted = () =>
       prisma.outboxEvent.count({ where: { kind: 'review.posted' } });
     const before = await posted();
-    jest
-      .spyOn(outbox, 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(outbox, 'record').mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const refused = await publish(s.as, { jobId: s.job.id, rating: 5 });
 

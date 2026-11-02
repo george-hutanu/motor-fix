@@ -50,7 +50,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   systemLog.stop();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 297-FR-001
@@ -196,7 +196,9 @@ describe('the caller never pays', () => {
   });
 
   it('drops an entry it cannot write, says so once with the kind and source only, and never throws', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const broken = createPrisma('postgresql://localhost:1/nowhere');
     systemLog.stop();
     systemLog.start({ prisma: broken, redis: store });
@@ -220,7 +222,7 @@ describe('the caller never pays', () => {
   });
 
   it('leaves the caller work in place when the entry fails inside its transaction', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const broken = createPrisma('postgresql://localhost:1/nowhere');
     systemLog.stop();
     systemLog.start({ prisma: broken, redis: store });
@@ -296,7 +298,9 @@ describe('the live nudge', () => {
   });
 
   it('keeps the entry and warns when the nudge cannot be sent', async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     systemLog.stop();
     systemLog.start({
       prisma,

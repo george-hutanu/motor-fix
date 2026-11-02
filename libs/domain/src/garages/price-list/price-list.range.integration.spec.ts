@@ -688,7 +688,7 @@ describe('the price list entry format', () => {
   it('keeps neither the change nor an entry when the entry cannot be written', async () => {
     const w = await world();
     const audit = app.get<AuditPort>(AUDIT_PORT);
-    const failing = jest
+    const failing = vi
       .spyOn(audit, 'recordChanges')
       .mockRejectedValueOnce(new Error('the entry write failed'));
 

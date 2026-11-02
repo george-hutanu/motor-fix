@@ -9,7 +9,7 @@ import { queueTelemetry } from './telemetry-option';
 describe('queue telemetry while telemetry is off', () => {
   it('subscribes to nothing and polls nothing', () => {
     const worker = new EventEmitter() as unknown as Worker & EventEmitter;
-    const queue = { getJobCounts: jest.fn(), name: 'q' } as unknown as Queue;
+    const queue = { getJobCounts: vi.fn(), name: 'q' } as unknown as Queue;
 
     observeWorker(worker);
     const stop = observeQueue(queue);

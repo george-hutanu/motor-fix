@@ -46,7 +46,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -63,7 +63,7 @@ async function seller(name = 'andrei') {
 async function logged(run: () => Promise<unknown>) {
   const lines: string[] = [];
   for (const level of ['log', 'warn', 'error', 'debug'] as const) {
-    jest.spyOn(Logger.prototype, level).mockImplementation(((
+    vi.spyOn(Logger.prototype, level).mockImplementation(((
       message: unknown,
     ) => {
       lines.push(String(message));
@@ -210,9 +210,9 @@ describe('a send', () => {
   it('rolls everything back when the audit write fails', async () => {
     const { auth, car } = await seller();
     const ticked = await world.logged(car.id);
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValueOnce(new Error('audit down'));
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValueOnce(
+      new Error('audit down'),
+    );
 
     const res = await send(auth, car.id, {
       buyerPhone: BUYER,

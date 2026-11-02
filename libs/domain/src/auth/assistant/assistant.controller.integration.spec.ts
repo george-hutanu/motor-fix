@@ -75,7 +75,7 @@ beforeAll(async () => {
   // Listening, so concurrent calls share one server.
   await app.listen(0, '127.0.0.1');
   for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-    jest.spyOn(Logger.prototype, level).mockImplementation((...args) => {
+    vi.spyOn(Logger.prototype, level).mockImplementation((...args) => {
       logged.push(JSON.stringify(args));
     });
   }

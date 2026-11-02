@@ -20,6 +20,8 @@ import { SavedGaragesControllerRemove$Params } from '../fn/saved-garages/saved-g
 import { savedGaragesControllerSave } from '../fn/saved-garages/saved-garages-controller-save';
 import { SavedGaragesControllerSave$Params } from '../fn/saved-garages/saved-garages-controller-save';
 import { SavedGaragesPageDto } from '../models/saved-garages-page-dto';
+import { saveSuggestionsControllerDismiss } from '../fn/saved-garages/save-suggestions-controller-dismiss';
+import { SaveSuggestionsControllerDismiss$Params } from '../fn/saved-garages/save-suggestions-controller-dismiss';
 
 @Injectable({ providedIn: 'root' })
 export class SavedGaragesService extends BaseService {
@@ -157,6 +159,39 @@ export class SavedGaragesService extends BaseService {
   savedGaragesControllerIds(params?: SavedGaragesControllerIds$Params, context?: HttpContext): Promise<SavedGarageIdsDto> {
     const resp = this.savedGaragesControllerIds$Response(params, context);
     return resp.then((r: StrictHttpResponse<SavedGarageIdsDto>): SavedGarageIdsDto => r.body);
+  }
+
+  /** Path part for operation `saveSuggestionsControllerDismiss()` */
+  static readonly SaveSuggestionsControllerDismissPath = '/api/v1/me/save-suggestions/{garageId}/dismiss';
+
+  /**
+   * Remember the caller's no to saving a garage after a finished job there.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `saveSuggestionsControllerDismiss()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  saveSuggestionsControllerDismiss$Response(params: SaveSuggestionsControllerDismiss$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = saveSuggestionsControllerDismiss(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Remember the caller's no to saving a garage after a finished job there.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `saveSuggestionsControllerDismiss$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  saveSuggestionsControllerDismiss(params: SaveSuggestionsControllerDismiss$Params, context?: HttpContext): Promise<void> {
+    const resp = this.saveSuggestionsControllerDismiss$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
 }

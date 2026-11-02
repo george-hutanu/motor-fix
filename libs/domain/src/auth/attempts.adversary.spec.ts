@@ -100,7 +100,7 @@ describe('the hourly limit on links and codes, attacked', () => {
   });
 
   it('admits and logs when Redis fails, every time', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const attempts = new Attempts(down);
@@ -112,7 +112,7 @@ describe('the hourly limit on links and codes, attacked', () => {
   });
 
   it('admits when the transaction answers nothing at all', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const redis = {
@@ -197,7 +197,7 @@ describe('the wrong-current-password limit, attacked', () => {
   });
 
   it('fails open on all three calls when Redis fails', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const attempts = new Attempts(down);

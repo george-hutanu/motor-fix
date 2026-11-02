@@ -28,8 +28,8 @@ let stops: (() => void)[] = [];
 afterEach(() => {
   for (const stop of stops) stop();
   stops = [];
-  jest.restoreAllMocks();
-  jest.useRealTimers();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 afterAll(() => started?.shutdown());
 
@@ -39,7 +39,7 @@ function postgres(
   slow: () => Promise<unknown[]> = async () => [],
   stats: () => Promise<unknown[]> = async () => [STATS],
 ) {
-  const query = jest.fn(<T>(text: string): Promise<T[]> => {
+  const query = vi.fn(<T>(text: string): Promise<T[]> => {
     const answer = text.includes('pg_stat_statements')
       ? slow
       : text.includes('GROUP BY')
@@ -50,10 +50,10 @@ function postgres(
   return { query: query as typeof query & MonitorSession['query'] };
 }
 const redis = (info: () => Promise<string> = async () => INFO) => ({
-  info: jest.fn(info),
+  info: vi.fn(info),
 });
 const outbox = (seconds: () => Promise<number> = async () => 1) => ({
-  oldestPendingSeconds: jest.fn(seconds),
+  oldestPendingSeconds: vi.fn(seconds),
 });
 
 function observe(options: Parameters<typeof observeDataStores>[0]) {
@@ -77,7 +77,7 @@ const value = async (name: string, attributes: Record<string, string> = {}) =>
 
 describe('observeDataStores under failing readers', () => {
   it('reports Redis down when info throws synchronously, and the others as usual', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: outbox(),
       postgres: postgres(),
@@ -94,7 +94,7 @@ describe('observeDataStores under failing readers', () => {
   });
 
   it('reports PostgreSQL down when query throws synchronously', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: outbox(),
       postgres: {
@@ -110,7 +110,7 @@ describe('observeDataStores under failing readers', () => {
   });
 
   it('leaves the outbox figure out when its reader throws synchronously', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: {
         oldestPendingSeconds: () => {
@@ -137,10 +137,16 @@ describe('observeDataStores under failing readers', () => {
   });
 
   it('keeps reading Redis next cycle after a hung PostgreSQL reading times out', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     const store = redis();
     observe({
       intervalMs: 1_000,
@@ -148,12 +154,12 @@ describe('observeDataStores under failing readers', () => {
       postgres: postgres(undefined, () => new Promise(() => undefined)),
       redis: store,
     });
-    await jest.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(20_000);
     expect(store.info.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
   it('does not report a non-string INFO answer, and marks Redis down', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: outbox(),
       postgres: postgres(),
@@ -164,7 +170,7 @@ describe('observeDataStores under failing readers', () => {
   });
 
   it('logs no second error while the same store keeps failing for many cycles', async () => {
-    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    const error = vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: outbox(),
       postgres: postgres(),
@@ -195,7 +201,7 @@ describe('observeDataStores under hostile figures', () => {
   );
 
   it('never exports NaN from PostgreSQL figures that are text', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: outbox(),
       postgres: postgres(undefined, async () => [
@@ -315,19 +321,25 @@ describe('observeDataStores stop and restart', () => {
   });
 
   it('logs no error and reports no down store when stop comes before a hung reading times out', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
-    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    const error = vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     const stop = observe({
       intervalMs: 60_000,
       outbox: outbox(),
       postgres: postgres(undefined, () => new Promise(() => undefined)),
       redis: redis(() => new Promise(() => undefined)),
     });
-    await jest.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(100);
     stop();
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(error).not.toHaveBeenCalled();
     expect(await points('motorfix_datastore_up')).toEqual([]);
   });

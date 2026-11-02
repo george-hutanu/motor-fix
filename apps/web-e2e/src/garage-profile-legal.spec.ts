@@ -206,6 +206,7 @@ test.describe('the legal check on the garage profile view @seeded @database', ()
 
 // @traces 136-FR-006
 // @traces 102-FR-004
+// @traces 1369-FR-003
 test.describe('the legal check stays the owner’s on the profile view @seeded', () => {
   test("shows the garage's receptionist the profile without the panel", async ({
     page,

@@ -604,7 +604,7 @@ describe('what the removal records', () => {
     const w = await world();
     const before = await snapshot(w);
     const audit = app.get<AuditPort>(AUDIT_PORT);
-    const failing = jest
+    const failing = vi
       .spyOn(audit, 'recordMany')
       .mockRejectedValueOnce(new Error('the entry write failed'));
 

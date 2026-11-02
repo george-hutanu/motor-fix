@@ -17,6 +17,15 @@ const outside = ago(now, days, 1);
 const inside = ago(now, days, -1);
 const longAgo = ago(now, days * 2);
 
+// Other spec files leave accounts behind and this one cannot clear its own
+// (the log it writes is append-only), so each account here is new.
+const newAccount = (
+  name: string,
+  ...rest: Parameters<typeof data.account> extends [string, ...infer R]
+    ? R
+    : never
+) => data.account(`${name}-${randomUUID().slice(0, 8)}`, ...rest);
+
 const row = (id: string) =>
   prisma.activityLog.findUniqueOrThrow({ where: { id } });
 
@@ -102,7 +111,7 @@ describe('the audit anonymising sweep', () => {
     const old = await data.garage(outside);
     const recent = await data.garage(inside);
     const open = await data.garage(null);
-    const actor = await data.account('ana');
+    const actor = await newAccount('ana');
     const due = await data.entry({
       actorId: actor,
       at: longAgo,
@@ -121,15 +130,15 @@ describe('the audit anonymising sweep', () => {
   });
 
   it('anonymises by the deletion of the account the entry is about', async () => {
-    const gone = await data.account('gone', ['driver'], { status: 'deleted' });
-    const live = await data.account('live');
+    const gone = await newAccount('gone', ['driver'], { status: 'deleted' });
+    const live = await newAccount('live');
     await data.entry({
       at: outside,
       kind: 'account_deleted',
       subjectId: gone,
       subjectType: 'account',
     });
-    const recentlyGone = await data.account('recent', ['driver'], {
+    const recentlyGone = await newAccount('recent', ['driver'], {
       status: 'deleted',
     });
     await data.entry({
@@ -166,7 +175,7 @@ describe('the audit anonymising sweep', () => {
   });
 
   it("anonymises by the deletion of the entry's actor when it is about something else", async () => {
-    const gone = await data.account('gone-actor', ['driver'], {
+    const gone = await newAccount('gone-actor', ['driver'], {
       status: 'deleted',
     });
     await data.entry({
@@ -175,7 +184,7 @@ describe('the audit anonymising sweep', () => {
       subjectId: gone,
       subjectType: 'account',
     });
-    const live = await data.account('live-actor');
+    const live = await newAccount('live-actor');
     const due = await data.entry({ actorId: gone, at: longAgo });
     const keep = await data.entry({ actorId: live, at: longAgo });
     await anonymiseAudit(prisma, now);
@@ -184,14 +193,14 @@ describe('the audit anonymising sweep', () => {
   });
 
   it("falls back to a deleted account's last activity, or creation, without a deletion entry", async () => {
-    const quiet = await data.account('quiet', ['driver'], {
+    const quiet = await newAccount('quiet', ['driver'], {
       status: 'deleted',
     });
     await prisma.account.update({
       data: { lastActiveAt: outside },
       where: { id: quiet },
     });
-    const active = await data.account('active', ['driver'], {
+    const active = await newAccount('active', ['driver'], {
       status: 'deleted',
     });
     await prisma.account.update({
@@ -227,7 +236,7 @@ describe('the audit anonymising sweep', () => {
       data: { status: 'suspended' },
       where: { id: garage },
     });
-    const account = await data.account('paused', ['driver'], {
+    const account = await newAccount('paused', ['driver'], {
       status: 'suspended',
     });
     const keep = [

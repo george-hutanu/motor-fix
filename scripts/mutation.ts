@@ -30,6 +30,7 @@ import {
   type Scope,
   shardScope,
   shardsOf,
+  shardTestFiles,
 } from './mutation-plan.ts';
 import type { Counts } from './mutation-summary.ts';
 
@@ -52,11 +53,19 @@ const DRY_RUN_TIMEOUT_MINUTES = 30;
 export const reportsDir = (project: string, shard?: string) =>
   `reports/mutation/${project}${shard ? `/${shard}` : ''}`;
 
-function scopeOf(project: string, root: string, shard: string): Scope {
+function namedShards(project: string): Record<string, string[]> {
   const shards = shardsOf(readShardFile(process.cwd()), project);
   if (!shards)
     throw new Error(`${project} has no shards in scripts/mutation-shards.json`);
-  return shardScope(root, shards, shard);
+  return shards;
+}
+
+function scopeOf(project: string, root: string, shard: string): Scope {
+  return shardScope(root, namedShards(project), shard);
+}
+
+function testFilesOf(project: string, root: string, shard: string): string[] {
+  return shardTestFiles(process.cwd(), root, namedShards(project), shard);
 }
 
 // The cache restores the last run's reports with its incremental file: a job
@@ -84,7 +93,7 @@ export function markInPlace(
 // runner takes no include list, and Stryker loads the config file itself.
 export const MUTATION_SPECS = 'MUTATION_SPECS';
 
-// A shard's specs for a project tested on Vitest, as the environment entry
+// A shard's specs for an Angular project, as the environment entry
 // vitest.shared.ts reads: a named shard's globs, or for rest every spec but
 // those of the named shards.
 export function vitestSpecs(
@@ -103,6 +112,8 @@ export function vitestSpecs(
   };
 }
 
+// The five Angular projects carry a vitest.config.ts (vitest.shared.ts); the
+// Nest projects on Vitest a vitest.config.mts.
 const testsOnVitest = (root: string) =>
   existsSync(join(root, 'vitest.config.ts'));
 
@@ -117,6 +128,30 @@ export function strykerOptions(
   const lib = join(root, 'tsconfig.lib.json');
   const reports = reportsDir(project, shard);
   const scope = shard ? scopeOf(project, root, shard) : undefined;
+  const vitestConfig = join(root, 'vitest.config.mts');
+  const runner = testsOnVitest(root)
+    ? {
+        plugins: [
+          '@stryker-mutator/vitest-runner',
+          '@stryker-mutator/typescript-checker',
+        ],
+        testRunner: 'vitest',
+        // An Angular project's shard specs go through MUTATION_SPECS
+        // (vitestSpecs); related mode would need every spec to import its
+        // sources directly.
+        vitest: {
+          configFile: join(root, 'vitest.config.ts'),
+          dir: join(root, 'src'),
+          related: false,
+        },
+      }
+    : existsSync(vitestConfig)
+      ? {
+          testRunner: 'vitest',
+          vitest: { configFile: vitestConfig },
+          ...(shard && { testFiles: testFilesOf(project, root, shard) }),
+        }
+      : { jest: jestOptions(root, scope), testRunner: 'jest' };
   return {
     checkers: ['typescript'],
     dryRunTimeoutMinutes: DRY_RUN_TIMEOUT_MINUTES,
@@ -141,27 +176,12 @@ export function strykerOptions(
     ignoreStatic: true,
     incremental,
     incrementalFile: `${reports}/incremental.json`,
-    ...(testsOnVitest(root)
-      ? {
-          plugins: [
-            '@stryker-mutator/vitest-runner',
-            '@stryker-mutator/typescript-checker',
-          ],
-          testRunner: 'vitest',
-          // A shard's specs go through MUTATION_SPECS (vitestSpecs); related
-          // mode would need every spec to import its sources directly.
-          vitest: {
-            configFile: join(root, 'vitest.config.ts'),
-            dir: join(root, 'src'),
-            related: false,
-          },
-        }
-      : { jest: jestOptions(root, scope), testRunner: 'jest' }),
     // mutation.json carries each survivor's file, line and mutator, which the
     // mutation-runner agent reads from the job's artifact.
     jsonReporter: { fileName: `${reports}/mutation.json` },
     mutate: [`${root}/src/**/*.ts`, ...excluded(root)],
     reporters: ['clear-text', 'progress', 'html', 'json'],
+    ...runner,
     tsconfigFile: existsSync(lib) ? lib : join(root, 'tsconfig.app.json'),
     ...own,
     ...(scope && {
@@ -296,7 +316,7 @@ async function main() {
   }
   const options = strykerOptions(project, root, incremental, only, shard);
   markInPlace(options);
-  if (shard && options['testRunner'] === 'vitest')
+  if (shard && testsOnVitest(root))
     Object.assign(process.env, vitestSpecs(project, root, shard));
   const floor = projectFloor(root);
   // A specifier the compiler cannot follow: the spec build resolves with node10,

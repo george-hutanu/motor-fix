@@ -24,7 +24,7 @@ function sender(
   sendWhatsApp: Brevo['sendWhatsApp'] = async () => 'wa-1',
   send: Brevo['send'] = async () => 'em-1',
 ) {
-  const brevo = { send: jest.fn(send), sendWhatsApp: jest.fn(sendWhatsApp) };
+  const brevo = { send: vi.fn(send), sendWhatsApp: vi.fn(sendWhatsApp) };
   return {
     brevo,
     email: testConfig('http://brevo.test'),

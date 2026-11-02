@@ -257,7 +257,7 @@ describe('the access check for admin routes', () => {
   ])(
     'answers sign_in_required without loading the account for %s',
     async (_, header) => {
-      const load = jest.fn(async () => account(['admin'], 'admin'));
+      const load = vi.fn(async () => account(['admin'], 'admin'));
       const guard = guardFor(load);
 
       expect(await decide(guard, 'admin.users', header)).toBe(

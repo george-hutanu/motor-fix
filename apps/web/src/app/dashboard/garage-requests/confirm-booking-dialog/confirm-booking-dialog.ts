@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  Injector,
   inject,
   signal,
 } from '@angular/core';
@@ -43,6 +45,8 @@ const FIELD_OF: Record<string, Field> = {
 // "Confirmă programarea": the booking named under the title, then the
 // mechanic and the lift the garage offers, then the confirmation. A refusal
 // keeps the choices and says what to change, under the select it concerns.
+// The lift choice is '' while none is made, '0' for "Fără elevator", else
+// the lift's number: a job done on a lift opens with none made.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, HlmInput, RouterLink, TranslatePipe],
@@ -54,6 +58,7 @@ export class ConfirmBookingDialog {
   private readonly bookings = inject(BookingsService);
   private readonly i18n = inject(I18n);
   private readonly session = inject(Session);
+  private readonly injector = inject(Injector);
   protected readonly task = injectOverlayTask<
     ConfirmBookingData,
     OverlayResult<ConfirmBookingResult>
@@ -80,6 +85,8 @@ export class ConfirmBookingDialog {
   protected readonly mechanic = signal('');
   protected readonly lift = signal('');
   protected readonly sending = signal(false);
+  private readonly reading = signal(false);
+  protected readonly busy = computed(() => this.sending() || this.reading());
   protected readonly problem = signal<string | null>(null);
   protected readonly fieldProblem = signal<{
     field: Field;
@@ -108,13 +115,37 @@ export class ConfirmBookingDialog {
   });
 
   constructor() {
-    this.bookings
+    this.reread().then((offered) => offered && this.task.focusStart());
+  }
+
+  private readOptions() {
+    this.reading.set(true);
+    return this.bookings
       .confirmControllerOptions({ id: this.booking.id })
       .then((offered) => {
         this.offered.set(offered);
-        this.task.focusStart();
+        return offered;
       })
-      .catch((failure: unknown) => this.problem.set(this.topText(failure)));
+      .catch((failure: unknown) => {
+        this.problem.set(this.topText(failure));
+        return null;
+      })
+      .finally(() => this.reading.set(false));
+  }
+
+  // Reads the choices (at opening, and again when the place was taken
+  // meanwhile): a pick still offered stays picked.
+  private async reread() {
+    const offered = await this.readOptions();
+    if (!offered) return null;
+    if (!offered.mechanics.some((one) => one.id === this.mechanic())) {
+      this.mechanic.set('');
+    }
+    const lift = Number(this.lift());
+    if (this.lift() === '' || lift > offered.liftCount) {
+      this.lift.set(offered.needsLift ? '' : '0');
+    }
+    return offered;
   }
 
   protected readonly mechanicMessage = computed(() =>
@@ -135,7 +166,7 @@ export class ConfirmBookingDialog {
   protected submit(event: Event) {
     event.preventDefault();
     const offered = this.offered();
-    if (!offered || this.sending() || this.noMechanics()) return;
+    if (!offered || this.busy() || this.noMechanics()) return;
     if (offered.mechanicRequired && !this.mechanic()) {
       this.fieldProblem.set({
         field: 'mechanic',
@@ -144,9 +175,19 @@ export class ConfirmBookingDialog {
       document.getElementById('mf-confirm-mechanic')?.focus();
       return;
     }
+    if (offered.liftCount && !this.lift()) {
+      this.fieldProblem.set({
+        field: 'lift',
+        text: this.i18n.t(`${MESSAGES}.liftRequired`),
+      });
+      document.getElementById('mf-confirm-lift')?.focus();
+      return;
+    }
+    const lift = offered.liftCount ? Number(this.lift()) : 0;
     const body: ConfirmBookingDto = {
-      ...(this.mechanic() && { mechanicId: this.mechanic() }),
-      ...(this.lift() && { lift: Number(this.lift()) }),
+      ...(offered.mechanicRequired &&
+        this.mechanic() && { mechanicId: this.mechanic() }),
+      ...(lift > 0 && { lift }),
     };
     this.sending.set(true);
     this.problem.set(null);
@@ -164,9 +205,15 @@ export class ConfirmBookingDialog {
   private refused(failure: unknown) {
     const { code } = toProblem(failure);
     const field = FIELD_OF[code];
-    if (field && (field === 'lift' ? this.lift() : this.mechanic())) {
+    if (field && (field === 'lift' ? Number(this.lift()) : this.mechanic())) {
       this.fieldProblem.set({ field, text: this.fieldText(code) });
-      document.getElementById(`mf-confirm-${field}`)?.focus();
+      // The selects are disabled while the confirm is in flight, and a
+      // disabled select takes no focus: enabled first, focused once drawn.
+      this.sending.set(false);
+      afterNextRender(
+        () => document.getElementById(`mf-confirm-${field}`)?.focus(),
+        { injector: this.injector },
+      );
       return;
     }
     // Confirmed, lapsed or cancelled meanwhile: the message is the toast and
@@ -178,6 +225,7 @@ export class ConfirmBookingDialog {
       return;
     }
     this.problem.set(this.topText(failure));
+    if (code === 'slot_taken') void this.reread();
   }
 
   private fieldText(code: string) {

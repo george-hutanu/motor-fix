@@ -20,8 +20,8 @@ afterAll(() => started?.shutdown());
 beforeEach(() => memory.logExporter.reset());
 
 async function exportedAll(log: () => void) {
-  const out = jest.spyOn(process.stdout, 'write').mockReturnValue(true);
-  const err = jest.spyOn(process.stderr, 'write').mockReturnValue(true);
+  const out = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+  const err = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
   try {
     log();
   } finally {

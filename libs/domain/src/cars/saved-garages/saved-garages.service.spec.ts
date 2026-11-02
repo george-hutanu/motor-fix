@@ -31,16 +31,16 @@ const unique = () =>
 // The database is faked: a real race between two saves and a removal cannot
 // be timed. The integration spec covers the plain race against PostgreSQL.
 function service(transactions: Array<() => Promise<unknown>>, kept: unknown) {
-  const transaction = jest.fn(() => {
+  const transaction = vi.fn(() => {
     const next = transactions.shift();
     if (!next) throw new Error('no more transactions');
     return next();
   });
   const prisma = {
     $transaction: transaction,
-    savedGarage: { findUnique: jest.fn(async () => kept) },
+    savedGarage: { findUnique: vi.fn(async () => kept) },
   } as unknown as PrismaClient;
-  const none = { record: jest.fn() };
+  const none = { record: vi.fn() };
   return {
     saved: new SavedGaragesService(
       prisma,

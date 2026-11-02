@@ -12,7 +12,7 @@ const calls: { tool: string; timeout: number }[] = [];
 let took: number[] = [];
 let now = 0;
 
-jest.mock('node:child_process', () => ({
+vi.mock('node:child_process', () => ({
   spawn: (tool: string, args: string[], options: { timeout: number }) => {
     calls.push({ timeout: options.timeout, tool });
     const child = Object.assign(new EventEmitter(), {
@@ -36,9 +36,9 @@ beforeEach(() => {
   calls.length = 0;
   took = [];
   now = 1_000_000;
-  jest.spyOn(performance, 'now').mockImplementation(() => now);
+  vi.spyOn(performance, 'now').mockImplementation(() => now);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 333-FR-007
 describe('the time one conversion has', () => {

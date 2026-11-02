@@ -272,10 +272,10 @@ describe('converting a clip', () => {
 
 // @traces 333-FR-007 333-FR-008
 describe('a conversion that failed', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   async function worker() {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const { providers = [] } = MediaProcessingModule.register({
       databaseUrl: process.env['DATABASE_URL'] ?? '',
       redisUrl,

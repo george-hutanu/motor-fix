@@ -4,6 +4,7 @@ import { dirname, join, relative } from 'node:path';
 
 const root = join(__dirname, '..');
 const jestBin = require.resolve('jest/bin/jest');
+const vitestBin = join(root, 'node_modules/vitest/vitest.mjs');
 const INTEGRATION = /\.integration\.spec\.ts$/;
 // A read of a service URL from process.env, bracket, dot or destructured; an
 // assignment or a delete only fakes the variable and needs no service. A name
@@ -26,6 +27,15 @@ const NEEDS_SERVICES = new RegExp(
   'u',
 );
 
+type Runner = 'jest' | 'vitest';
+
+function runnerOf(project: string): Runner | undefined {
+  const names = readdirSync(join(root, project));
+  if (names.includes('vitest.config.mts')) return 'vitest';
+  if (names.some((name) => name.startsWith('jest.config.'))) return 'jest';
+  return undefined;
+}
+
 function listTests(project: string, suite?: string) {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -36,17 +46,33 @@ function listTests(project: string, suite?: string) {
       moduleResolution: 'node10',
     }),
   };
-  delete env['JEST_SUITE'];
-  if (suite !== undefined) env['JEST_SUITE'] = suite;
-  const run = spawnSync(process.execPath, [jestBin, '--listTests', '--json'], {
+  delete env['TEST_SUITE'];
+  if (suite !== undefined) env['TEST_SUITE'] = suite;
+  const vitest = runnerOf(project) === 'vitest';
+  if (vitest) env['NODE_OPTIONS'] = '';
+  const args = vitest
+    ? [
+        vitestBin,
+        'list',
+        '--filesOnly',
+        '--json',
+        '--config',
+        'vitest.config.mts',
+      ]
+    : [jestBin, '--listTests', '--json'];
+  const run = spawnSync(process.execPath, args, {
     cwd: join(root, project),
     encoding: 'utf8',
     env,
   });
+  const listed = (out: string): string[] =>
+    vitest
+      ? (JSON.parse(out) as { file: string }[]).map((t) => t.file)
+      : (JSON.parse(out) as string[]);
   return {
     files:
       run.status === 0
-        ? (JSON.parse(run.stdout) as string[]).map((f) => relative(root, f))
+        ? [...new Set(listed(run.stdout))].map((f) => relative(root, f))
         : [],
     status: run.status,
     stderr: run.stderr,
@@ -70,18 +96,17 @@ function projectOf(file: string): string | undefined {
   return undefined;
 }
 
-// Only a project with a Jest config splits into JEST_SUITE's unit and
-// integration suites; apps/web-e2e's specs run under Playwright in the E2E job.
-function runByJest(file: string): boolean {
+// Only a project with a Jest or Vitest config splits into TEST_SUITE's unit
+// and integration suites; apps/web-e2e's specs run under Playwright in the E2E job.
+function runByUnitRunner(file: string): boolean {
   const project = projectOf(file);
   return (
-    project !== undefined &&
-    readdirSync(project).some((name) => name.startsWith('jest.config.'))
+    project !== undefined && runnerOf(relative(root, project)) !== undefined
   );
 }
 
 // Every project holding an integration spec must honour the split, whatever
-// runs it: one that stops running them through Jest fails here by name.
+// runs it: one that stops running them through its runner fails here by name.
 function integrationProjects(): string[] {
   const projects = ['apps', 'libs']
     .flatMap((dir) => specFiles(join(root, dir)))
@@ -94,7 +119,9 @@ function integrationProjects(): string[] {
 
 function misnamedIntegrationSpec(file: string, source: string): boolean {
   return (
-    runByJest(file) && !INTEGRATION.test(file) && NEEDS_SERVICES.test(source)
+    runByUnitRunner(file) &&
+    !INTEGRATION.test(file) &&
+    NEEDS_SERVICES.test(source)
   );
 }
 
@@ -142,11 +169,42 @@ describe('the unit and integration suites', () => {
     });
   }
 
-  it('refuses a suite it does not know', () => {
-    const run = listTests('libs/contracts', 'e2e');
+  it.each(['libs/contracts', 'libs/i18n'])(
+    '%s refuses a suite it does not know, naming the three it does',
+    (project) => {
+      const run = listTests(project, 'e2e');
 
-    expect(run.status).not.toBe(0);
-    expect(run.stderr).toContain('JEST_SUITE');
+      expect(run.status).not.toBe(0);
+      expect(run.stderr).toContain(
+        'TEST_SUITE must be "unit" or "integration", or unset; got "e2e"',
+      );
+    },
+  );
+
+  // @traces 1338-FR-001
+  // @traces 1338-FR-002
+  it('runs the Nest projects on Vitest and the Angular projects on Jest', () => {
+    const nest = [
+      'apps/api',
+      'apps/worker',
+      'apps/mcp',
+      'libs/contracts',
+      'libs/domain',
+      'libs/observability',
+      'libs/mcp-tools',
+      'scripts',
+    ];
+    // libs/data-access is generated and holds no spec, so it has no runner.
+    const angular = [
+      'apps/web',
+      'libs/ui-cockpit',
+      'libs/media',
+      'libs/i18n',
+      'libs/overlays',
+    ];
+    expect(nest.map(runnerOf)).toEqual(nest.map(() => 'vitest'));
+    expect(angular.map(runnerOf)).toEqual(angular.map(() => 'jest'));
+    expect(runnerOf('libs/data-access')).toBeUndefined();
   });
 
   // @traces 438-FR-004
@@ -227,31 +285,123 @@ describe('the unit and integration suites', () => {
 // A commit and PR CI run one suite only, so a project whose specs are all in
 // the other suite has none to run; that is a pass, not "No tests found".
 describe('a chosen suite', () => {
-  const preset = (suite: string | undefined) => {
-    const saved = process.env['JEST_SUITE'];
-    if (suite === undefined) delete process.env['JEST_SUITE'];
-    else process.env['JEST_SUITE'] = suite;
-    try {
-      let config: { passWithNoTests?: boolean } = {};
-      jest.isolateModules(() => {
-        config = require('../jest.preset.cjs');
-      });
-      return config;
-    } finally {
-      if (saved === undefined) delete process.env['JEST_SUITE'];
-      else process.env['JEST_SUITE'] = saved;
-    }
+  // Each preset is loaded in a fresh node so it reads the suite as a run would.
+  const load: Record<Runner, string> = {
+    jest: `console.log(JSON.stringify(require(${JSON.stringify(join(root, 'jest.preset.cjs'))})))`,
+    vitest: `import(${JSON.stringify(join(root, 'vitest.preset.mts'))}).then((m) => console.log(JSON.stringify(m.nestPreset(${JSON.stringify(join(root, 'libs/contracts'))}).test)))`,
+  };
+  const preset = (runner: Runner, suite: string | undefined) => {
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: '' };
+    delete env['TEST_SUITE'];
+    if (suite !== undefined) env['TEST_SUITE'] = suite;
+    const run = spawnSync(process.execPath, ['-e', load[runner]], {
+      cwd: root,
+      encoding: 'utf8',
+      env,
+    });
+    if (run.status !== 0) throw new Error(run.stderr);
+    return JSON.parse(run.stdout) as {
+      passWithNoTests?: boolean;
+      sequence?: { hooks?: string };
+    };
   };
 
-  it.each(['unit', 'integration'])(
-    'passes %s with no tests to run',
-    (suite) => {
-      expect(preset(suite).passWithNoTests).toBe(true);
-    },
-  );
+  // @traces 1338-FR-007
+  // database-turn.setup.ts registers its afterAll before the spec's own, so
+  // the turn goes back after the spec's teardown only while hooks run as a stack.
+  it('runs Vitest hooks as a stack, so a setup file afterAll runs last', () => {
+    expect(preset('vitest', 'unit').sequence?.hooks).toBe('stack');
+  });
 
-  it('keeps the whole run strict when no suite is chosen', () => {
-    expect(preset(undefined).passWithNoTests).toBeUndefined();
+  describe.each<Runner>(['jest', 'vitest'])('under %s', (runner) => {
+    it.each(['unit', 'integration'])(
+      'passes %s with no tests to run',
+      (suite) => {
+        expect(preset(runner, suite).passWithNoTests).toBe(true);
+      },
+    );
+
+    it('keeps the whole run strict when no suite is chosen', () => {
+      expect(preset(runner, undefined).passWithNoTests).toBeFalsy();
+    });
+
+    // @traces 1338-FR-004
+    it('refuses a suite it does not know before any test starts', () => {
+      expect(() => preset(runner, 'e2e')).toThrow(
+        'TEST_SUITE must be "unit" or "integration", or unset; got "e2e"',
+      );
+    });
+  });
+});
+
+// The projects on Vitest call none of Jest's API: Vitest has no global `jest`,
+// so a spec merged in from a branch still on Jest fails only when it runs.
+const NEST_SOURCES = [
+  'apps/api/src',
+  'apps/worker/src',
+  'apps/mcp/src',
+  'libs/contracts/src',
+  'libs/domain/src',
+  'libs/observability/src',
+  'libs/mcp-tools/src',
+];
+const JEST_API =
+  /\bjest\.(fn|mock|spyOn|requireActual|setTimeout|isolateModules|useFakeTimers|Mock|SpyInstance|Mocked|restoreAllMocks|clearAllMocks|resetAllMocks|mocked)\b/;
+
+function tsFiles(dir: string): string[] {
+  return readdirSync(join(root, dir), { withFileTypes: true }).flatMap((e) => {
+    const path = join(dir, e.name);
+    if (e.isDirectory()) return tsFiles(path);
+    return /\.(ts|mts|cts)$/.test(e.name) ? [path] : [];
+  });
+}
+
+describe('the Nest projects on Vitest', () => {
+  // @traces 1338-FR-003
+  it("call none of Jest's API in a spec or a test helper", () => {
+    const offenders = [
+      ...NEST_SOURCES.flatMap(tsFiles),
+      ...readdirSync(join(root, 'scripts'))
+        .filter((name) => /\.(ts|mts)$/.test(name))
+        .map((name) => join('scripts', name))
+        .filter((path) => path !== 'scripts/test-suites.spec.ts'),
+    ].filter((path) => JEST_API.test(readFileSync(join(root, path), 'utf8')));
+
+    expect(offenders).toEqual([]);
+  });
+
+  // @traces 1338-FR-015
+  it('rename the suite variable in the texts that name it, and leave the Jest rules to ST-1304', () => {
+    const read = (path: string) => readFileSync(join(root, path), 'utf8');
+    for (const path of [
+      '.claude/skills/speckit-auto/lifecycle.md',
+      '.github/workflows/ci.yml',
+      '.github/workflows/mutation.yml',
+    ])
+      expect(read(path)).not.toContain('JEST_SUITE');
+
+    expect(read('AGENTS.md')).toContain('Tests: Jest from the root config');
+    expect(read('.specify/memory/constitution.md')).toContain(
+      'run on Jest from the root config',
+    );
+  });
+
+  // @traces 1338-FR-006
+  it('give every libs/domain integration test and hook 30 s, and unit specs the default', () => {
+    const config = readFileSync(
+      join(root, 'libs/domain/vitest.config.mts'),
+      'utf8',
+    );
+    const setup = readFileSync(
+      join(root, 'libs/domain/src/integration-timeout.testing.ts'),
+      'utf8',
+    );
+
+    expect(config).toContain("'src/integration-timeout.testing.ts'");
+    expect(setup).toContain('/\\.integration\\.spec\\.ts$/.test(');
+    expect(setup).toContain(
+      'vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 })',
+    );
   });
 });
 

@@ -23,12 +23,16 @@ import {
   fixtures,
 } from '../../notifications/notifications.testing';
 
-jest.mock('../../auth/email-confirmation/email-confirmation', () => {
-  const actual = jest.requireActual(
-    '../../auth/email-confirmation/email-confirmation',
-  );
-  return { ...actual, newToken: jest.fn(actual.newToken) };
-});
+vi.mock(
+  '../../auth/email-confirmation/email-confirmation',
+  async (actualModule) => {
+    const actual =
+      await actualModule<
+        typeof import('../../auth/email-confirmation/email-confirmation')
+      >();
+    return { ...actual, newToken: vi.fn(actual.newToken) };
+  },
+);
 
 const reader = countedMetrics();
 const signUps = () => counterTotal(reader, 'motorfix_garage_sign_ups_total');
@@ -74,10 +78,21 @@ beforeEach(async () => {
 });
 afterAll(() => prisma.$disconnect());
 
-// A survey holds no free text any more, so the size is made of photo keys.
-const PHOTO = `garage-photos/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/${'x'.repeat(64)}`;
-const filesOf = (bytes: number) =>
-  Array.from({ length: Math.ceil(bytes / (PHOTO.length + 3)) }, () => PHOTO);
+// The envelope caps the photos at 20, so the size is made of the most
+// prices a draft holds, each name a control character JSON writes in six
+// bytes: about 280 KB, past the draft's limit and under the body's.
+const OVERSIZED = {
+  steps: {
+    '3': {
+      jobs: Array.from({ length: 500 }, () => ({
+        brandId: '3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10',
+        fromBani: 1,
+        name: '\u0001'.repeat(80),
+        toBani: 2,
+      })),
+    },
+  },
+};
 
 describe('creating a draft', () => {
   it('keeps only the hashes of the browser key and the link token', async () => {
@@ -113,7 +128,9 @@ describe('creating a draft', () => {
   });
 
   it('keeps the draft and says no link went when the e-mail cannot be queued', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     queueDown = true;
 
     const created = await service.create(body());
@@ -176,7 +193,10 @@ describe('creating a draft', () => {
   });
 
   it('refuses data over the size limit with draft_too_large', async () => {
-    const big = { files: filesOf(DRAFT_MAX_BYTES) };
+    const big = OVERSIZED;
+    expect(Buffer.byteLength(JSON.stringify(big))).toBeGreaterThan(
+      DRAFT_MAX_BYTES,
+    );
 
     const refused = await refusalOf(service.create(body({ data: big })));
 
@@ -191,7 +211,7 @@ describe('what a draft leaves behind', () => {
     const logged: string[] = [];
     const spies = (['log', 'warn', 'error', 'debug', 'verbose'] as const).map(
       (level) =>
-        jest
+        vi
           .spyOn(Logger.prototype, level)
           .mockImplementation((...args: unknown[]) => {
             logged.push(args.map(String).join(' '));
@@ -342,7 +362,7 @@ describe('saving a draft', () => {
   // @traces 116-FR-033
   it('makes no new key when the address is the same', async () => {
     const created = await service.create(body());
-    const made = jest.mocked(newToken);
+    const made = vi.mocked(newToken);
     made.mockClear();
 
     await service.save(created.id, created.token, body({ step: 2 }));

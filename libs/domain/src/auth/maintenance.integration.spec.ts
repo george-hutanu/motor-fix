@@ -20,7 +20,7 @@ const stored = (value: boolean) =>
 let flag: MaintenanceFlag;
 
 beforeEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   await stored(false);
   await redis.del(KEY);
   flag = new MaintenanceFlag(redis, prisma);
@@ -55,8 +55,10 @@ describe('reading the maintenance switch', () => {
   });
 
   it('reads the stored rule when the fast store fails, and says so once until it answers again', async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    const get = jest
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const get = vi
       .spyOn(redis, 'get')
       .mockRejectedValue(new Error('Connection is closed.'));
     await stored(true);
@@ -68,16 +70,16 @@ describe('reading the maintenance switch', () => {
 
     get.mockRestore();
     expect(await flag.on()).toBe(false);
-    jest
-      .spyOn(redis, 'get')
-      .mockRejectedValue(new Error('Connection is closed.'));
+    vi.spyOn(redis, 'get').mockRejectedValue(
+      new Error('Connection is closed.'),
+    );
     await flag.on();
     expect(warn).toHaveBeenCalledTimes(2);
   });
 
   it('still answers from the stored rule when keeping it in the fast store fails', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    jest.spyOn(redis, 'set').mockRejectedValue(new Error('Command timed out'));
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(redis, 'set').mockRejectedValue(new Error('Command timed out'));
     await stored(true);
 
     expect(await flag.on()).toBe(true);
@@ -85,7 +87,7 @@ describe('reading the maintenance switch', () => {
 
   it('never lets a fill after a miss overwrite a switch written meanwhile', async () => {
     const find = prisma.platformRule.findUnique.bind(prisma.platformRule);
-    jest.spyOn(prisma.platformRule, 'findUnique').mockImplementation((async (
+    vi.spyOn(prisma.platformRule, 'findUnique').mockImplementation((async (
       args: Parameters<typeof find>[0],
     ) => {
       const rule = await find(args);
@@ -99,7 +101,7 @@ describe('reading the maintenance switch', () => {
   });
 
   it('reads as off when the rule is not stored at all', async () => {
-    jest.spyOn(prisma.platformRule, 'findUnique').mockResolvedValue(null);
+    vi.spyOn(prisma.platformRule, 'findUnique').mockResolvedValue(null);
 
     expect(await flag.on()).toBe(false);
   });

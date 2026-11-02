@@ -97,7 +97,7 @@ beforeEach(async () => {
   owner = await account('andrei');
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the sweep under hostile conditions', () => {
   it('answers zero and adds nothing when there are no rows', async () => {
@@ -167,7 +167,7 @@ describe('the sweep under hostile conditions', () => {
   });
 
   it('survives a queue that rejects with a non-error value', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     build({ addBulk: () => Promise.reject('boom') });
@@ -178,7 +178,7 @@ describe('the sweep under hostile conditions', () => {
   });
 
   it('survives a queue that rejects with null', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     build({ addBulk: () => Promise.reject(null) });
     await row();
     await expect(service.requeueStranded()).resolves.toBe(0);
@@ -186,9 +186,9 @@ describe('the sweep under hostile conditions', () => {
 
   // @traces 523-FR-015
   it('counts only the rows it handed over when the queue fails part way', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     // The page the sweep reads at a time, as its first read asks for it.
-    const read = jest.spyOn(prisma.notification, 'findMany');
+    const read = vi.spyOn(prisma.notification, 'findMany');
     await service.requeueStranded();
     const page = read.mock.calls[0][0]?.take as number;
     read.mockRestore();
@@ -218,7 +218,7 @@ describe('the sweep under hostile conditions', () => {
   });
 
   it('hands over every held row of a backlog longer than two pages, each once', async () => {
-    const read = jest.spyOn(prisma.notification, 'findMany');
+    const read = vi.spyOn(prisma.notification, 'findMany');
     await service.requeueHeld();
     const page = read.mock.calls[0][0]?.take as number;
     read.mockClear();
@@ -234,7 +234,7 @@ describe('the sweep under hostile conditions', () => {
         status: 'held' as const,
       })),
     });
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     await expect(service.requeueHeld()).resolves.toBe(page * 2 + 1);
     expect(read).toHaveBeenCalledTimes(3);
     read.mockRestore();
@@ -302,7 +302,7 @@ describe('the requeue job through the processor', () => {
   });
 
   it('resolves when the queue refuses every add', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     build({ addBulk: () => Promise.reject(new Error('Redis down')) });
     await row();
     await expect(

@@ -24,10 +24,10 @@ serialDatabase(databaseUrl);
 const CACHED =
   'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800, stale-if-error=604800';
 
-const render = jest.fn<
-  Promise<Buffer>,
-  Parameters<StaticMapRenderer['render']>
->();
+const render =
+  vi.fn<
+    (...args: Parameters<StaticMapRenderer['render']>) => Promise<Buffer>
+  >();
 let app: NestExpressApplication;
 let webp: Buffer;
 

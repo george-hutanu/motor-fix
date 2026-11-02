@@ -102,11 +102,11 @@ describe('the day cut of a blocked interval, pushed', () => {
 // @traces 427-FR-012
 describe('removing the blocks of a card, pushed', () => {
   it('records nothing when the card has no block still to come', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
-    const audit = { record: jest.fn(), write: jest.fn() };
-    const events = { emit: jest.fn(), enqueue: jest.fn(), record: jest.fn() };
+    const findMany = vi.fn().mockResolvedValue([]);
+    const audit = { record: vi.fn(), write: vi.fn() };
+    const events = { emit: vi.fn(), enqueue: vi.fn(), record: vi.fn() };
     const tx = {
-      timeBlock: { delete: jest.fn(), deleteMany: jest.fn(), findMany },
+      timeBlock: { delete: vi.fn(), deleteMany: vi.fn(), findMany },
     };
     const now = new Date('2026-11-10T10:00:00.000Z');
 

@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "ignoreDeprecations": "6.0",
-    "module": "commonjs",
-    "moduleResolution": "node10"
-  },
-  "extends": "./tsconfig.json"
-}

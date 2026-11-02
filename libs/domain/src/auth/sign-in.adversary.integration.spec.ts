@@ -65,7 +65,7 @@ beforeEach(async () => {
     ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];
   if (keys.length) await redis.del(...keys);
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -479,7 +479,7 @@ describe('attempt limits at their boundaries', () => {
       data: { status: 'suspended' },
       where: { id },
     });
-    const check = jest.spyOn(password, 'verifyPassword');
+    const check = vi.spyOn(password, 'verifyPassword');
 
     const res = await signIn({
       email: 'mihai@example.test',
@@ -603,11 +603,11 @@ describe('attempt limits at their boundaries', () => {
   it('logs no e-mail, password or address for a refused attempt or a bad request', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...a: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...a: unknown[]) => {
           lines.push(JSON.stringify(a));
-        });
+        },
+      );
     }
     await person('andrei@example.test');
     const from = '198.51.100.9';

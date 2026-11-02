@@ -11,7 +11,7 @@ describe('the brand loader transaction timeout', () => {
   const timeoutUsed = async () => {
     const options: unknown[] = [];
     const prisma = {
-      $transaction: jest.fn(async (_fn: unknown, opts: unknown) => {
+      $transaction: vi.fn(async (_fn: unknown, opts: unknown) => {
         options.push(opts);
         return 0;
       }),

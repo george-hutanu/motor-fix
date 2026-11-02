@@ -58,7 +58,7 @@ beforeEach(async () => {
   if (keys.length) await redis.del(...keys);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 async function start() {
   const moduleRef = await Test.createTestingModule({
@@ -135,7 +135,7 @@ function watch(nest: INestApplication) {
   const arrivals: (() => void)[] = [];
   let everyone = false;
 
-  jest.spyOn(store, 'eval').mockImplementation((...args) => {
+  vi.spyOn(store, 'eval').mockImplementation((...args) => {
     const key = args
       .map(String)
       .find((arg) => /^v5:(driver|garage)-home:/.test(arg));
@@ -153,18 +153,18 @@ function watch(nest: INestApplication) {
     });
   });
   const quit = store.quit.bind(store);
-  jest.spyOn(store, 'quit').mockImplementation(() => {
+  vi.spyOn(store, 'quit').mockImplementation(() => {
     order.push('redis closed');
     return quit();
   });
   const disconnect = store.disconnect.bind(store);
-  jest.spyOn(store, 'disconnect').mockImplementation(() => {
+  vi.spyOn(store, 'disconnect').mockImplementation(() => {
     order.push('redis closed');
     disconnect();
   });
   const database = nest.get(PRISMA);
   const end = database.$disconnect.bind(database);
-  jest.spyOn(database, '$disconnect').mockImplementation(() => {
+  vi.spyOn(database, '$disconnect').mockImplementation(() => {
     order.push('database closed');
     return end();
   });
@@ -204,7 +204,7 @@ const poolCalls = () => {
   >;
   for (const method of ['connect', 'query']) {
     const real = pool[method] as (...args: unknown[]) => unknown;
-    jest.spyOn(pool, method).mockImplementation(function (
+    vi.spyOn(pool, method).mockImplementation(function (
       this: unknown,
       ...args: unknown[]
     ) {
@@ -300,15 +300,15 @@ describe('the app’s shutdown with sign-in warms in flight', () => {
     const seen = watch(app);
     const messages: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           messages.push(args.map(String).join(' '));
-        });
+        },
+      );
     }
     const reading = Promise.withResolvers<void>();
     const held = Promise.withResolvers<void>();
-    jest.spyOn(app.get(CarsService), 'list').mockImplementation(async () => {
+    vi.spyOn(app.get(CarsService), 'list').mockImplementation(async () => {
       reading.resolve();
       await held.promise;
       throw new Error('database gone');
@@ -339,8 +339,8 @@ describe('the app’s shutdown with sign-in warms in flight', () => {
   it('warms nothing and touches neither store when asked after the app has closed', async () => {
     const app = await start();
     const store: Redis = app.get(AUTH_REDIS);
-    const evaluate = jest.spyOn(store, 'eval');
-    const list = jest.spyOn(app.get(CarsService), 'list');
+    const evaluate = vi.spyOn(store, 'eval');
+    const list = vi.spyOn(app.get(CarsService), 'list');
     const warmer: HomeWarmer = app.get(HOME_WARM);
     const andrei = await driver();
     const boss = await owner();

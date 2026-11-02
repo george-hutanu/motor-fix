@@ -15,7 +15,7 @@ const SECRET_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.c2VjcmV0.c2lnbmF0dXJl';
 
 // @traces 365-FR-002 365-FR-017
 describe('the bearer check in front of the MCP endpoint', () => {
-  const verifyAccessToken = jest.fn<Promise<AuthInfo>, [string]>();
+  const verifyAccessToken = vi.fn<(token: string) => Promise<AuthInfo>>();
   let server: Server;
   let base: string;
 
@@ -40,8 +40,10 @@ describe('the bearer check in front of the MCP endpoint', () => {
 
   afterAll(() => new Promise((resolve) => server.close(resolve)));
 
-  beforeEach(() => verifyAccessToken.mockReset());
-  afterEach(() => jest.restoreAllMocks());
+  beforeEach(() => {
+    verifyAccessToken.mockReset();
+  });
+  afterEach(() => vi.restoreAllMocks());
 
   const call = (authorization?: string) =>
     fetch(`${base}/mcp`, {
@@ -92,7 +94,7 @@ describe('the bearer check in front of the MCP endpoint', () => {
 
   it('answers 503 when the keys cannot be read, without blaming the token', async () => {
     verifyAccessToken.mockRejectedValue(new TypeError('fetch failed'));
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 
@@ -136,7 +138,7 @@ describe('the bearer check in front of the MCP endpoint', () => {
 
   // @traces 365-FR-015
   it('counts a missing and a rejected token as authentication failures, and a key server outage as neither', async () => {
-    const counted = jest.spyOn(metrics, 'recordAuthFailure');
+    const counted = vi.spyOn(metrics, 'recordAuthFailure');
     await call();
     verifyAccessToken.mockRejectedValueOnce(new InvalidTokenError('expired'));
     await call(`Bearer ${SECRET_TOKEN}`);

@@ -115,7 +115,9 @@ describe('the reminder', () => {
   });
 
   it('logs a failed draft by its id alone, reminds the others and tries it again next run', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const broken = await draft(daysAgo(4), { email: 'broken@example.test' });
     const fine = await draft(daysAgo(4));
     failFor = broken.id;
@@ -197,7 +199,9 @@ describe('the clean-up', () => {
   });
 
   it('keeps the draft whose files could not be deleted, and deletes the others', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const stuck = await draft(daysAgo(91), {
       data: { files: ['listing/x.jpg'] },
     });
@@ -400,7 +404,9 @@ describe('the reminder e-mail and its queue', () => {
   });
 
   it('keeps the refused e-mail row unsent and requeues that same row on the next run', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const due = await draft(daysAgo(3));
     refusals = 1;
 
@@ -436,7 +442,7 @@ describe('the reminder e-mail and its queue', () => {
 
   it('writes the claim, the key and the e-mail row in one transaction', async () => {
     const due = await draft(daysAgo(3));
-    const transactions = jest.spyOn(prisma, '$transaction');
+    const transactions = vi.spyOn(prisma, '$transaction');
 
     await queueing.remind(NOW);
 

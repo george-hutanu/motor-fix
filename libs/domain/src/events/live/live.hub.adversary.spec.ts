@@ -1,5 +1,7 @@
 import { EventEmitter } from 'node:events';
 
+import type { Mock } from 'vitest';
+
 import { LiveHub, publishLive } from './live.hub';
 
 class Sink extends EventEmitter {
@@ -29,11 +31,11 @@ const MINUTE = 60_000;
 const SECOND = 1_000;
 
 let hub: LiveHub;
-let publish: jest.Mock;
+let publish: Mock;
 
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
-  publish = jest.fn(async () => 1);
+  vi.useFakeTimers({ now: NOW });
+  publish = vi.fn(async () => 1);
   hub = new LiveHub(async () => ({
     mechanics: new Map(),
     off: new Set(),
@@ -44,7 +46,7 @@ beforeEach(() => {
 
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 const open = (
@@ -264,7 +266,7 @@ describe('LiveHub lifetime', () => {
   it('ends a stream opened with an already expired token with bye expired', () => {
     const { sink } = open('a1', ['account:a1'], NOW - SECOND);
 
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
 
     expect(sink.events().at(-1)).toBe('bye');
     expect(sink.chunks.at(-1)).toContain('"reason":"expired"');
@@ -274,7 +276,7 @@ describe('LiveHub lifetime', () => {
   it('ends at the exact expiry instant', () => {
     const { sink } = open('a1', ['account:a1'], NOW + 10 * SECOND);
 
-    jest.advanceTimersByTime(10 * SECOND);
+    vi.advanceTimersByTime(10 * SECOND);
 
     expect(sink.ended).toBe(true);
   });
@@ -282,7 +284,7 @@ describe('LiveHub lifetime', () => {
   it('keeps the stream open one millisecond before expiry', () => {
     const { sink } = open('a1', ['account:a1'], NOW + 10 * SECOND);
 
-    jest.advanceTimersByTime(10 * SECOND - 1);
+    vi.advanceTimersByTime(10 * SECOND - 1);
 
     expect(sink.ended).toBe(false);
   });
@@ -290,10 +292,10 @@ describe('LiveHub lifetime', () => {
   it('says bye as the last thing written and writes nothing after it', () => {
     const { sink } = open('a1', ['account:a1', 'system'], NOW + 30 * SECOND);
 
-    jest.advanceTimersByTime(30 * SECOND);
+    vi.advanceTimersByTime(30 * SECOND);
     const written = sink.chunks.length;
     hub.deliver(JSON.stringify({ audience: ['system'], event: good }));
-    jest.advanceTimersByTime(5 * MINUTE);
+    vi.advanceTimersByTime(5 * MINUTE);
 
     expect(sink.chunks).toHaveLength(written);
     expect(sink.events().filter((e) => e === 'bye')).toHaveLength(1);
@@ -302,7 +304,7 @@ describe('LiveHub lifetime', () => {
   it('does not ping a stream that expires inside the heartbeat window', () => {
     const { sink } = open('a1', ['account:a1'], NOW + 24 * SECOND);
 
-    jest.advanceTimersByTime(30 * SECOND);
+    vi.advanceTimersByTime(30 * SECOND);
 
     expect(sink.pings()).toBe(0);
   });
@@ -310,11 +312,11 @@ describe('LiveHub lifetime', () => {
   it('pings every 25 seconds of silence', () => {
     const { sink } = open('a1', ['account:a1']);
 
-    jest.advanceTimersByTime(24_999);
+    vi.advanceTimersByTime(24_999);
     expect(sink.pings()).toBe(0);
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     expect(sink.pings()).toBe(1);
-    jest.advanceTimersByTime(50 * SECOND);
+    vi.advanceTimersByTime(50 * SECOND);
     expect(sink.pings()).toBe(3);
   });
 
@@ -323,7 +325,7 @@ describe('LiveHub lifetime', () => {
 
     sink.emit('close');
 
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('leaves no timers running after shutdown', () => {
@@ -332,7 +334,7 @@ describe('LiveHub lifetime', () => {
 
     hub.shutdown();
 
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('tolerates a close event emitted twice and after shutdown', () => {

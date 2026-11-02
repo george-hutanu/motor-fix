@@ -95,7 +95,7 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE sign_in_code');
   await redis.flushdb();
   brevo.reset();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -312,7 +312,7 @@ describe('asking to change my phone', () => {
   it('answers 503 send_failed and keeps nothing when Brevo refuses', async () => {
     const id = await driver();
     brevo.answer({ status: 400 });
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const res = await ask(id, NEW);
 
@@ -323,7 +323,7 @@ describe('asking to change my phone', () => {
 
   it('answers 503 send_failed and sends nothing to a number WhatsApp sending may not reach', async () => {
     const id = await driver();
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     // Outside the test allowlist.
     const res = await ask(id, '+40799999999');
@@ -346,7 +346,7 @@ describe('asking to change my phone', () => {
 
   it('does not count a code that could not be sent', async () => {
     const id = await driver('ro', null);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     // Outside the test allowlist.
     await ask(id, '+40799999999').expect(503);
 
@@ -623,11 +623,11 @@ describe('keeping the code secret', () => {
   it('never writes the code or the number to a log line, a notification or the change row', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(args.map(String).join(' '));
-        });
+        },
+      );
     }
     const id = await driver();
     await ask(id, NEW).expect(202);

@@ -33,7 +33,7 @@ const events = (subjectId: string) =>
     where: { kind: 'repair.updated', subjectId },
   });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('opening a repair as the admin', () => {
   it('records one open entry per read, naming the admin, the car and the shared garage, and no values', async () => {
@@ -88,9 +88,9 @@ describe('opening a repair as the admin', () => {
   it('answers no content when the open cannot be recorded', async () => {
     const s = await scene();
     const row = await s.repair();
-    jest
-      .spyOn(provider<AuditPort>(AUDIT_PORT), 'record')
-      .mockRejectedValueOnce(new Error('audit down'));
+    vi.spyOn(provider<AuditPort>(AUDIT_PORT), 'record').mockRejectedValueOnce(
+      new Error('audit down'),
+    );
 
     const res = await get(one(row.id), s.auth.admin);
 
@@ -193,9 +193,9 @@ describe('correcting a repair as the admin', () => {
   it('leaves nothing behind when the event cannot be recorded', async () => {
     const s = await scene();
     const row = await s.repair();
-    jest
-      .spyOn(provider<EventPort>(EVENT_PORT), 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(provider<EventPort>(EVENT_PORT), 'record').mockRejectedValueOnce(
+      new Error('outbox down'),
+    );
 
     const res = await send('patch', one(row.id), s.auth.admin, {
       odometerKm: 150_000,
@@ -244,7 +244,7 @@ describe('correcting a repair as the admin', () => {
   it('logs that an admin made the correction, naming the fields', async () => {
     const s = await scene();
     const row = await s.repair();
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     await send('patch', one(row.id), s.auth.admin, {
       odometerKm: 150_000,

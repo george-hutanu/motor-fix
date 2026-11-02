@@ -21,7 +21,7 @@ afterAll(() => started?.shutdown());
 beforeEach(async () => {
   await started?.flush();
   memory.spanExporter.reset();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const approval = {
@@ -74,7 +74,7 @@ async function delta(
 // @traces 1254-FR-011
 describe('counting the approvals', () => {
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   });
 
   it('counts each outcome by kind and outcome, never who', async () => {
@@ -104,7 +104,9 @@ describe('counting the approvals', () => {
   });
 
   it('logs the outcome with the approval, tool, grant and account, never the summary or the arguments', () => {
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     recordApproval('failed', locked);
 
@@ -137,15 +139,15 @@ describe('counting the approvals', () => {
 
 // @traces 1254-FR-011
 describe('every outcome of the store is counted', () => {
-  const events = { record: jest.fn(async () => undefined) };
-  const audit = { record: jest.fn(async () => undefined) };
+  const events = { record: vi.fn(async () => undefined) };
+  const audit = { record: vi.fn(async () => undefined) };
   const store = (prisma: unknown = {}) =>
     new AssistantApprovals(prisma as never, audit as never, events as never);
 
   it('counts the request when the yes opens one', async () => {
     const tx = {
       assistantApproval: {
-        create: jest.fn(async () => ({
+        create: vi.fn(async () => ({
           expiresAt: new Date(),
           id: approval.id,
         })),
@@ -168,7 +170,7 @@ describe('every outcome of the store is counted', () => {
 
   it('counts a decision only when its write decided the approval', async () => {
     const tx = (count: number) => ({
-      assistantApproval: { updateMany: jest.fn(async () => ({ count })) },
+      assistantApproval: { updateMany: vi.fn(async () => ({ count })) },
     });
     for (const status of ['approved', 'failed', 'refused', 'expired'] as const)
       expect(
@@ -187,7 +189,7 @@ describe('every outcome of the store is counted', () => {
     const prisma = (rows: unknown[]) => ({
       $transaction: (fn: (tx: unknown) => unknown) =>
         fn({
-          assistantApproval: { updateManyAndReturn: jest.fn(async () => rows) },
+          assistantApproval: { updateManyAndReturn: vi.fn(async () => rows) },
         }),
     });
     expect(
@@ -210,7 +212,7 @@ describe('every outcome of the store is counted', () => {
   it('counts each approval a revoke or the switch turned off expires', async () => {
     const tx = {
       assistantApproval: {
-        updateManyAndReturn: jest.fn(async () => [
+        updateManyAndReturn: vi.fn(async () => [
           approval,
           { ...approval, id: 'other', kind: 'move' },
         ]),

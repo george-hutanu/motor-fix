@@ -257,7 +257,7 @@ describe('the legal documents sweep against a failing store', () => {
     const garage = await data.garage(ago(now, limit, 1));
     const bad = await data.legalDocument(garage, 'valid', ['p/bad']);
     const good = await data.legalDocument(garage, 'refused', ['p/good']);
-    const deleteObject = jest.fn(async (key: string) => {
+    const deleteObject = vi.fn(async (key: string) => {
       if (key === 'p/bad') throw new Error('store down');
     });
     await expect(
@@ -271,7 +271,7 @@ describe('the legal documents sweep against a failing store', () => {
   it('keeps the documents of a garage closed exactly at the limit', async () => {
     const garage = await data.garage(ago(now, limit));
     await data.legalDocument(garage, 'valid', ['p/a']);
-    const deleteObject = jest.fn(async () => undefined);
+    const deleteObject = vi.fn(async () => undefined);
     expect(
       await sweepLegalDocuments({ prisma, storage: { deleteObject } }, now),
     ).toBe(0);
@@ -285,7 +285,7 @@ describe('the legal documents sweep against a failing store', () => {
       where: { id: garage },
     });
     await data.legalDocument(garage, 'valid', ['p/a']);
-    const deleteObject = jest.fn(async () => undefined);
+    const deleteObject = vi.fn(async () => undefined);
     expect(
       await sweepLegalDocuments({ prisma, storage: { deleteObject } }, now),
     ).toBe(0);
@@ -305,7 +305,7 @@ describe('the legal documents sweep against a failing store', () => {
         verificationFileId: file.id,
       })),
     });
-    const deleteObject = jest.fn(async () => undefined);
+    const deleteObject = vi.fn(async () => undefined);
     expect(
       await sweepLegalDocuments({ prisma, storage: { deleteObject } }, now),
     ).toBe(total);

@@ -17,6 +17,7 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import { Client } from 'pg';
 import request from 'supertest';
+import type { MockInstance } from 'vitest';
 
 import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
@@ -68,10 +69,10 @@ const db = new Client({ connectionString: databaseUrl });
 
 let app: INestApplication;
 let routes: { method: Method; path: string; route: string }[];
-let sent: jest.SpyInstance;
+let sent: MockInstance;
 
 beforeAll(async () => {
-  sent = jest
+  sent = vi
     .spyOn(NotificationsService.prototype, 'sendAccountEmail')
     .mockResolvedValue(undefined);
   app = await api.start();

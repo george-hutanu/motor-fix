@@ -1,3 +1,5 @@
+import type { Mock } from 'vitest';
+
 import { ConfirmService } from './confirm.service';
 import type { Actor } from '../../auth/policy';
 
@@ -15,7 +17,7 @@ const actor = {
   role: 'owner',
 } as unknown as Actor;
 
-const serviceWith = (transaction: jest.Mock) =>
+const serviceWith = (transaction: Mock) =>
   new ConfirmService(
     { $transaction: transaction } as never,
     {} as never,
@@ -25,7 +27,7 @@ const serviceWith = (transaction: jest.Mock) =>
 
 describe('ConfirmService.confirm on a deadlock', () => {
   it('runs the transaction again and answers what the second run answers', async () => {
-    const transaction = jest
+    const transaction = vi
       .fn()
       .mockRejectedValueOnce(deadlock())
       .mockResolvedValueOnce({ id: 'b' });
@@ -37,7 +39,7 @@ describe('ConfirmService.confirm on a deadlock', () => {
   });
 
   it('gives up after three runs that all deadlock', async () => {
-    const transaction = jest
+    const transaction = vi
       .fn()
       .mockImplementation(() => Promise.reject(deadlock()));
 
@@ -48,7 +50,7 @@ describe('ConfirmService.confirm on a deadlock', () => {
   });
 
   it('never runs again on any other failure', async () => {
-    const transaction = jest.fn().mockRejectedValue(new Error('audit down'));
+    const transaction = vi.fn().mockRejectedValue(new Error('audit down'));
 
     await expect(
       serviceWith(transaction).confirm(actor, 'b', { lift: 1 }),

@@ -1,4 +1,4 @@
-import type { GarageScheduleEntryDto } from '@motor-fix/contracts';
+import { type GarageScheduleEntryDto, storedWeek } from '@motor-fix/contracts';
 import {
   BadRequestException,
   Inject,
@@ -14,6 +14,8 @@ import {
 } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { addDays, atLocal, daysBetween, localDay } from '../../bucharest';
+import { wall } from '../../garages/garage-hours';
+import { unset } from '../../garages/mechanic-hours';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { blocksOf } from '../../workshop/time-blocks/time-blocks';
 import { bookedInclude, bookedOf, shortName } from '../reads';
@@ -123,7 +125,59 @@ export class GarageScheduleService {
       { end, garageId, lift: query.lift, mechanicId, start },
       lifts,
     );
-    return { blocks, entries, from, lifts, to };
+    const calendar = await this.calendarOf(garageId, from, span);
+    return {
+      blocks,
+      entries,
+      from,
+      lifts,
+      to,
+      ...calendar,
+      liftCount: lifts ? calendar.liftCount : 0,
+    };
+  }
+
+  // The garage's lifts and when it opens on each day of the range: no
+  // interval on a closed day, a public holiday or while it has set no hours.
+  private async calendarOf(garageId: string, from: string, span: number) {
+    const days = Array.from({ length: span + 1 }, (_, n) => addDays(from, n));
+    const range = {
+      gte: new Date(`${from}T00:00:00Z`),
+      lte: new Date(`${days[span]}T00:00:00Z`),
+    };
+    const [garage, closed, holidays] = await Promise.all([
+      this.prisma.garage.findUniqueOrThrow({
+        select: { hours: true, liftCount: true },
+        where: { id: garageId },
+      }),
+      this.prisma.garageClosedDay.findMany({
+        select: { day: true },
+        where: { day: range, garageId },
+      }),
+      this.prisma.publicHoliday.findMany({
+        select: { day: true },
+        where: { day: range },
+      }),
+    ]);
+    const shut = new Set(
+      [...closed, ...holidays].map((d) => d.day.toISOString().slice(0, 10)),
+    );
+    const week = storedWeek(garage.hours);
+    return {
+      days: days.map((day) => ({
+        day,
+        open: shut.has(day)
+          ? []
+          : (week[wall(atLocal(day, 12)).weekday] ?? []).map(
+              ([open, close]) => ({
+                from: open,
+                to: close,
+              }),
+            ),
+      })),
+      hoursSet: !unset(garage.hours),
+      liftCount: garage.liftCount,
+    };
   }
 
   // A mechanic reads her own card's bookings only, and asks for no other,

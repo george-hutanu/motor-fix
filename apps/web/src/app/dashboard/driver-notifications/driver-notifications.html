@@ -62,7 +62,7 @@
                       [value]="type.channel"
                       [disabled]="!loaded()"
                       [attr.aria-label]="typeKey(type.type) | t"
-                      [attr.aria-describedby]="pushHint()?.type === type.type ? pickerName(type.type) + '-push-hint' : null"
+                      [attr.aria-describedby]="describedBy(type)"
                       (valueChange)="pick(type.type, $event)"
                     >
                       @for (channel of type.channels; track channel) {
@@ -81,6 +81,11 @@
                     }
                   } @else {
                     <span class="channel">{{ channelKey(type.channel) | t }}</span>
+                  }
+                  @if (fallbackOf(type); as hint) {
+                    <p class="hint" [id]="pickerName(type.type) + '-fallback-hint'">
+                      {{ hint.key | t: { from: (hint.from | t), to: (hint.to | t) } }}
+                    </p>
                   }
                 </div>
               }

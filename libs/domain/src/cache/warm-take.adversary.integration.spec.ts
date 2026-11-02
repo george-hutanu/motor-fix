@@ -24,7 +24,7 @@ const other = client();
 afterAll(() => {
   for (const redis of clients) redis.disconnect();
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const warmKey = () => cacheKey('driver-home', randomUUID(), 'cars');
@@ -131,7 +131,7 @@ describe('taking a warm entry under pressure', () => {
   it('answers nothing, and does not throw, when the warm it waited for failed', async () => {
     const cache = new CacheService(client());
     const k = warmKey();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     const warming = cache.warm(() =>
       cache.read({
@@ -179,11 +179,11 @@ describe('taking a warm entry under pressure', () => {
   it('is available again once Redis answers after an outage', async () => {
     const redis = client();
     const cache = new CacheService(redis);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     const k = warmKey();
     await warmed(cache, k, 'kept');
-    const getdel = jest
+    const getdel = vi
       .spyOn(redis, 'getdel')
       .mockRejectedValue(new Error('ECONNREFUSED'));
 

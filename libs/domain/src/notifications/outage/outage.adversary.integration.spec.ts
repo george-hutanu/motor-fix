@@ -64,7 +64,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => reset());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const AUTH = `Bearer ${TOKEN}`;
 
@@ -144,9 +144,9 @@ describe('the outage webhook credentials under attack', () => {
   });
 
   it('never writes the token to the log when it is refused', async () => {
-    const log = jest.spyOn(Logger.prototype, 'log');
-    const warn = jest.spyOn(Logger.prototype, 'warn');
-    const error = jest.spyOn(Logger.prototype, 'error');
+    const log = vi.spyOn(Logger.prototype, 'log');
+    const warn = vi.spyOn(Logger.prototype, 'warn');
+    const error = vi.spyOn(Logger.prototype, 'error');
     await post({ alerts: [alert()] }, 'Bearer wrong-secret-value');
     const written = JSON.stringify([
       ...log.mock.calls,
@@ -259,8 +259,8 @@ describe('alerts the endpoint must skip without failing', () => {
   });
 
   it('logs the reason for a skipped alert', async () => {
-    const log = jest.spyOn(Logger.prototype, 'log');
-    const warn = jest.spyOn(Logger.prototype, 'warn');
+    const log = vi.spyOn(Logger.prototype, 'log');
+    const warn = vi.spyOn(Logger.prototype, 'warn');
     await post({ alerts: [alert({ fingerprint: undefined })] });
     const written = JSON.stringify([...log.mock.calls, ...warn.mock.calls]);
     expect(written).toContain('alert skipped');
@@ -464,7 +464,7 @@ describe('one message pair per outage', () => {
 describe('the log line', () => {
   it('writes one line per alert in the contract wording', async () => {
     await oneAdmin();
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     await post({ alerts: [alert(), alert({ fingerprint: 'f2' })] });
 
@@ -480,7 +480,7 @@ describe('the log line', () => {
   it('says sent=false for a repeat', async () => {
     await oneAdmin();
     await post({ alerts: [alert()] });
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     await post({ alerts: [alert()] });
 
@@ -490,7 +490,7 @@ describe('the log line', () => {
 
   it('never writes a push endpoint or the body', async () => {
     await oneAdmin();
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
     await post({
       alerts: [alert({ generatorURL: 'http://secret-body-marker' })],
     });

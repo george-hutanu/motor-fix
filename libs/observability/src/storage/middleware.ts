@@ -2,11 +2,13 @@ import {
   type Counter,
   type Histogram,
   metrics,
+  context as otelContext,
   type Span,
   SpanKind,
   SpanStatusCode,
   trace,
 } from '@opentelemetry/api';
+import { suppressTracing } from '@opentelemetry/core';
 
 import { telemetryStarted } from '../setup/start';
 
@@ -75,7 +77,17 @@ export function storageTelemetry(
         },
         kind: SpanKind.CLIENT,
       },
-      (span) => traced(span, () => next(args), done),
+      // The SDK's own HTTP request runs untraced: its span would carry the
+      // key in url.path, and this span already stands for the call.
+      (span) =>
+        traced(
+          span,
+          () =>
+            otelContext.with(suppressTracing(otelContext.active()), () =>
+              next(args),
+            ),
+          done,
+        ),
     );
   };
 }

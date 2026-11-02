@@ -5,11 +5,11 @@ import { observeDataStores } from './observe';
 // @traces 878-FR-011
 describe('observeDataStores while telemetry is off', () => {
   it('reads nothing, creates no instrument and starts no timer', async () => {
-    const meter = jest.spyOn(metrics, 'getMeter');
-    const interval = jest.spyOn(global, 'setInterval');
-    const postgres = { query: jest.fn() };
-    const redis = { info: jest.fn() };
-    const outbox = { oldestPendingSeconds: jest.fn() };
+    const meter = vi.spyOn(metrics, 'getMeter');
+    const interval = vi.spyOn(global, 'setInterval');
+    const postgres = { query: vi.fn() };
+    const redis = { info: vi.fn() };
+    const outbox = { oldestPendingSeconds: vi.fn() };
 
     const stop = observeDataStores({ outbox, postgres, redis });
     await new Promise((resolve) => setTimeout(resolve, 10));

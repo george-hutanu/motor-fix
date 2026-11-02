@@ -43,7 +43,7 @@ describe('telemetry with an endpoint that fails', () => {
   it('leaves every response unchanged and flushes and shuts down without throwing', async () => {
     const endpoint = await listen(collector);
     const base = await listen(server);
-    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const started = startTelemetry('api', {
       APP_ENV: 'staging',
       OTEL_EXPORTER_OTLP_ENDPOINT: endpoint,

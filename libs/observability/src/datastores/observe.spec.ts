@@ -29,8 +29,8 @@ let stops: (() => void)[] = [];
 afterEach(() => {
   for (const stop of stops) stop();
   stops = [];
-  jest.restoreAllMocks();
-  jest.useRealTimers();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 afterAll(() => started?.shutdown());
 
@@ -40,7 +40,7 @@ function postgres(
   slow: () => Promise<unknown[]> = async () => [],
   stats: () => Promise<unknown[]> = async () => [STATS],
 ) {
-  const query = jest.fn(<T>(text: string): Promise<T[]> => {
+  const query = vi.fn(<T>(text: string): Promise<T[]> => {
     const answer = text.includes('pg_stat_statements')
       ? slow
       : text.includes('GROUP BY')
@@ -55,10 +55,10 @@ function postgres(
 }
 
 const redis = (info: () => Promise<string> = async () => INFO) => ({
-  info: jest.fn(info),
+  info: vi.fn(info),
 });
 const outbox = (seconds: () => Promise<number> = async () => 12) => ({
-  oldestPendingSeconds: jest.fn(seconds),
+  oldestPendingSeconds: vi.fn(seconds),
 });
 
 function observe(options: Parameters<typeof observeDataStores>[0]) {
@@ -155,7 +155,7 @@ describe('observeDataStores', () => {
   });
 
   it('turns the PostgreSQL readings off with one log line when there is no monitoring session', async () => {
-    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     observe({ outbox: outbox(), redis: redis() });
     await tick(50);
 
@@ -177,7 +177,7 @@ describe('observeDataStores', () => {
   });
 
   it('reports a store that fails as down, with none of its figures, and the others as usual', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: outbox(),
       postgres: postgres(),
@@ -195,7 +195,7 @@ describe('observeDataStores', () => {
   });
 
   it('drops a store figures that were read before it went down', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     let down = false;
     observe({
       outbox: outbox(),
@@ -215,7 +215,7 @@ describe('observeDataStores', () => {
   });
 
   it('logs one error line per failure streak', async () => {
-    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    const error = vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     let failing = true;
     observe({
       outbox: outbox(),
@@ -248,10 +248,16 @@ describe('observeDataStores', () => {
   });
 
   it('counts a PostgreSQL reading that has not answered within 5 s, or Redis within 2 s, as failed', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       intervalMs: 60_000,
       outbox: outbox(),
@@ -259,21 +265,21 @@ describe('observeDataStores', () => {
       redis: redis(() => new Promise(() => undefined)),
     });
 
-    await jest.advanceTimersByTimeAsync(1_999);
+    await vi.advanceTimersByTimeAsync(1_999);
     expect(await value('motorfix_datastore_up', { store: 'redis' })).toBe(
       undefined,
     );
-    await jest.advanceTimersByTimeAsync(2);
+    await vi.advanceTimersByTimeAsync(2);
     expect(await value('motorfix_datastore_up', { store: 'redis' })).toBe(0);
     expect(await value('motorfix_datastore_up', { store: 'postgres' })).toBe(
       undefined,
     );
-    await jest.advanceTimersByTimeAsync(3_000);
+    await vi.advanceTimersByTimeAsync(3_000);
     expect(await value('motorfix_datastore_up', { store: 'postgres' })).toBe(0);
   });
 
   it('reports the other PostgreSQL figures and logs once when the statement view cannot be read', async () => {
-    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     observe({
       outbox: outbox(),
       postgres: postgres(async () => {
@@ -299,8 +305,14 @@ describe('observeDataStores', () => {
 
   it('counts the slow statements whose calls grew since the previous reading', async () => {
     // Fake timers: a loaded CI runner fired the 20 ms interval before the first assertion.
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
     let calls = 1;
     observe({
@@ -317,14 +329,14 @@ describe('observeDataStores', () => {
       ]),
       redis: redis(),
     });
-    await jest.advanceTimersByTimeAsync(5);
+    await vi.advanceTimersByTimeAsync(5);
     expect(await value('motorfix_pg_slow_statements')).toBe(0);
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(await value('motorfix_pg_slow_statements')).toBe(1);
   });
 
   it('leaves the outbox figure out when its reading fails', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       outbox: outbox(async () => {
         throw new Error('outbox unreachable');
@@ -365,7 +377,7 @@ describe('the PostgreSQL readings left off', () => {
   };
 
   beforeEach(async () => {
-    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
     await started?.flush();
     memory.logExporter.reset();
   });
@@ -388,7 +400,7 @@ describe('the PostgreSQL readings left off', () => {
     await tick(50);
 
     expect(
-      jest
+      vi
         .mocked(console.log)
         .mock.calls.filter(([line]) =>
           String(line).includes('MONITOR_DATABASE_URL'),
@@ -410,7 +422,7 @@ const KEYCLOAK_FIGURES = [
 ];
 
 const keycloak = (metrics: () => Promise<string> = async () => KEYCLOAK) => ({
-  metrics: jest.fn(metrics),
+  metrics: vi.fn(metrics),
 });
 
 // @traces 1178-FR-005
@@ -451,7 +463,7 @@ describe('the Keycloak reading', () => {
   });
 
   it('reports a failed reading as down with no heap figure, and the other stores as usual', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       keycloak: keycloak(async () => {
         throw new Error('HTTP 503');
@@ -472,7 +484,7 @@ describe('the Keycloak reading', () => {
   });
 
   it('counts a body without the heap series as a failed reading', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       keycloak: keycloak(async () => 'jvm_threads_live_threads 42.0'),
       outbox: outbox(),
@@ -485,7 +497,7 @@ describe('the Keycloak reading', () => {
   });
 
   it('drops the heap figures read before Keycloak went down, and resumes after', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     let failing = false;
     observe({
       keycloak: keycloak(async () => {
@@ -509,7 +521,7 @@ describe('the Keycloak reading', () => {
   });
 
   it('logs one error line per failure streak, naming the store and the reason only', async () => {
-    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    const error = vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       keycloak: keycloak(async () => {
         throw new Error('HTTP 404');
@@ -526,10 +538,16 @@ describe('the Keycloak reading', () => {
   });
 
   it('counts a reading that has not answered within 5 s as failed', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     observe({
       intervalMs: 60_000,
       keycloak: keycloak(() => new Promise(() => undefined)),
@@ -537,11 +555,11 @@ describe('the Keycloak reading', () => {
       redis: redis(),
     });
 
-    await jest.advanceTimersByTimeAsync(4_999);
+    await vi.advanceTimersByTimeAsync(4_999);
     expect(
       await value('motorfix_datastore_up', { store: 'keycloak' }),
     ).toBeUndefined();
-    await jest.advanceTimersByTimeAsync(2);
+    await vi.advanceTimersByTimeAsync(2);
     expect(await value('motorfix_datastore_up', { store: 'keycloak' })).toBe(0);
   });
 
@@ -563,7 +581,7 @@ describe('the Keycloak reading under hostile answers', () => {
   const up = (store: string) => value('motorfix_datastore_up', { store });
 
   it('publishes no heap sample, never zero, when a body has used but only -1 maxima', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     watch({
       metrics: async () =>
         'jvm_memory_used_bytes{area="heap"} 5\njvm_memory_max_bytes{area="heap"} -1.0',
@@ -576,7 +594,7 @@ describe('the Keycloak reading under hostile answers', () => {
   });
 
   it('keeps no stale heap figure when the next body is bad', async () => {
-    jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     // The body turns bad only once the good one has been seen, so a slow
     // runner cannot skip past the good reading before the first check.
     let bad = false;
@@ -591,7 +609,7 @@ describe('the Keycloak reading under hostile answers', () => {
   });
 
   it('logs a bad body once per streak without the body', async () => {
-    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    const error = vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     watch({ metrics: async () => 'SECRET-BODY-TEXT' });
     await tick(100);
     expect(error).toHaveBeenCalledTimes(1);
@@ -599,7 +617,7 @@ describe('the Keycloak reading under hostile answers', () => {
   });
 
   it('does not log the address when a reader fails with it in the message', async () => {
-    const error = jest.spyOn(diag, 'error').mockImplementation(() => undefined);
+    const error = vi.spyOn(diag, 'error').mockImplementation(() => undefined);
     watch({
       metrics: async () => {
         throw new Error(

@@ -14,7 +14,7 @@ const listeners = addedListeners(() => {
     memory,
   );
 });
-const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
+const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
 
 afterAll(() => {
   kill.mockRestore();
@@ -26,9 +26,9 @@ afterAll(() => {
 describe('the telemetry shutdown', () => {
   it('shuts each exporter down once when the signal and a direct call both ask', async () => {
     const shutdowns = [
-      jest.spyOn(memory.spanExporter, 'shutdown'),
-      jest.spyOn(memory.metricReader, 'shutdown'),
-      jest.spyOn(memory.logExporter, 'shutdown'),
+      vi.spyOn(memory.spanExporter, 'shutdown'),
+      vi.spyOn(memory.metricReader, 'shutdown'),
+      vi.spyOn(memory.logExporter, 'shutdown'),
     ];
     const restore = aloneOn('SIGTERM', listeners.SIGTERM);
 

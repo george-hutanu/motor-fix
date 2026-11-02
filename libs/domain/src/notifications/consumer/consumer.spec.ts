@@ -1,5 +1,6 @@
 // @traces 520-FR-001 520-FR-002 520-FR-003 520-FR-005
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { NotificationsConsumer } from './consumer';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -17,7 +18,7 @@ const unreachable: KeyStatus = {
 };
 
 function processorAnswering(...outcomes: KeyStatus[]) {
-  const keyStatus = jest.fn(async () => outcomes.shift() ?? unreachable);
+  const keyStatus = vi.fn(async () => outcomes.shift() ?? unreachable);
   const processor = new NotificationsProcessor(
     {} as PrismaClient,
     {} as NotificationsService,
@@ -32,19 +33,17 @@ function processorAnswering(...outcomes: KeyStatus[]) {
   return { delays, keyStatus, processor };
 }
 
-let warn: jest.SpyInstance;
-let error: jest.SpyInstance;
+let warn: MockInstance;
+let error: MockInstance;
 
 beforeEach(() => {
-  warn = jest
-    .spyOn(Logger.prototype, 'warn')
-    .mockImplementation(() => undefined);
-  error = jest
+  warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  error = vi
     .spyOn(Logger.prototype, 'error')
     .mockImplementation(() => undefined);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the delay before the next key check', () => {
   it('starts at a second and doubles up to a minute', () => {
@@ -113,15 +112,15 @@ describe('the start-up key check', () => {
 });
 
 describe('the notifications consumer', () => {
-  const worker = () => ({ close: jest.fn(async () => undefined) });
+  const worker = () => ({ close: vi.fn(async () => undefined) });
 
   it('starts consuming as soon as the check passes, without a restart', async () => {
     let pass!: (ok: boolean) => void;
-    const ready = jest.fn(
+    const ready = vi.fn(
       () => new Promise<boolean>((resolve) => (pass = resolve)),
     );
     const started = worker();
-    const start = jest.fn(async () => started);
+    const start = vi.fn(async () => started);
     const consumer = new NotificationsConsumer(ready, start);
 
     const running = consumer.start();
@@ -139,7 +138,7 @@ describe('the notifications consumer', () => {
   });
 
   it('never consumes when the check does not pass', async () => {
-    const start = jest.fn(async () => worker());
+    const start = vi.fn(async () => worker());
     const consumer = new NotificationsConsumer(async () => false, start);
 
     await consumer.start();
@@ -156,7 +155,7 @@ describe('the notifications consumer', () => {
         signal = given;
         return new Promise<boolean>((resolve) => (pass = resolve));
       },
-      jest.fn(async () => worker()),
+      vi.fn(async () => worker()),
     );
 
     const running = consumer.start();

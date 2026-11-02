@@ -1,6 +1,7 @@
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { LIVE_INPUTS_CONSUMER, LiveInputs } from './inputs';
 import { FakeLiveVideo } from '../providers/fake-live-video.provider';
@@ -24,19 +25,19 @@ const SESSION = '5d2a1c7e-8b3f-4e6a-9d0c-1f2e3a4b5c6d';
 const INPUT = 'input-uid-7';
 
 let provider: FakeLiveVideo;
-let findUnique: jest.Mock;
+let findUnique: Mock;
 let logger: Logger;
 
 beforeEach(() => {
   provider = new FakeLiveVideo();
-  findUnique = jest
+  findUnique = vi
     .fn()
     .mockResolvedValue({ provider: 'fake', providerInputId: INPUT });
   logger = new Logger('LiveInputs');
-  jest.spyOn(logger, 'log').mockImplementation(() => undefined);
-  jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'log').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const inputs = (p = provider as typeof provider | typeof NONE) =>
   new LiveInputs({ liveSession: { findUnique } } as never, p, logger);
@@ -94,9 +95,9 @@ describe('closing the provider input after a live stop', () => {
   );
 
   it('throws on a failed close so the queue tries again, counting only the last try', async () => {
-    jest
-      .spyOn(provider, 'closeInput')
-      .mockRejectedValue(new Error('live input close failed: 503'));
+    vi.spyOn(provider, 'closeInput').mockRejectedValue(
+      new Error('live input close failed: 503'),
+    );
     const before = await closes('close_failed');
 
     await expect(
@@ -117,9 +118,9 @@ describe('closing the provider input after a live stop', () => {
   });
 
   it('logs only the error class when the failure carries no reason token', async () => {
-    jest
-      .spyOn(provider, 'closeInput')
-      .mockRejectedValue(new TypeError('https://secret.example/?token=abc'));
+    vi.spyOn(provider, 'closeInput').mockRejectedValue(
+      new TypeError('https://secret.example/?token=abc'),
+    );
 
     await expect(
       inputs().onEvent(stoppedJob({ reason: 'sender' }, 0)),
@@ -147,7 +148,7 @@ describe('closing the provider input after a live stop', () => {
     });
     await inputs().onEvent(stoppedJob({ reason: 'sender' }));
     findUnique.mockResolvedValue({ provider: 'fake', providerInputId: INPUT });
-    const none = jest.spyOn(NONE, 'closeInput');
+    const none = vi.spyOn(NONE, 'closeInput');
     await inputs(NONE).onEvent(stoppedJob({ reason: 'sender' }));
 
     expect(provider.closed).toEqual([]);

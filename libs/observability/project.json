@@ -6,6 +6,9 @@
   "sourceRoot": "libs/observability/src",
   "tags": [],
   "targets": {
+    "test": {
+      "command": "vitest run --config libs/observability/vitest.config.mts"
+    },
     "test:mutation": {},
     "typecheck": {
       "cache": true,

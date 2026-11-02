@@ -21,12 +21,12 @@ describe('servicesFor under hostile input', () => {
 
   beforeEach(() => {
     notices = [];
-    jest.spyOn(console, 'log').mockImplementation((...a: unknown[]) => {
+    vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => {
       notices.push(a.join(' '));
     });
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('lists staging in order with a health path and one replica for the two new services', () => {
     const list = servicesFor('staging', ALL);
@@ -177,7 +177,7 @@ describe('the staging deploy of five services', () => {
   beforeEach(async () => {
     updates = [];
     failing = undefined;
-    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
     server = createServer((req, res) => {
       let body = '';
       req.on('data', (c) => {
@@ -192,7 +192,7 @@ describe('the staging deploy of five services', () => {
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     await new Promise((resolve) => server.close(resolve));
   });
 

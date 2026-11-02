@@ -65,9 +65,9 @@ beforeEach(async () => {
   refusals = 0;
   queued.length = 0;
   await reset();
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 afterAll(() => prisma.$disconnect());
 
 // @traces 116-FR-036

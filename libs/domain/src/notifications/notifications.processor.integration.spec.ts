@@ -190,7 +190,7 @@ describe('sending one e-mail', () => {
   });
 
   it('fails the row and calls nobody when its template cannot render', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const ana = await account('ana');
@@ -212,7 +212,7 @@ describe('sending one e-mail', () => {
   });
 
   it('fails the test message when the web app address is not configured', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     build({ PUBLIC_WEB_URL: '' });
@@ -448,7 +448,7 @@ describe('a job the worker does not know', () => {
 
 describe('the sweep job', () => {
   it('re-queues the stranded rows', async () => {
-    const sweep = jest.spyOn(service, 'requeueStranded').mockResolvedValue(2);
+    const sweep = vi.spyOn(service, 'requeueStranded').mockResolvedValue(2);
     await expect(
       processor.handle({ attemptsMade: 0, data: {}, name: 'requeue' }),
     ).resolves.toBeUndefined();
@@ -552,13 +552,11 @@ describe('the sweep of held rows whose job was lost', () => {
   it('still re-queues the stranded queued rows when the held sweep fails', async () => {
     const { row } = await heldOvernight();
     clocks(new Date(row.sendAfter!.getTime() + 10 * 60_000).toISOString());
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    const stranded = jest
-      .spyOn(service, 'requeueStranded')
-      .mockResolvedValue(1);
-    const read = jest
+    const stranded = vi.spyOn(service, 'requeueStranded').mockResolvedValue(1);
+    const read = vi
       .spyOn(prisma.notification, 'findMany')
       .mockRejectedValue(new Error('connection lost'));
     try {
@@ -621,7 +619,7 @@ describe('when Brevo fails', () => {
   });
 
   it('names the type and channel when it logs a retry', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const andrei = await account('andrei');
@@ -634,10 +632,10 @@ describe('when Brevo fails', () => {
   });
 
   it('logs the failure without the address or the message', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const ana = await account('ana');
@@ -869,15 +867,16 @@ describe('a window whose flush job is already running', () => {
   function duringFirstSend(during: () => Promise<unknown>) {
     const send = Brevo.prototype.send;
     let ran = false;
-    return jest
-      .spyOn(Brevo.prototype, 'send')
-      .mockImplementation(async function (this: Brevo, mail) {
-        if (!ran) {
-          ran = true;
-          await during();
-        }
-        return send.call(this, mail);
-      });
+    return vi.spyOn(Brevo.prototype, 'send').mockImplementation(async function (
+      this: Brevo,
+      mail,
+    ) {
+      if (!ran) {
+        ran = true;
+        await during();
+      }
+      return send.call(this, mail);
+    });
   }
 
   // A leader sent at 11:00 and two followers held behind it until 11:05.
@@ -1015,7 +1014,7 @@ describe('starting the worker', () => {
   it.each([400, 401, 403])(
     'refuses to send with a key Brevo refuses (%s), logs it and asks once',
     async (status) => {
-      const error = jest
+      const error = vi
         .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => undefined);
       mock.answer({ status });
@@ -1028,7 +1027,7 @@ describe('starting the worker', () => {
 
   // @traces 520-FR-001 520-FR-002 520-FR-003
   it('waits out an unreachable Brevo and starts once it answers', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const delays: number[] = [];
@@ -1049,7 +1048,7 @@ describe('starting the worker', () => {
   ])(
     'refuses to send e-mail with PUBLIC_WEB_URL %s, and logs it',
     async (_, value) => {
-      const error = jest
+      const error = vi
         .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => undefined);
       build({ PUBLIC_WEB_URL: value });
@@ -1068,7 +1067,7 @@ describe('starting the worker', () => {
   });
 
   it('refuses to send with no key', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     build({ BREVO_API_KEY: '' });

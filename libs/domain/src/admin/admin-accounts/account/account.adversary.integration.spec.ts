@@ -79,7 +79,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   published.length = 0;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());

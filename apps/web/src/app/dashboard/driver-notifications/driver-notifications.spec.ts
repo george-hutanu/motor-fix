@@ -830,3 +830,348 @@ describe('picking push', () => {
     );
   });
 });
+
+type Fallback = {
+  from: string;
+  to: string;
+  reason: string;
+  at?: string;
+};
+
+// A full read with one type's last message gone by another channel.
+const fallen = (
+  fallbacks: Record<string, Fallback | null | undefined>,
+  options: Parameters<typeof full>[0] = {},
+) => {
+  const read = full(options);
+  for (const entry of read.preferences as unknown as {
+    type: string;
+    fallback?: Fallback | null;
+  }[]) {
+    if (!(entry.type in fallbacks)) continue;
+    const fallback = fallbacks[entry.type];
+    if (fallback === undefined) continue;
+    entry.fallback = fallback && {
+      at: '2026-10-30T08:00:00.000Z',
+      ...fallback,
+    };
+  }
+  return read;
+};
+const hintOf = (element: HTMLElement, type: string) =>
+  element.querySelector<HTMLElement>(
+    `#driver-notifications-${type}-fallback-hint`,
+  );
+const hintText = (element: HTMLElement, type: string) =>
+  hintOf(element, type)?.textContent?.trim();
+
+// @traces 1415-FR-002 1415-FR-004 1415-FR-006
+describe('the fallback hint text', () => {
+  it.each([
+    [
+      'no_device',
+      'push',
+      'whatsapp',
+      'ro',
+      'Ultimul mesaj a venit pe WhatsApp: nu ai niciun dispozitiv cu notificări push. Permite notificările în acest browser.',
+    ],
+    [
+      'no_device',
+      'push',
+      'whatsapp',
+      'en',
+      'The last message came by WhatsApp: you have no device with push notifications. Allow notifications in this browser.',
+    ],
+    [
+      'phone_not_verified',
+      'sms',
+      'email',
+      'ro',
+      'Ultimul mesaj a venit pe E‑mail: numărul de telefon nu este confirmat. Confirmă‑l în Datele tale.',
+    ],
+    [
+      'phone_not_verified',
+      'sms',
+      'email',
+      'en',
+      'The last message came by E-mail: your phone number is not confirmed. Confirm it in Your details.',
+    ],
+    [
+      'sms_cap_reached',
+      'sms',
+      'whatsapp',
+      'ro',
+      'Ultimul mesaj a venit pe WhatsApp: ai folosit toate SMS‑urile lunii.',
+    ],
+    [
+      'sms_cap_reached',
+      'sms',
+      'whatsapp',
+      'en',
+      "The last message came by WhatsApp: you have used this month's SMS.",
+    ],
+    [
+      'send_failed',
+      'email',
+      'push',
+      'ro',
+      'Ultimul mesaj a venit pe Push: trimiterea pe E‑mail a eșuat. Verifică adresa de e‑mail în Datele tale.',
+    ],
+    [
+      'send_failed',
+      'email',
+      'push',
+      'en',
+      'The last message came by Push: sending by E-mail failed. Check your e-mail address in Your details.',
+    ],
+    [
+      'send_failed',
+      'sms',
+      'email',
+      'ro',
+      'Ultimul mesaj a venit pe E‑mail: trimiterea pe SMS a eșuat. Verifică numărul de telefon în Datele tale.',
+    ],
+    [
+      'send_failed',
+      'whatsapp',
+      'email',
+      'en',
+      'The last message came by E-mail: sending by WhatsApp failed. Check your phone number in Your details.',
+    ],
+    [
+      'send_failed',
+      'push',
+      'sms',
+      'ro',
+      'Ultimul mesaj a venit pe SMS: trimiterea pe Push a eșuat. Permite notificările în acest browser.',
+    ],
+    [
+      'send_failed',
+      'push',
+      'email',
+      'en',
+      'The last message came by E-mail: sending by Push failed. Allow notifications in this browser.',
+    ],
+  ] as const)(
+    'says why for %s from %s to %s in %s',
+    async (reason, from, to, language, text) => {
+      const { element } = await opened(
+        'due_dates',
+        fallen({ DUE_ITP: { from, reason, to } }),
+        language,
+      );
+
+      expect(hintText(element, 'DUE_ITP')).toBe(text);
+    },
+  );
+
+  it.each([
+    ['an unknown reason', { from: 'sms', reason: 'carrier_down', to: 'email' }],
+    ['an unknown from', { from: 'fax', reason: 'send_failed', to: 'email' }],
+    ['an unknown to', { from: 'sms', reason: 'no_device', to: 'pigeon' }],
+  ])('shows nothing for %s and keeps the panel', async (_, fallback) => {
+    const { element } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: fallback }),
+    );
+
+    expect(hintOf(element, 'DUE_ITP')).toBeNull();
+    expect(groupOf(element, 'ITP').hasAttribute('aria-describedby')).toBe(
+      false,
+    );
+    expect(checked(groupOf(element, 'RCA'))).toBe('email');
+  });
+});
+
+// @traces 1415-FR-001 1415-FR-005 1415-FR-006
+describe('where the fallback hint shows', () => {
+  const smsFailed = { from: 'sms', reason: 'send_failed', to: 'email' };
+
+  it.each([
+    ['a null fallback', fallen({ DUE_ITP: null })],
+    ['a read without one', full()],
+  ])('shows nothing for %s', async (_, first) => {
+    const { element } = await opened('due_dates', first);
+
+    expect(
+      region(element, 'due_dates')?.querySelector('[id$="-fallback-hint"]'),
+    ).toBeNull();
+    expect(groupOf(element, 'ITP').hasAttribute('aria-describedby')).toBe(
+      false,
+    );
+  });
+
+  it('shows the hint only under the type that carries a fallback, after its picker', async () => {
+    const { element } = await opened(
+      'due_dates',
+      fallen({ DUE_RCA: smsFailed }),
+    );
+
+    const hints = region(element, 'due_dates')!.querySelectorAll(
+      '[id$="-fallback-hint"]',
+    );
+    expect(hints).toHaveLength(1);
+    expect(groupOf(element, 'RCA').nextElementSibling).toBe(
+      hintOf(element, 'DUE_RCA'),
+    );
+    expect(hintOf(element, 'DUE_RCA')?.classList).toContain('hint');
+    expect(groupOf(element, 'ITP').hasAttribute('aria-describedby')).toBe(
+      false,
+    );
+  });
+
+  it('puts the hint under the channel label of a one-channel type', async () => {
+    const { element } = await opened(
+      'news',
+      fallen({ NEWS: { from: 'email', reason: 'send_failed', to: 'email' } }),
+    );
+
+    const hint = hintOf(element, 'NEWS') as HTMLElement;
+    expect(hint.textContent?.trim()).toBe(
+      'Ultimul mesaj a venit pe E‑mail: trimiterea pe E‑mail a eșuat. Verifică adresa de e‑mail în Datele tale.',
+    );
+    expect(hint.previousElementSibling?.classList).toContain('channel');
+    expect(
+      element.querySelector('[aria-describedby$="NEWS-fallback-hint"]'),
+    ).toBeNull();
+  });
+
+  it('shows the hint with the group switched off', async () => {
+    const read = fallen({ DUE_ITP: smsFailed });
+    const group = (
+      read.groups as unknown as { key: string; enabled: boolean }[]
+    ).find((g) => g.key === 'due_dates');
+    if (group) group.enabled = false;
+    const { element } = await opened('due_dates', read);
+
+    expect(isOn(named(element, 'Scadențe'))).toBe(false);
+    expect(hintOf(element, 'DUE_ITP')).not.toBeNull();
+  });
+
+  it('is not a live region', async () => {
+    const { element } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: smsFailed }),
+    );
+
+    const hint = hintOf(element, 'DUE_ITP') as HTMLElement;
+    expect(hint.hasAttribute('role')).toBe(false);
+    expect(hint.hasAttribute('aria-live')).toBe(false);
+  });
+});
+
+// @traces 1415-FR-001 1415-FR-003 1415-FR-006
+describe('the picker described by the fallback hint', () => {
+  it('names the fallback hint alone', async () => {
+    const { element } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: { from: 'push', reason: 'no_device', to: 'email' } }),
+    );
+
+    expect(groupOf(element, 'ITP').getAttribute('aria-describedby')).toBe(
+      'driver-notifications-DUE_ITP-fallback-hint',
+    );
+  });
+
+  it('names the push hint first, then the fallback hint', async () => {
+    const { element, settle } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: { from: 'push', reason: 'no_device', to: 'email' } }),
+    );
+    push.enable.mockImplementationOnce(async () => push.state.set('blocked'));
+
+    labelOf(groupOf(element, 'ITP'), 'push').click();
+    await settle();
+
+    expect(save).not.toHaveBeenCalled();
+    expect(groupOf(element, 'ITP').getAttribute('aria-describedby')).toBe(
+      'driver-notifications-DUE_ITP-push-hint driver-notifications-DUE_ITP-fallback-hint',
+    );
+    expect(hintOf(element, 'DUE_ITP')).not.toBeNull();
+  });
+});
+
+// @traces 1415-FR-003 1415-FR-006
+describe('the fallback hint after a pick', () => {
+  const smsFailed = { from: 'sms', reason: 'send_failed', to: 'email' };
+
+  it('goes away at once when the pick saves, with no re-read', async () => {
+    const { element, settle } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: smsFailed }),
+    );
+
+    labelOf(groupOf(element, 'ITP'), 'whatsapp').click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(hintOf(element, 'DUE_ITP')).toBeNull();
+    expect(groupOf(element, 'ITP').hasAttribute('aria-describedby')).toBe(
+      false,
+    );
+  });
+
+  it('stays when the save fails', async () => {
+    const { element, settle } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: smsFailed }),
+    );
+    save.mockRejectedValueOnce(new Error('down'));
+
+    labelOf(groupOf(element, 'ITP'), 'whatsapp').click();
+    await settle();
+
+    expect(hintOf(element, 'DUE_ITP')).not.toBeNull();
+  });
+
+  it('stays cleared when a read started before the save answers late', async () => {
+    const { element, settle } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: smsFailed }),
+    );
+    let answerRead: (value: NotificationPreferencesDto) => void = () =>
+      undefined;
+    read.mockReturnValueOnce(
+      new Promise<NotificationPreferencesDto>((resolve) => {
+        answerRead = resolve;
+      }),
+    );
+    resync.next();
+    await settle();
+
+    labelOf(groupOf(element, 'ITP'), 'whatsapp').click();
+    await settle();
+    answerRead(fallen({ DUE_ITP: smsFailed }));
+    await settle();
+
+    expect(hintOf(element, 'DUE_ITP')).toBeNull();
+  });
+
+  it('follows a live update: changed, dropped, or back after a cleared pick', async () => {
+    const { element, settle } = await opened(
+      'due_dates',
+      fallen({ DUE_ITP: smsFailed, DUE_RCA: smsFailed }),
+    );
+
+    labelOf(groupOf(element, 'ITP'), 'whatsapp').click();
+    await settle();
+    expect(hintOf(element, 'DUE_ITP')).toBeNull();
+
+    read.mockResolvedValue(
+      fallen(
+        {
+          DUE_ITP: { from: 'whatsapp', reason: 'send_failed', to: 'email' },
+          DUE_RCA: null,
+        },
+        { chosen: { DUE_ITP: 'whatsapp' } },
+      ),
+    );
+    resync.next();
+    await settle();
+
+    expect(hintText(element, 'DUE_ITP')).toBe(
+      'Ultimul mesaj a venit pe E‑mail: trimiterea pe WhatsApp a eșuat. Verifică numărul de telefon în Datele tale.',
+    );
+    expect(hintOf(element, 'DUE_RCA')).toBeNull();
+  });
+});

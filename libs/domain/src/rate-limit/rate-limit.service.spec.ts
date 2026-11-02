@@ -54,9 +54,9 @@ const digest = (value: string) =>
 // @traces 1181-FR-012
 describe('the route limits', () => {
   beforeEach(() =>
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
   );
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('admits a key up to its limit, then refuses with rate_limited and the wait', async () => {
     const limits = new RateLimits(countingRedis(37).redis);

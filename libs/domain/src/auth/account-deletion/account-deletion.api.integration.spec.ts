@@ -1,6 +1,7 @@
 // @traces 129-FR-001 129-FR-002 129-FR-003 129-FR-004 129-FR-005
 // @traces 129-FR-006 129-FR-007 129-FR-008 129-FR-012 129-FR-013
 // @traces 140-FR-012 140-FR-014 140-FR-017
+// @traces 1374-FR-006
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
@@ -110,7 +111,7 @@ beforeEach(async () => {
   await redis.flushdb();
   brevo.reset();
   published.length = 0;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -226,6 +227,7 @@ async function leftOf(accountId: string) {
     assistantGrant: await prisma.assistantGrant.count(where),
     assistantSignInCode: await prisma.assistantSignInCode.count(where),
     identity: await prisma.accountIdentity.count(where),
+    notificationFallback: await prisma.notificationFallback.count(where),
     notificationPreference: await prisma.notificationPreference.count(where),
     phoneChange: await prisma.phoneChange.count(where),
     pushSubscription: await prisma.pushSubscription.count(where),
@@ -263,6 +265,16 @@ async function everything(accountId: string) {
   });
   await prisma.notificationPreference.create({
     data: { accountId, channel: 'email', enabled: false, type: 'NEWS' },
+  });
+  await prisma.notificationFallback.create({
+    data: {
+      accountId,
+      at: new Date(),
+      from: 'push',
+      reason: 'no_device',
+      to: 'email',
+      type: 'DUE_ITP',
+    },
   });
   await prisma.assistantGrant.create({
     data: {
@@ -365,6 +377,7 @@ describe('deleting my account', () => {
       assistantGrant: 1,
       assistantSignInCode: 0,
       identity: 0,
+      notificationFallback: 0,
       notificationPreference: 0,
       phoneChange: 0,
       pushSubscription: 0,
@@ -577,7 +590,7 @@ describe('deleting my account', () => {
   });
 
   it('logs the deletion with the account id and no personal value', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const id = await person();

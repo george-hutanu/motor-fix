@@ -2,6 +2,7 @@ import {
   type DetailsSection,
   detailsComplete,
   isDetailsSection,
+  isListingDraftData,
   isMechanicsSection,
   isPricesSection,
   mechanicsComplete,
@@ -497,5 +498,47 @@ describe('mechanicsComplete at the edges', () => {
     expect(
       mechanicsComplete({ mechanics: [{ name: 'Ion', speciality: '' }] }),
     ).toBe(true);
+  });
+});
+
+// @traces 1249-FR-018 1249-FR-021
+describe("the draft's photo keys under hostile input", () => {
+  const DRAFT = '7c1f5d9e-2b44-4f0a-9a51-3d6e8c2b1f00';
+  const photo = (n: number) =>
+    `garage_photo/${DRAFT}/5e0a8f3b-91c2-4d7e-8b6a-${String(n).padStart(12, '0')}`;
+  const photos = (count: number) =>
+    Array.from({ length: count }, (_, n) => photo(n));
+  const files = (keys: unknown[]) => isListingDraftData({ files: keys });
+
+  it('takes twenty distinct photos of a draft', () => {
+    expect(files(photos(20))).toBe(true);
+  });
+
+  it.each([
+    ['36 dashes', '-'.repeat(36)],
+    ['36 hex digits and no dash', 'a'.repeat(36)],
+    ['dashes out of place', '7c1f5d9e2b44-4f0a-9a51-3d6e8c2b1f00---'],
+    ['uppercase hex', DRAFT.toUpperCase()],
+    ['a letter past f', DRAFT.replace('7', 'g')],
+  ])('refuses an owner of %s', (_, owner) => {
+    expect(files([`garage_photo/${owner}/p1`])).toBe(false);
+  });
+
+  it('refuses the same owner check on a document page', () => {
+    expect(
+      isListingDraftData({
+        documents: {
+          rar_authorisation: { pages: [`legal_document/${'-'.repeat(36)}/p1`] },
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it('refuses twenty-one photos', () => {
+    expect(files(photos(21))).toBe(false);
+  });
+
+  it('refuses a photo named twice', () => {
+    expect(files([photo(1), photo(2), photo(1)])).toBe(false);
   });
 });

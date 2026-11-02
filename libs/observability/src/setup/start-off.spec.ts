@@ -2,13 +2,13 @@ import { ProxyTracerProvider, trace } from '@opentelemetry/api';
 
 import { startTelemetry } from './start';
 
-jest.mock('@opentelemetry/sdk-trace-node', () => {
+vi.mock('@opentelemetry/sdk-trace-node', () => {
   throw new Error('the trace SDK was loaded');
 });
-jest.mock('@opentelemetry/sdk-metrics', () => {
+vi.mock('@opentelemetry/sdk-metrics', () => {
   throw new Error('the metrics SDK was loaded');
 });
-jest.mock('@opentelemetry/sdk-logs', () => {
+vi.mock('@opentelemetry/sdk-logs', () => {
   throw new Error('the logs SDK was loaded');
 });
 
@@ -30,7 +30,7 @@ describe('startTelemetry while telemetry is off', () => {
   });
 
   it('writes one error line naming the variable, never a value, when the endpoint is malformed', () => {
-    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(
       startTelemetry('api', {

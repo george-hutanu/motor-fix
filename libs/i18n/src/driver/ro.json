@@ -85,6 +85,9 @@
     },
     "findGarage": "Caută un service",
     "findGarageFor": "Caută un service pentru {car}",
+    "history": {
+      "previousOwner": "de la proprietarul anterior"
+    },
     "itp": {
       "days": {
         "few": "ITP‑ul expiră în {count} zile",
@@ -172,6 +175,16 @@
       "sent": "Linkul a plecat pe WhatsApp",
       "title": "Ai vândut {car}?"
     },
+    "sold": {
+      "empty": "Nicio reparație până la vânzare.",
+      "hide": "Ascunde istoricul",
+      "hideFor": "Ascunde istoricul pentru {car}",
+      "line": "{car} · vândută pe {day}",
+      "loading": "Citim istoricul…",
+      "show": "Vezi istoricul",
+      "showFor": "Vezi istoricul pentru {car}",
+      "title": "Mașini vândute"
+    },
     "transfer": {
       "cancel": "Anulează transferul",
       "confirm": {
@@ -255,6 +268,16 @@
       "confirm": "Sunt de acord",
       "text": "Vreau să primesc pe e‑mail noutăți MotorFix, cel mult o dată pe lună. Pot renunța oricând, cu un clic.",
       "title": "Primești noutăți MotorFix?"
+    },
+    "fallback": {
+      "no_device": "Ultimul mesaj a venit pe {to}: nu ai niciun dispozitiv cu notificări push. Permite notificările în acest browser.",
+      "phone_not_verified": "Ultimul mesaj a venit pe {to}: numărul de telefon nu este confirmat. Confirmă‑l în Datele tale.",
+      "send_failed": {
+        "email": "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Verifică adresa de e‑mail în Datele tale.",
+        "phone": "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Verifică numărul de telefon în Datele tale.",
+        "push": "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Permite notificările în acest browser."
+      },
+      "sms_cap_reached": "Ultimul mesaj a venit pe {to}: ai folosit toate SMS‑urile lunii."
     },
     "group": {
       "bookings": {

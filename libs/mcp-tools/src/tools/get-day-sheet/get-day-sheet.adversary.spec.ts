@@ -24,7 +24,7 @@ const entry = (id: string, more: Record<string, unknown> = {}): Entry =>
   }) as Entry;
 
 const sheetOf = (answer: Partial<Sheet> = {}) =>
-  jest.fn(async () => ({
+  vi.fn(async () => ({
     day: '2026-10-10',
     entries: [] as Entry[],
     jobCount: 0,
@@ -154,7 +154,7 @@ describe('get_day_sheet under hostile calls', () => {
   });
 
   it('answers a mechanic of another garage as not_found', async () => {
-    const get = jest.fn(async () => {
+    const get = vi.fn(async () => {
       throw new NotFoundException({ code: 'not_found', message: 'x' });
     });
     const result = await call({ mechanic: 'other-garage-id' }, get);
@@ -164,7 +164,7 @@ describe('get_day_sheet under hostile calls', () => {
 
   it('keeps the mechanics list on mechanic_not_found in both languages', async () => {
     const mechanics = [costel, { id: 'mechanic-2', name: 'Costel Pop' }];
-    const get = jest.fn(async () => {
+    const get = vi.fn(async () => {
       throw new NotFoundException({
         code: 'mechanic_not_found',
         mechanics,
@@ -194,7 +194,7 @@ describe('get_day_sheet under hostile calls', () => {
     });
     const result = await call(
       { mechanic: 'C' },
-      jest.fn(() => Promise.reject(down)),
+      vi.fn(() => Promise.reject(down)),
     );
     expect(result.structuredContent).toMatchObject({
       code: 'service_unavailable',
@@ -299,7 +299,7 @@ describe('get_day_sheet answers', () => {
       context({
         garage: {
           daySheet: {
-            get: jest
+            get: vi
               .fn()
               .mockResolvedValueOnce({
                 day: '2026-10-10',

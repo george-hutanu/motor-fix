@@ -281,8 +281,8 @@ describe('register', () => {
 
 // An acting tool with a preview, as every acting tool of the catalogue is.
 function previewed() {
-  const handler = jest.fn(async () => ({ moved: true, secret: 'x' }));
-  const preview = jest.fn(async () => ({ summary: 'Moves the booking.' }));
+  const handler = vi.fn(async () => ({ moved: true, secret: 'x' }));
+  const preview = vi.fn(async () => ({ summary: 'Moves the booking.' }));
   const tool = defineTool({
     acts: true,
     annotations: { destructiveHint: true, readOnlyHint: false },
@@ -467,7 +467,7 @@ function approvalSetup(language: 'ro' | 'en' = 'ro') {
   let now = new Date('2026-10-29T10:00:00Z');
   const confirmations = memoryConfirmations(() => now);
   const approvals = memoryApprovals(() => now);
-  const handler = jest.spyOn(bookFixture, 'handler');
+  const handler = vi.spyOn(bookFixture, 'handler');
   const tools = [bookFixture, confirmAction];
   const ctx = context({ approvals, confirmations });
   const who = caller({ language, roles: ['driver'] });
@@ -495,7 +495,7 @@ function approvalSetup(language: 'ro' | 'en' = 'ro') {
 }
 
 describe('in-app approval at the yes', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // @traces 1254-FR-001
   // @traces 1254-FR-002
@@ -577,7 +577,7 @@ describe('in-app approval at the yes', () => {
   // @traces 1254-FR-001
   it('saves the approval on a yes given over elicitation too', async () => {
     const approvals = memoryApprovals();
-    const handler = jest.spyOn(bookFixture, 'handler');
+    const handler = vi.spyOn(bookFixture, 'handler');
     const client = await connect(
       [bookFixture, confirmAction],
       caller({ language: 'en', roles: ['driver'] }),

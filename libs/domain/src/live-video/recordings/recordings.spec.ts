@@ -1,6 +1,7 @@
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import {
   LIVE_RECORDINGS_CONSUMER,
@@ -25,19 +26,19 @@ const SESSION = '0b6c3d7e-2f41-4a8e-9c1d-5e7f8a9b0c1d';
 const INPUT = 'input-uid-1';
 
 let provider: FakeLiveVideo;
-let findUnique: jest.Mock;
+let findUnique: Mock;
 let logger: Logger;
 
 beforeEach(() => {
   provider = new FakeLiveVideo();
-  findUnique = jest
+  findUnique = vi
     .fn()
     .mockResolvedValue({ provider: 'fake', providerInputId: INPUT });
   logger = new Logger('LiveRecordings');
-  jest.spyOn(logger, 'log').mockImplementation(() => undefined);
-  jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'log').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const recordings = (p = provider as typeof provider | typeof NONE) =>
   new LiveRecordings({ liveSession: { findUnique } } as never, p, logger);
@@ -93,9 +94,9 @@ describe('deleting a discarded recording in the worker', () => {
   });
 
   it('throws on a failed delete so the queue tries again, counting only the last try', async () => {
-    jest
-      .spyOn(provider, 'deleteRecording')
-      .mockRejectedValue(new Error('recording delete failed: 500'));
+    vi.spyOn(provider, 'deleteRecording').mockRejectedValue(
+      new Error('recording delete failed: 500'),
+    );
     const before = await total('motorfix_live_recordings_total', {
       outcome: 'discard_failed',
     });

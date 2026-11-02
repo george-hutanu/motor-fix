@@ -46,9 +46,9 @@ afterAll(async () => {
 
 beforeEach(() => {
   memory.spanExporter.reset();
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const cloudflare = () =>
   new CloudflareLiveVideo(

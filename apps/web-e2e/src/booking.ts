@@ -48,12 +48,22 @@ export async function freeSlot(request: APIRequestContext) {
 }
 
 // One request of the driver's, quoted by Militari and accepted by the driver,
-// so its booking waits for the garage's confirmation.
-export async function accepted(request: APIRequestContext) {
-  return (await acceptedBooking(request)).requestId;
+// so its booking waits for the garage's confirmation; at the slot given, so
+// two bookings can contend for one place, and of the driver named, so a test
+// can spare the seeded driver's 20 requests a day.
+export async function accepted(
+  request: APIRequestContext,
+  slot?: string,
+  email = DRIVER,
+) {
+  return (await acceptedBooking(request, email, slot)).requestId;
 }
 
-async function acceptedBooking(request: APIRequestContext, email = DRIVER) {
+async function acceptedBooking(
+  request: APIRequestContext,
+  email = DRIVER,
+  slot?: string,
+) {
   const militari = await accessToken(request, MILITARI);
   const me = await request.get('/api/v1/me', { headers: bearer(militari) });
   const { garageId } = (await me.json()) as { garageId: string };
@@ -82,7 +92,7 @@ async function acceptedBooking(request: APIRequestContext, email = DRIVER) {
       durationMinutes: 60,
       fromLei: 300,
       requestId,
-      slot: await freeSlot(request),
+      slot: slot ?? (await freeSlot(request)),
       toLei: 400,
     },
     headers: { ...bearer(militari), 'Idempotency-Key': randomUUID() },

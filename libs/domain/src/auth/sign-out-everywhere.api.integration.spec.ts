@@ -224,7 +224,7 @@ describe('signing out on all devices', () => {
       },
     ]);
 
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     events = {
       record: async () => {
         throw new Error('outbox down');
@@ -238,7 +238,7 @@ describe('signing out on all devices', () => {
       1,
     );
     expect(await entries(id)).toHaveLength(before);
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('writes nothing to the audit history for a sign-out on this device', async () => {
@@ -261,7 +261,7 @@ describe('signing out on all devices', () => {
       if (message.includes(id)) heard.push(JSON.parse(message));
     });
     await listener.subscribe('live:events');
-    const revoke = jest.spyOn(app.get(SignInService), 'revokeSessionsLive');
+    const revoke = vi.spyOn(app.get(SignInService), 'revokeSessionsLive');
     try {
       await everywhere(phone);
       await until('the live sign-out', () => heard.length > 0);
@@ -360,7 +360,7 @@ describe('signing out on all devices', () => {
     const unsent = new Promise<void>((resolve) => {
       logged = resolve;
     });
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation((message: unknown) => {
         if (String(message).startsWith('session.revoked not sent')) logged();

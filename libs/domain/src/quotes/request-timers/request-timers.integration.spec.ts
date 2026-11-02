@@ -62,7 +62,7 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -71,8 +71,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
   await jobs.obliterate({ force: true });
@@ -817,7 +817,7 @@ describe('expiring a request at the end of its seven days', () => {
     const { service, timers } = await start(EXPIRES);
     const notify = service.notify.bind(service);
     let calls = 0;
-    jest.spyOn(service, 'notify').mockImplementation(async (input) => {
+    vi.spyOn(service, 'notify').mockImplementation(async (input) => {
       calls += 1;
       if (calls === 2) throw new Error('mail queue down');
       return notify(input);

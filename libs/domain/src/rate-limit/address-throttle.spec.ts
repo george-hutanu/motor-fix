@@ -45,9 +45,9 @@ const rule = {
 
 describe('a limit per address over a window', () => {
   beforeEach(() =>
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
   );
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('admits the limit, then names the seconds left in the window', async () => {
     const throttle = new AddressThrottle(countingRedis(42).redis, rule);
@@ -103,9 +103,9 @@ describe('a limit per address over a window', () => {
 // @traces 280-FR-013
 describe('a limit per key over a window', () => {
   beforeEach(() =>
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
   );
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('counts a key as given, under the prefix by its digest', async () => {
     const { expiries, keys, redis } = countingRedis(30);

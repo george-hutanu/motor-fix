@@ -26,7 +26,7 @@ function cancelBooking(
     phone: '+40712345678',
   }),
 ) {
-  const handler = jest.fn(run);
+  const handler = vi.fn(run);
   const tool = defineTool({
     acts: true,
     annotations: { destructiveHint: true, readOnlyHint: false },

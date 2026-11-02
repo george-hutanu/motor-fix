@@ -21,7 +21,7 @@ let mark: bigint;
 beforeEach(async () => {
   mark = await outboxMark(prisma);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const NO_FUEL = {
   diesel: false,
@@ -266,9 +266,9 @@ describe('POST /quote-requests', () => {
 
   it('leaves no request, audit entry or event when the audit cannot be written', async () => {
     const { auth, body, driver } = await scene();
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValue(new Error('history unavailable'));
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValue(
+      new Error('history unavailable'),
+    );
 
     const res = await send(body, auth);
 

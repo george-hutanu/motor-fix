@@ -71,7 +71,7 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
   const keys = await redis.keys('auth:*');
   if (keys.length) await redis.del(...keys);
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -184,7 +184,7 @@ describe('creating a driver account', () => {
       }),
     ]);
 
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     events = {
       record: async () => {
         throw new Error('outbox down');
@@ -200,10 +200,10 @@ describe('creating a driver account', () => {
   });
 
   it('keeps the account when the session cannot be opened: 500, no cookie, and the password signs in later', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    jest
-      .spyOn(SignInService.prototype, 'openSession')
-      .mockRejectedValueOnce(new Error('database went away'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(SignInService.prototype, 'openSession').mockRejectedValueOnce(
+      new Error('database went away'),
+    );
 
     const failed = await signUp();
 
@@ -494,7 +494,7 @@ describe('the hourly limit per address', () => {
   });
 
   it('skips the limit for an address that cannot be read, and says so in the log', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     for (let i = 0; i < 11; i++) {
@@ -519,7 +519,7 @@ describe('the hourly limit per address', () => {
   });
 
   it('still signs up when Redis cannot be reached, and says so in the log', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const offline = await start('redis://127.0.0.1:1');
@@ -552,11 +552,11 @@ describe('the log', () => {
   it('holds the codes, and never the name, the e-mail, the password or the address', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(JSON.stringify(args));
-        });
+        },
+      );
     }
     const from = '198.51.100.249';
 

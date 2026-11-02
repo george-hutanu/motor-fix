@@ -92,10 +92,10 @@ async function untouched(s: Live) {
 }
 
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   fake().deleted.length = 0;
 });
 
@@ -271,10 +271,10 @@ describe('stopping a live stream and discarding its recording', () => {
 
   it('still answers when the provider delete fails, logging ids alone', async () => {
     const s = await live();
-    const warn = jest.mocked(Logger.prototype.warn);
-    jest
-      .spyOn(fake(), 'deleteRecording')
-      .mockRejectedValueOnce(new Error('provider down secret-detail'));
+    const warn = vi.mocked(Logger.prototype.warn);
+    vi.spyOn(fake(), 'deleteRecording').mockRejectedValueOnce(
+      new Error('provider down secret-detail'),
+    );
     const before = await recordings('discard_failed');
 
     const res = await send('post', s.stop, s.costel, { keep: false });
@@ -290,9 +290,9 @@ describe('stopping a live stream and discarding its recording', () => {
 
   it('gives up on a provider that never answers and still answers', async () => {
     const s = await live();
-    jest
-      .spyOn(fake(), 'deleteRecording')
-      .mockReturnValueOnce(new Promise<void>(() => undefined));
+    vi.spyOn(fake(), 'deleteRecording').mockReturnValueOnce(
+      new Promise<void>(() => undefined),
+    );
     const before = await recordings('discard_failed');
     const sent = Date.now();
 
@@ -446,7 +446,7 @@ describe('a stop or keep change that is refused', () => {
 
   it('logs a refused stop by code and session id alone', async () => {
     const s = await live();
-    const warn = jest.mocked(Logger.prototype.warn);
+    const warn = vi.mocked(Logger.prototype.warn);
 
     await send('post', s.stop, bearer(s.andrei, 'driver'), {});
 

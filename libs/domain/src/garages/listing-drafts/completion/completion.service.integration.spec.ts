@@ -135,7 +135,7 @@ describe('opening the copy', () => {
 
   it('keeps one copy per file when two opens race, and logs the one it made', async () => {
     await asked(['photos']);
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
 
@@ -424,7 +424,7 @@ describe('sending the copy again', () => {
   it('logs the sending again without the note', async () => {
     await asked(['photos']);
     const copy = await service.open(garage.owner);
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
 
@@ -601,7 +601,7 @@ describe('a sending again that is refused', () => {
       },
       steps: { ...steps, '1': { ...steps['1'], phone: '0733 000 111' } },
     }));
-    const replace = jest
+    const replace = vi
       .spyOn(LegalDocumentsService.prototype, 'replace')
       .mockRejectedValueOnce(new Error('storage down'));
     const since = await clock();
@@ -628,7 +628,7 @@ describe('a sending again that is refused', () => {
       ...data,
       files: [`garage-photos/${randomUUID()}/p5`],
     }));
-    const replace = jest
+    const replace = vi
       .spyOn(LegalDocumentsService.prototype, 'replace')
       .mockRejectedValueOnce(new Error('storage down'));
 

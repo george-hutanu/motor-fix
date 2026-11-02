@@ -134,7 +134,7 @@ describe('removing a photo', () => {
     store.beforeDelete = () => {
       throw new Error('storage down');
     };
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 
@@ -149,7 +149,7 @@ describe('removing a photo', () => {
     const draft = await draftWith(2);
     const key = draft.keys[0] as string;
     const open = drafts.open.bind(drafts);
-    const opening = jest
+    const opening = vi
       .spyOn(drafts, 'open')
       .mockImplementationOnce(async (...args) => {
         const opened = await open(...args);

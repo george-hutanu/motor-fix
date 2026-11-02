@@ -44,8 +44,8 @@ const queues = (
   .map((entry) => entry.name);
 
 // Booting every worker module and waiting out a reading take longer than
-// Jest's default 5 s.
-jest.setTimeout(60_000);
+// the runner's default 5 s.
+vi.setConfig({ hookTimeout: 60_000, testTimeout: 60_000 });
 
 const store = new S3TestStore();
 let app: INestApplication;

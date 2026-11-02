@@ -1,10 +1,10 @@
 import { logEntry } from './log';
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('logEntry while telemetry is off', () => {
   it('still writes its one JSON line on stdout', () => {
-    const out = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const out = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     logEntry('warn', 'telemetry is off', { method: 'GET' });
 
@@ -17,8 +17,8 @@ describe('logEntry while telemetry is off', () => {
   });
 
   it('still writes an error on stderr and nothing on stdout', () => {
-    const out = jest.spyOn(console, 'log').mockImplementation(() => {});
-    const err = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const out = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     logEntry('error', 'boom');
 

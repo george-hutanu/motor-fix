@@ -123,6 +123,19 @@ model SavedGarage {
   @@map("saved_garage")
 }
 
+// A driver's no to saving a garage after a finished job there; the time is
+// the first no.
+model SaveSuggestionDismissal {
+  accountId   String   @map("account_id") @db.Uuid
+  garageId    String   @map("garage_id") @db.Uuid
+  dismissedAt DateTime @default(now()) @map("dismissed_at") @db.Timestamptz(3)
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  garage      Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, garageId])
+  @@map("save_suggestion_dismissal")
+}
+
 enum RepairSource {
   motorfix
   logged

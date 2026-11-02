@@ -59,11 +59,11 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   notifications.now = () => NOW;
   await reset();
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
 
@@ -308,7 +308,7 @@ describe('the daily compliance step', () => {
   });
 
   it('reports the overdue cycles and logs one line for the run', async () => {
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
     await cycleDue('2026-10-01', { state: 'overdue' });
     await cycleDue('2026-10-22');
     await cycleDue('2026-11-20');
@@ -451,13 +451,11 @@ describe('the notices the compliance step sends', () => {
   // The notice commits on its own; the cycle's change after it is lost.
   const loseTheCommitAfterTheNotice = () => {
     const notify = notifications.notify.bind(notifications);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    jest
-      .spyOn(notifications, 'notify')
-      .mockImplementationOnce(async (input) => {
-        await notify(input);
-        throw new Error('commit lost');
-      });
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(notifications, 'notify').mockImplementationOnce(async (input) => {
+      await notify(input);
+      throw new Error('commit lost');
+    });
   };
 
   it('sends DOCUMENT_DUE once per channel when the run after a lost commit sends it again', async () => {

@@ -15,7 +15,7 @@ afterAll(() => {
   redis.disconnect();
   reader.disconnect();
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const fill = async (
   tag: string,
@@ -36,7 +36,7 @@ const fill = async (
 // @traces 1169-FR-006
 describe('purging warm entries by audience', () => {
   it('purges nothing and calls no hook for an empty audience', async () => {
-    const hook = jest.fn();
+    const hook = vi.fn();
 
     await expect(purgeAudience(redis, [], hook)).resolves.toEqual([]);
 
@@ -62,7 +62,7 @@ describe('purging warm entries by audience', () => {
 
   it('hands each warm tag to the hook', async () => {
     const id = randomUUID();
-    const hook = jest.fn();
+    const hook = vi.fn();
 
     await purgeAudience(redis, [`account:${id}`, `garage:${id}`], hook);
 
@@ -81,7 +81,7 @@ describe('purging warm entries by audience', () => {
     ' account:1',
     'garages:1',
   ])('names no warm tag for the audience key %s', async (key) => {
-    const hook = jest.fn();
+    const hook = vi.fn();
 
     await purgeAudience(redis, [key], hook);
 
@@ -133,7 +133,7 @@ describe('purging warm entries by audience', () => {
   it('still purges when the hook fails', async () => {
     const id = randomUUID();
     const k = await fill(`warm:account:${id}`);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     await purgeAudience(redis, [`account:${id}`], () => {
       throw new Error('cdn down');
@@ -144,7 +144,7 @@ describe('purging warm entries by audience', () => {
 
   it('rejects when Redis refuses, so the relay retries the event', async () => {
     const refusing = new Redis(redisUrlFor(2));
-    jest.spyOn(refusing, 'eval').mockRejectedValue(new Error('READONLY'));
+    vi.spyOn(refusing, 'eval').mockRejectedValue(new Error('READONLY'));
 
     await expect(purgeAudience(refusing, ['account:1'])).rejects.toThrow(
       'READONLY',

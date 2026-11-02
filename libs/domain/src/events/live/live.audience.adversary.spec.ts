@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 
 import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { LiveHub } from './live.hub';
 import type { LiveSubject } from '../audience';
@@ -56,19 +57,19 @@ const access = (over: Partial<GarageAccess> = {}): GarageAccess => ({
   ...over,
 });
 
-let load: jest.Mock<Promise<GarageAccess>, [string]>;
+let load: Mock<(...args: [string]) => Promise<GarageAccess>>;
 let hub: LiveHub;
 
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
-  load = jest.fn(async (_garageId: string) => access());
+  vi.useFakeTimers({ now: NOW });
+  load = vi.fn(async (_garageId: string) => access());
   hub = new LiveHub(load);
 });
 
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const open = (
@@ -116,8 +117,8 @@ const fanOut = (audience: string[], kind: string, id = `e${++counter}`) =>
   );
 
 const silenceLogs = () => [
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(),
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(),
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined),
 ];
 
 describe('audienceOf', () => {
@@ -414,7 +415,7 @@ describe('who still counts as staff', () => {
     await fanOut(['garage:g1'], 'request.created');
     load.mockResolvedValue(access({ owners: new Set() }));
 
-    jest.advanceTimersByTime(MINUTE);
+    vi.advanceTimersByTime(MINUTE);
     await fanOut(['garage:g1'], 'request.created');
 
     expect(owner.kinds()).toEqual(['request.created']);
@@ -532,7 +533,7 @@ describe('the staff cache', () => {
 
     await fanOut(['garage:g1'], 'request.created');
     await fanOut(['garage:g1'], 'request.created');
-    jest.advanceTimersByTime(60 * SECOND - 1);
+    vi.advanceTimersByTime(60 * SECOND - 1);
     await fanOut(['garage:g1'], 'request.created');
 
     expect(load).toHaveBeenCalledTimes(1);
@@ -542,7 +543,7 @@ describe('the staff cache', () => {
     staff('ion', 'garage');
     await fanOut(['garage:g1'], 'request.created');
 
-    jest.advanceTimersByTime(60 * SECOND);
+    vi.advanceTimersByTime(60 * SECOND);
     await fanOut(['garage:g1'], 'request.created');
 
     expect(load).toHaveBeenCalledTimes(2);

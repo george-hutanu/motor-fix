@@ -10,7 +10,7 @@ function answer(url: string, status: number, method = 'GET') {
   const res = Object.assign(new EventEmitter(), {
     statusCode: status,
   }) as unknown as Response;
-  new FailureLog().use(req, res, jest.fn());
+  new FailureLog().use(req, res, vi.fn());
   res.emit('finish');
   return res;
 }
@@ -21,15 +21,15 @@ let infos: unknown[];
 beforeEach(() => {
   warns = [];
   infos = [];
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation((m: unknown) => {
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation((m: unknown) => {
     warns.push(m);
   });
-  jest.spyOn(Logger.prototype, 'log').mockImplementation((m: unknown) => {
+  vi.spyOn(Logger.prototype, 'log').mockImplementation((m: unknown) => {
     infos.push(m);
   });
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1345-FR-018
 describe('FailureLog at the edges of the status classes', () => {
@@ -86,7 +86,7 @@ describe('FailureLog at the edges of the status classes', () => {
     const res = Object.assign(new EventEmitter(), {
       statusCode: 401,
     }) as unknown as Response;
-    new FailureLog().use(req, res, jest.fn());
+    new FailureLog().use(req, res, vi.fn());
 
     expect(infos).toEqual([]);
     expect(warns).toEqual([]);

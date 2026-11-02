@@ -68,7 +68,7 @@ describe('the writer given a kind or source outside the lists', () => {
     ['__proto__', 'api'],
     ['deploy', 'toString'],
   ])('never rejects and never stores %s from %s', async (kind, source) => {
-    const create = jest.fn();
+    const create = vi.fn();
     const prisma = new Proxy(
       { systemLogEntry: { create, upsert: create } },
       {
@@ -141,7 +141,7 @@ describe('minuteOf at its edges', () => {
 
 // @traces 297-FR-012
 describe('purgeSystemLog', () => {
-  const deleteMany = jest.fn();
+  const deleteMany = vi.fn();
   const prisma = { systemLogEntry: { deleteMany } } as never;
   const now = new Date('2026-10-17T00:30:00.000Z');
 

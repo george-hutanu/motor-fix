@@ -61,7 +61,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   store.objects.clear();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const AVIF = Buffer.from('avif bytes');
@@ -119,7 +119,7 @@ describe('serving a photo variant', () => {
     ['a name with more after it', 'g/{owner}/{digest}/640.avif.thumb'],
   ])('refuses %s without reading the store', async (_, shape) => {
     const { digest, owner } = await held();
-    const reads = jest.spyOn(store.objects, 'get');
+    const reads = vi.spyOn(store.objects, 'get');
 
     refusedAsMissing(
       await get(
@@ -155,7 +155,7 @@ describe('serving a photo variant', () => {
 
   it('answers storage_unavailable, never cached, when the store fails', async () => {
     const { variantPath } = await held();
-    jest.spyOn(store.objects, 'get').mockImplementation(() => {
+    vi.spyOn(store.objects, 'get').mockImplementation(() => {
       throw new Error('disk gone');
     });
 

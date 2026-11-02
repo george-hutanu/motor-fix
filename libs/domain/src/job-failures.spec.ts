@@ -21,7 +21,7 @@ describe('logFinalFailure', () => {
     const worker = fakeWorker();
     const logger = new Logger('Notifications');
     const seen: unknown[] = [];
-    jest.spyOn(logger, 'error').mockImplementation((message) => {
+    vi.spyOn(logger, 'error').mockImplementation((message) => {
       seen.push([message, requestContext.getStore()?.jobId]);
     });
     logFinalFailure(worker as unknown as Worker, logger);
@@ -37,7 +37,7 @@ describe('logFinalFailure', () => {
   it('treats an unrecoverable error as final', () => {
     const worker = fakeWorker();
     const logger = new Logger('Notifications');
-    const error = jest.spyOn(logger, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
     logFinalFailure(worker as unknown as Worker, logger);
 
     const unrecoverable = Object.assign(new Error('unknown job'), {
@@ -52,11 +52,11 @@ describe('logFinalFailure', () => {
 
 // @traces 297-FR-007
 describe('the system log entry of a job that failed for good', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const watch = () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-    return jest.spyOn(systemLog, 'write').mockResolvedValue('written');
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    return vi.spyOn(systemLog, 'write').mockResolvedValue('written');
   };
 
   it('is written once, on the last attempt only, with the queue, job, attempts and error class', () => {

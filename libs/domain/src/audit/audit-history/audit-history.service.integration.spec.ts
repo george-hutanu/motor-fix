@@ -812,7 +812,7 @@ describe('the index the unfiltered admin read uses', () => {
       // The service on the transaction, which alone sees the million, at one
       // instant, so the window is the same with and without the index.
       const now = Date.now();
-      jest.spyOn(Date, 'now').mockReturnValue(now);
+      vi.spyOn(Date, 'now').mockReturnValue(now);
       const inTx = new AuditHistoryService(tx as unknown as PrismaClient);
       await inTx.list(admin, {});
       for (let call = 0; call < 100; call++) {
@@ -822,7 +822,7 @@ describe('the index the unfiltered admin read uses', () => {
       }
       await tx.$executeRaw`DROP INDEX activity_log_at_idx`;
       unindexed = await inTx.list(admin, {});
-    }).finally(() => jest.restoreAllMocks());
+    }).finally(() => vi.restoreAllMocks());
 
     expect(plans).toHaveLength(2);
     for (const plan of plans) {

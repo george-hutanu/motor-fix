@@ -61,7 +61,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   store.objects.clear();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -140,7 +140,7 @@ describe('serving a photo variant, hostile requests', () => {
     ['an empty digest', () => ''],
   ])('refuses %s without reading the store', async (_, change) => {
     const { digest, owner } = await held();
-    const reads = jest.spyOn(store.objects, 'get');
+    const reads = vi.spyOn(store.objects, 'get');
 
     refusedAsMissing(await get(`g/${owner}/${change(digest)}/640.avif`));
     expect(reads).not.toHaveBeenCalled();
@@ -163,7 +163,7 @@ describe('serving a photo variant, hostile requests', () => {
     '640%2eavif%2e',
   ])('refuses the file name %p', async (file) => {
     const { variantPath } = await held();
-    const reads = jest.spyOn(store.objects, 'get');
+    const reads = vi.spyOn(store.objects, 'get');
 
     refusedAsMissing(await get(`${variantPath}/${file}`));
     expect(reads).not.toHaveBeenCalled();
@@ -264,7 +264,7 @@ describe('serving a photo variant, hostile requests', () => {
 
   it('answers storage_unavailable without a CDN tag when the store rejects with a non-error', async () => {
     const { variantPath } = await held();
-    jest.spyOn(store.objects, 'get').mockImplementation(() => {
+    vi.spyOn(store.objects, 'get').mockImplementation(() => {
       throw 'boom';
     });
 
@@ -291,7 +291,7 @@ describe('serving a photo variant, hostile requests', () => {
 
   it('reads the store once for one request', async () => {
     const { variantPath } = await held();
-    const reads = jest.spyOn(store.objects, 'get');
+    const reads = vi.spyOn(store.objects, 'get');
 
     await get(`${variantPath}/640.avif`);
 

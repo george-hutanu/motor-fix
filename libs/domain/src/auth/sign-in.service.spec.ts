@@ -17,9 +17,9 @@ const DIRECT: Forwarding = { headers: {}, socket: undefined };
 
 function service(blocked: boolean) {
   const attempts = {
-    blocked: jest.fn(async () => blocked),
-    clear: jest.fn(async () => undefined),
-    fail: jest.fn(async () => undefined),
+    blocked: vi.fn(async () => blocked),
+    clear: vi.fn(async () => undefined),
+    fail: vi.fn(async () => undefined),
   };
   const prisma = { account: { findUnique: async () => null } };
   const signIns = new SignInService(
@@ -41,11 +41,11 @@ async function refusal(
 ) {
   const lines: string[] = [];
   for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-    jest
-      .spyOn(Logger.prototype, level)
-      .mockImplementation((...args: unknown[]) => {
+    vi.spyOn(Logger.prototype, level).mockImplementation(
+      (...args: unknown[]) => {
         lines.push(JSON.stringify(args));
-      });
+      },
+    );
   }
   const { attempts, signIns } = service(blocked);
   const error = await signIns
@@ -60,7 +60,7 @@ function codeOf(error: unknown) {
     : error;
 }
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 500-FR-005
 describe('a refused sign-in names its caller masked', () => {
@@ -197,23 +197,24 @@ describe('a successful sign-in', () => {
   it('logs no line that names its caller', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(JSON.stringify(args));
-        });
+        },
+      );
     }
     const { attempts, signIns } = service(false);
     const inner = signIns as unknown as {
       credentials: () => Promise<unknown>;
     };
-    jest.spyOn(inner, 'credentials').mockResolvedValue({
+    vi.spyOn(inner, 'credentials').mockResolvedValue({
       account: { id: 'acc-1', roles: [], status: 'active' },
       role: 'driver',
     } as never);
-    jest
-      .spyOn(signIns, 'openSession')
-      .mockResolvedValue({ accessToken: 't', remember: true } as never);
+    vi.spyOn(signIns, 'openSession').mockResolvedValue({
+      accessToken: 't',
+      remember: true,
+    } as never);
 
     const issued = await signIns.signIn(
       { email: EMAIL, password: PASSWORD },

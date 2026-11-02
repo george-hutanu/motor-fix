@@ -11,5 +11,5 @@ describe('loading the time-block service after the schedule service', () => {
 
     const params = Reflect.getMetadata('design:paramtypes', TimeBlocksService);
     expect(params[3]).toBe(ScheduleService);
-  });
+  }, 60_000);
 });

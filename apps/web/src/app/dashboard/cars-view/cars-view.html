@@ -71,3 +71,12 @@
     <div class="skeleton" aria-hidden="true"></div>
   </div>
 }
+@defer (when soldCars().length) {
+  <mf-sold-cars [cars]="soldCars()" (gone)="loadSold()" />
+}
+@if (soldFailed()) {
+  <div class="sold-failed">
+    <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="loadSold()">{{ 'driver.cars.retry' | t }}</button>
+  </div>
+}

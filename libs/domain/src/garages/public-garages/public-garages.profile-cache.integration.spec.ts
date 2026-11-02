@@ -77,7 +77,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await reset();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const read = (slug: string, query: Record<string, string> = {}) =>
@@ -302,7 +302,7 @@ describe('the profile through the cache service', () => {
 
   it('answers from PostgreSQL while Redis is down, warning once per outage', async () => {
     const garage = await garageOf();
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const outageWarnings = () =>
@@ -311,13 +311,13 @@ describe('the profile through the cache service', () => {
       ).length;
     const send = appRedis.sendCommand.bind(appRedis);
     let down = true;
-    jest
-      .spyOn(appRedis, 'sendCommand')
-      .mockImplementation((command: Command, ...rest) => {
+    vi.spyOn(appRedis, 'sendCommand').mockImplementation(
+      (command: Command, ...rest) => {
         if (!down) return send(command, ...rest);
         command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
         return command.promise;
-      });
+      },
+    );
 
     const first = await read(garage.slug);
     const second = await read(garage.slug);

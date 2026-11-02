@@ -9,8 +9,8 @@ import {
   initProductCounters,
 } from './product-counters';
 
-// No startTelemetry in this file: Jest gives it a fresh global, so the
-// counters fall through to the OpenTelemetry API's no-op meter.
+// No startTelemetry in this file: otel-reset.ts clears the global first, so
+// the counters fall through to the OpenTelemetry API's no-op meter.
 // @traces 879-FR-011
 describe('the product counters with telemetry off', () => {
   it('count nothing and never throw', () => {

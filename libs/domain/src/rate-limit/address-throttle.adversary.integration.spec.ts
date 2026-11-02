@@ -17,7 +17,7 @@ const address = () =>
   `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.7`;
 
 afterEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   const keys = await store.keys('limit:adv-*');
   if (keys.length) await store.del(...keys);
 });
@@ -98,7 +98,7 @@ describe('giving a counted request back', () => {
   });
 
   it('swallows a store failure and says so in the log', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const broken = {

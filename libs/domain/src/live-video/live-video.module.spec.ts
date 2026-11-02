@@ -21,7 +21,7 @@ const secrets = {
 
 // @traces 1250-FR-001 1250-FR-012
 describe('which live video provider the api uses', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('uses Cloudflare whenever all five values are set', () => {
     expect(liveVideoConfig('production', secrets)).toEqual({
@@ -57,7 +57,7 @@ describe('which live video provider the api uses', () => {
   );
 
   it('has none when the signing key cannot be read, and never logs it', () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const broken = {
@@ -73,7 +73,7 @@ describe('which live video provider the api uses', () => {
 });
 
 describe('the live video module', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const providerOf = (
     config: Parameters<typeof LiveVideoModule.register>[0],
@@ -88,7 +88,7 @@ describe('the live video module', () => {
   };
 
   it('answers unavailable with no provider configured, and says so once at boot', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 
@@ -103,7 +103,7 @@ describe('the live video module', () => {
   });
 
   it('names the provider it chose without its secrets', () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
 

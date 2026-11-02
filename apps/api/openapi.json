@@ -3614,6 +3614,48 @@
         ]
       }
     },
+    "/api/v1/me/save-suggestions/{garageId}/dismiss": {
+      "post": {
+        "operationId": "SaveSuggestionsController_dismiss",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Recorded, or recorded already with its first time kept"
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          },
+          "404": {
+            "description": "not_found: no finished job of the caller at that garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remember the caller's no to saving a garage after a finished job there",
+        "tags": [
+          "saved-garages"
+        ]
+      }
+    },
     "/api/v1/me/dashboard-layouts/{role}": {
       "get": {
         "operationId": "DashboardLayoutsController_read",
@@ -6502,6 +6544,108 @@
         ]
       }
     },
+    "/api/v1/garage/jobs/{id}/lock": {
+      "post": {
+        "operationId": "JobLockController_take",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TakeJobLockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobLockTakenDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden: a mechanic not on this job; the desk for anything but reception or handover"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job"
+          },
+          "423": {
+            "description": "job_locked (with holder)"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable; nothing changed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Take the job, or refresh the caller’s own lock",
+        "tags": [
+          "garage-jobs"
+        ]
+      },
+      "delete": {
+        "operationId": "JobLockController_release",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "force",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Released, or nothing to release"
+          },
+          "403": {
+            "description": "forbidden: force by anyone but the owner"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable; nothing changed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Release the caller’s lock; the owner forces another’s",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
     "/api/v1/garage/jobs/{id}/start": {
       "post": {
         "operationId": "JobStagesController_start",
@@ -6515,6 +6659,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6533,7 +6687,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "not_received; invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); not_received; invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6560,6 +6720,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6578,7 +6748,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6605,6 +6781,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6623,7 +6809,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6650,6 +6842,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6668,7 +6870,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "job_not_started; invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); job_not_started; invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6726,7 +6934,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "job_closed; invalid_state"
+            "description": "job_changed (with job); job_closed; invalid_state"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6784,7 +6998,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "job_not_done; already_handed_over (with finalPriceBani); invalid_transition (with currentStatus) of the booking"
+            "description": "job_changed (with job); job_not_done; already_handed_over (with finalPriceBani); invalid_transition (with currentStatus) of the booking"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6842,7 +7062,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "not_handed_over; correction_window_closed"
+            "description": "job_changed (with job); not_handed_over; correction_window_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6909,7 +7135,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "too_many_steps; job_closed"
+            "description": "job_changed (with job); too_many_steps; job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6960,7 +7192,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_closed"
+            "description": "job_changed (with job); job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -7026,7 +7264,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_closed"
+            "description": "job_changed (with job); job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -7057,6 +7301,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "basedOnUpdatedAt",
+            "required": false,
+            "in": "query",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -7073,7 +7327,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_closed"
+            "description": "job_changed (with job); job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -7139,7 +7399,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_not_started; job_closed"
+            "description": "job_changed (with job); job_not_started; job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -9684,6 +9950,58 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/members/{accountId}": {
+      "delete": {
+        "operationId": "GarageMembersController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "removed"
+          },
+          "400": {
+            "description": "an id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "owner_row: the owner's own row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a receptionist from the garage, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/images/g/{owner}/{digest}/{file}": {
       "get": {
         "operationId": "getImageVariant",
@@ -11616,6 +11934,344 @@
         },
         "tags": [
           "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos": {
+      "get": {
+        "operationId": "OwnerPhotosController_list",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotosDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's gallery in order, with its stamp",
+        "tags": [
+          "garages"
+        ]
+      },
+      "put": {
+        "operationId": "OwnerPhotosController_save",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveGaragePhotosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotosDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a rule broken (errors[].field names the entry); unknown_photo: an id the gallery does not hold"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "409": {
+            "description": "file_missing: an added upload is not stored; photo_processing: its copies are not made yet; profile_changed: the version is not the current one"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Save the whole gallery in its new order: kept photos by id, new uploads by key, each with its caption",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/upload-url": {
+      "post": {
+        "operationId": "OwnerPhotosController_uploadAddress",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoUploadAddressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          },
+          "422": {
+            "description": "photos_full, file_type_not_allowed, file_too_large"
+          },
+          "429": {
+            "description": "rate_limited: too many upload addresses for this garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sign an upload of a photo for the gallery",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/uploads": {
+      "post": {
+        "operationId": "OwnerPhotosController_confirm",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotoUploadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or not an upload of its own"
+          },
+          "409": {
+            "description": "file_missing: nothing was uploaded"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          },
+          "422": {
+            "description": "file_type_mismatch, file_too_large"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Keep an uploaded photo under the garage and make its copies",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/uploads/{id}": {
+      "get": {
+        "operationId": "OwnerPhotosController_upload",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotoUploadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: no such upload"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "An upload not yet saved, as its copies are made",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "OwnerPhotosController_removeUpload",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: no such upload"
+          },
+          "409": {
+            "description": "photo_in_gallery: remove it by saving the gallery"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Drop an upload not yet saved, with its copies",
+        "tags": [
+          "garages"
         ]
       }
     },
@@ -13980,6 +14636,50 @@
           "types"
         ]
       },
+      "NotificationFallbackDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The channel it was meant for",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "to": {
+            "type": "string",
+            "description": "The channel it went by",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_device",
+              "phone_not_verified",
+              "sms_cap_reached",
+              "send_failed"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "reason",
+          "at"
+        ]
+      },
       "NotificationPreferenceDto": {
         "type": "object",
         "properties": {
@@ -14021,6 +14721,16 @@
                 "whatsapp"
               ]
             }
+          },
+          "fallback": {
+            "description": "A driver entry: the last message of the type that went by another channel than the chosen one since it was chosen, else null; a staff entry has none",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationFallbackDto"
+              }
+            ]
           }
         },
         "required": [
@@ -19739,6 +20449,42 @@
           "segments"
         ]
       },
+      "ScheduleIntervalDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "08:30"
+          },
+          "to": {
+            "type": "string",
+            "example": "17:00"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "ScheduleDayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "example": "2026-10-09"
+          },
+          "open": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleIntervalDto"
+            }
+          }
+        },
+        "required": [
+          "day",
+          "open"
+        ]
+      },
       "GarageScheduleDto": {
         "type": "object",
         "properties": {
@@ -19762,6 +20508,20 @@
           },
           "lifts": {
             "type": "boolean"
+          },
+          "liftCount": {
+            "type": "number",
+            "description": "The garage's lifts; 0 while lifts is false"
+          },
+          "hoursSet": {
+            "type": "boolean",
+            "description": "Whether the garage has set opening hours"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleDayDto"
+            }
           }
         },
         "required": [
@@ -19769,7 +20529,10 @@
           "blocks",
           "from",
           "to",
-          "lifts"
+          "lifts",
+          "liftCount",
+          "hoursSet",
+          "days"
         ]
       },
       "RatingBreakdownDto": {
@@ -21027,6 +21790,22 @@
           "steps"
         ]
       },
+      "SaveSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "garageId",
+          "name"
+        ]
+      },
       "ActiveRequestDto": {
         "type": "object",
         "properties": {
@@ -21087,6 +21866,15 @@
                 "$ref": "#/components/schemas/ActiveRequestJobDto"
               }
             ]
+          },
+          "saveSuggestion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SaveSuggestionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -21098,7 +21886,8 @@
           "range",
           "booking",
           "mechanicName",
-          "job"
+          "job",
+          "saveSuggestion"
         ]
       },
       "ActiveRequestAnswerDto": {
@@ -21205,6 +21994,95 @@
           "odometerKm"
         ]
       },
+      "LockHolderDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "firstName",
+          "role"
+        ]
+      },
+      "JobLockDto": {
+        "type": "object",
+        "properties": {
+          "holder": {
+            "$ref": "#/components/schemas/LockHolderDto"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastChangeAt": {
+            "type": "string",
+            "description": "The holder's last take or change; the lock ends 5 minutes after it",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "holder",
+          "since",
+          "lastChangeAt"
+        ]
+      },
+      "ForcedByDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          }
+        },
+        "required": [
+          "firstName",
+          "role"
+        ]
+      },
+      "LastForcedUnlockDto": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "$ref": "#/components/schemas/ForcedByDto"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "holderId": {
+            "type": "string",
+            "description": "Who held the lock",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "by",
+          "at",
+          "holderId"
+        ]
+      },
       "JobSummaryDto": {
         "type": "object",
         "properties": {
@@ -21304,6 +22182,29 @@
             "type": "number",
             "description": "Steps written, 0 to 20"
           },
+          "updatedAt": {
+            "type": "string",
+            "description": "The job's version, to send back as basedOnUpdatedAt",
+            "format": "date-time"
+          },
+          "lock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobLockDto"
+              }
+            ]
+          },
+          "lastForcedUnlock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LastForcedUnlockDto"
+              }
+            ]
+          },
           "noShowAt": {
             "type": "string",
             "description": "When the garage recorded that the driver did not come",
@@ -21340,6 +22241,9 @@
           "mechanicName",
           "stepsDone",
           "stepsTotal",
+          "updatedAt",
+          "lock",
+          "lastForcedUnlock",
           "noShowAt",
           "canRecordNoShow",
           "canWithdrawNoShow"
@@ -21575,6 +22479,29 @@
             "type": "number",
             "description": "Steps written, 0 to 20"
           },
+          "updatedAt": {
+            "type": "string",
+            "description": "The job's version, to send back as basedOnUpdatedAt",
+            "format": "date-time"
+          },
+          "lock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobLockDto"
+              }
+            ]
+          },
+          "lastForcedUnlock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LastForcedUnlockDto"
+              }
+            ]
+          },
           "noShowAt": {
             "type": "string",
             "description": "When the garage recorded that the driver did not come",
@@ -21635,6 +22562,9 @@
           "mechanicName",
           "stepsDone",
           "stepsTotal",
+          "updatedAt",
+          "lock",
+          "lastForcedUnlock",
           "noShowAt",
           "canRecordNoShow",
           "canWithdrawNoShow",
@@ -21645,9 +22575,72 @@
           "stages"
         ]
       },
+      "TakeJobLockDto": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "default": "edit",
+            "description": "A receptionist takes a job for its reception or handover only",
+            "enum": [
+              "edit",
+              "reception",
+              "handover"
+            ]
+          }
+        }
+      },
+      "JobLockTakenDto": {
+        "type": "object",
+        "properties": {
+          "holder": {
+            "$ref": "#/components/schemas/LockHolderDto"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastChangeAt": {
+            "type": "string",
+            "description": "The holder's last take or change; the lock ends 5 minutes after it",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "The job's version, to send back as basedOnUpdatedAt",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "holder",
+          "since",
+          "lastChangeAt",
+          "expiresAt",
+          "updatedAt"
+        ]
+      },
+      "BasedOnUpdatedAtDto": {
+        "type": "object",
+        "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          }
+        }
+      },
       "ReceiveJobDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "odometerKm": {
             "type": "integer",
             "description": "The odometer reading, in km",
@@ -21662,6 +22655,11 @@
       "FinalPriceDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "finalPriceBani": {
             "type": "number",
             "description": "The final price, in bani",
@@ -21676,6 +22674,11 @@
       "JobStepTextDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "text": {
             "type": "string",
             "description": "Trimmed, 2 to 80 characters",
@@ -21690,6 +22693,11 @@
       "ReorderJobStepsDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "stepIds": {
             "description": "Every step of the job, once each, in the new order",
             "maxItems": 20,
@@ -21708,6 +22716,11 @@
       "JobStepDoneDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "done": {
             "type": "boolean",
             "description": "true ticks the step, false unticks it"
@@ -23816,6 +24829,11 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "caption": {
+            "type": "string",
+            "description": "The owner's caption, when the photo has one",
+            "maxLength": 80
           },
           "thumbnailUrl": {
             "type": "string",
@@ -27635,6 +28653,139 @@
         },
         "required": [
           "photos"
+        ]
+      },
+      "GaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "number",
+            "description": "0 is the cover"
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy, signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 1
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Always true: the gallery holds only processed photos"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "thumbnailUrl",
+          "processed"
+        ]
+      },
+      "GaragePhotosDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp, sent back on save"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaragePhotoDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "photos"
+        ]
+      },
+      "SaveGaragePhotoEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "A photo the gallery holds",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "description": "An upload confirmed for this garage"
+          },
+          "caption": {
+            "type": "string",
+            "description": "Trimmed; empty clears it. No control characters",
+            "maxLength": 80,
+            "nullable": true
+          }
+        }
+      },
+      "SaveGaragePhotosDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp as last read",
+            "maxLength": 20,
+            "minLength": 1
+          },
+          "photos": {
+            "description": "Exactly one of id and key per entry; the first is the cover",
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaveGaragePhotoEntryDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "photos"
+        ]
+      },
+      "GaragePhotoUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key to put in the gallery"
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Whether the copies are made"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "Signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "key",
+          "processed"
         ]
       },
       "DocumentUploadRequestDto": {

@@ -3,9 +3,13 @@ import { Worker } from 'bullmq';
 
 import { ListingPhotosWorkerModule } from './listing-photos.worker';
 
-jest.mock('bullmq', () => ({
-  ...jest.requireActual('bullmq'),
-  Worker: jest.fn().mockImplementation(() => ({ on: jest.fn() })),
+vi.mock('bullmq', async (actualModule) => ({
+  ...(await actualModule<typeof import('bullmq')>()),
+  Worker: vi.fn(
+    class {
+      on = vi.fn();
+    },
+  ),
 }));
 
 const provider = (name: string) => {
@@ -38,7 +42,7 @@ describe('ListingPhotosWorkerModule', () => {
       delete process.env['PHOTO_WORKER_CONCURRENCY'];
     }
 
-    expect(jest.mocked(Worker).mock.calls[0]?.[2]).toEqual(
+    expect(vi.mocked(Worker).mock.calls[0]?.[2]).toEqual(
       expect.objectContaining({ concurrency: 3 }),
     );
   });

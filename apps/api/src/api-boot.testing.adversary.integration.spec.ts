@@ -9,15 +9,15 @@ const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('stopping the API boot handle in unusual orders', () => {
   it(
     'stops cleanly when start was never called, closing nothing',
     async () => {
-      const closeApp = jest.spyOn(NestApplication.prototype, 'close');
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+      const closeApp = vi.spyOn(NestApplication.prototype, 'close');
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
 
       await expect(api.stop()).resolves.toBeUndefined();
@@ -36,13 +36,13 @@ describe('stopping the API boot handle in unusual orders', () => {
       const storeFailure = new Error('store stop failed');
       const closeOriginal = NestApplication.prototype.close;
       const stopOriginal = S3TestStore.prototype.stop;
-      jest
-        .spyOn(NestApplication.prototype, 'close')
-        .mockImplementationOnce(async function (this: NestApplication) {
+      vi.spyOn(NestApplication.prototype, 'close').mockImplementationOnce(
+        async function (this: NestApplication) {
           await closeOriginal.call(this);
           throw appFailure;
-        });
-      const stopStore = jest
+        },
+      );
+      const stopStore = vi
         .spyOn(S3TestStore.prototype, 'stop')
         .mockImplementationOnce(async function (this: S3TestStore) {
           await stopOriginal.call(this);
@@ -64,13 +64,13 @@ describe('stopping the API boot handle in unusual orders', () => {
     async () => {
       const storeFailure = new Error('store stop failed');
       const stopOriginal = S3TestStore.prototype.stop;
-      const closeApp = jest.spyOn(NestApplication.prototype, 'close');
-      jest
-        .spyOn(S3TestStore.prototype, 'stop')
-        .mockImplementationOnce(async function (this: S3TestStore) {
+      const closeApp = vi.spyOn(NestApplication.prototype, 'close');
+      vi.spyOn(S3TestStore.prototype, 'stop').mockImplementationOnce(
+        async function (this: S3TestStore) {
           await stopOriginal.call(this);
           throw storeFailure;
-        });
+        },
+      );
       const api = apiBoot();
       await api.start();
 
@@ -87,13 +87,13 @@ describe('stopping the API boot handle in unusual orders', () => {
     async () => {
       const failure = new Error('close failed');
       const closeOriginal = NestApplication.prototype.close;
-      const closeApp = jest
+      const closeApp = vi
         .spyOn(NestApplication.prototype, 'close')
         .mockImplementationOnce(async function (this: NestApplication) {
           await closeOriginal.call(this);
           throw failure;
         });
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
       await api.start();
       await expect(api.stop()).rejects.toBe(failure);
@@ -111,10 +111,10 @@ describe('stopping the API boot handle in unusual orders', () => {
     'stays harmless when stop is called twice after a failed boot',
     async () => {
       const failure = new Error('bad module');
-      jest.spyOn(Test, 'createTestingModule').mockImplementationOnce(() => {
+      vi.spyOn(Test, 'createTestingModule').mockImplementationOnce(() => {
         throw failure;
       });
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
       await expect(api.start()).rejects.toBe(failure);
 
@@ -133,16 +133,16 @@ describe('stopping the API boot handle in unusual orders', () => {
       const initFailure = new Error('init failed');
       const closeFailure = new Error('close failed');
       const closeOriginal = NestApplication.prototype.close;
-      jest
-        .spyOn(NestApplication.prototype, 'init')
-        .mockRejectedValueOnce(initFailure);
-      jest
-        .spyOn(NestApplication.prototype, 'close')
-        .mockImplementationOnce(async function (this: NestApplication) {
+      vi.spyOn(NestApplication.prototype, 'init').mockRejectedValueOnce(
+        initFailure,
+      );
+      vi.spyOn(NestApplication.prototype, 'close').mockImplementationOnce(
+        async function (this: NestApplication) {
           await closeOriginal.call(this);
           throw closeFailure;
-        });
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+        },
+      );
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
       await expect(api.start()).rejects.toBe(initFailure);
 

@@ -49,9 +49,9 @@ function countingRedis() {
 
 describe('the create limit per address', () => {
   beforeEach(() =>
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
   );
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('admits ten drafts an hour, then names the wait', async () => {
     const throttle = new ListingDraftThrottle(countingRedis().redis);
@@ -109,9 +109,9 @@ describe('the create limit per address', () => {
 // @traces 116-FR-032
 describe('a create that fails', () => {
   beforeEach(() =>
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
   );
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const caller = { ip: '198.51.100.7' } as Request;
   const refused = new HttpException('invalid', HttpStatus.BAD_REQUEST);

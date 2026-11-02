@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { diag, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 import type { Queue, Worker } from 'bullmq';
+import type { Mock } from 'vitest';
 
 import { observeQueue, observeWorker } from './observe';
 import { startTelemetry } from '../setup/start';
@@ -220,28 +221,32 @@ describe('observeQueue', () => {
     read: Partial<Record<'counts' | 'waiting', unknown>> = {},
   ) {
     return {
-      getJobCounts: jest.fn(
-        async () => read.counts ?? { failed: 2, waiting: 5 },
-      ),
-      getWaiting: jest.fn(
+      getJobCounts: vi.fn(async () => read.counts ?? { failed: 2, waiting: 5 }),
+      getWaiting: vi.fn(
         async () => read.waiting ?? [{ timestamp: Date.now() - 30_000 }],
       ),
       name,
     } as unknown as Queue & {
-      getJobCounts: jest.Mock;
-      getWaiting: jest.Mock;
+      getJobCounts: Mock;
+      getWaiting: Mock;
     };
   }
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('reports waiting, oldest waiting age and failed counts by queue, read every 15 seconds', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
     const queue = fakeQueue('reminders');
     const stop = observeQueue(queue);
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(await points('motorfix_queue_waiting')).toContainEqual(
       expect.objectContaining({ attributes: { queue: 'reminders' }, value: 5 }),
@@ -259,36 +264,48 @@ describe('observeQueue', () => {
     );
     expect(queue.getWaiting).toHaveBeenCalledWith(0, 0);
 
-    await jest.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(15_000);
     expect(queue.getJobCounts).toHaveBeenCalledTimes(2);
 
     stop();
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(queue.getJobCounts).toHaveBeenCalledTimes(2);
   });
 
   it('stops reading once the queue closes', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
     const queue = fakeQueue('closing');
     observeQueue(queue);
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
     Object.assign(queue, { closing: Promise.resolve() });
 
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
 
     expect(queue.getJobCounts).toHaveBeenCalledTimes(1);
   });
 
   it('reports an oldest age of 0 for an empty queue', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
     const stop = observeQueue(
       fakeQueue('insights', { counts: { failed: 0, waiting: 0 }, waiting: [] }),
     );
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(
       await points('motorfix_queue_oldest_waiting_seconds'),
@@ -299,15 +316,21 @@ describe('observeQueue', () => {
   });
 
   it('swallows a read error and reports it once through diag', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'setImmediate', 'performance', 'hrtime'],
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
     });
-    const error = jest.spyOn(diag, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(diag, 'error').mockImplementation(() => {});
     const queue = fakeQueue('outbox');
     queue.getJobCounts.mockRejectedValue(new Error('redis down'));
 
     const stop = observeQueue(queue);
-    await jest.advanceTimersByTimeAsync(45_000);
+    await vi.advanceTimersByTimeAsync(45_000);
 
     expect(error).toHaveBeenCalledTimes(1);
     stop();

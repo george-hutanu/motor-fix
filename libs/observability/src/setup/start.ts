@@ -18,7 +18,9 @@ import { observeCpu } from './cpu';
 import { instrumentations } from './instrumentations';
 import { observeMemory } from './memory';
 import { sampler } from './sampler';
+import { gaugeDelta } from './temporality';
 import { scrub } from '../scrub/scrub';
+import { ScrubSpanProcessor } from '../scrub/span-processor';
 
 export type Service = 'api' | 'worker' | 'mcp' | 'web';
 
@@ -129,10 +131,6 @@ function boot(
     require('@opentelemetry/sdk-logs') as typeof import('@opentelemetry/sdk-logs');
   const { registerInstrumentations } =
     require('@opentelemetry/instrumentation') as typeof import('@opentelemetry/instrumentation');
-  const { ScrubSpanProcessor } =
-    require('../scrub/span-processor') as typeof import('../scrub/span-processor');
-  const { gaugeDelta } =
-    require('./temporality') as typeof import('./temporality');
 
   const base = endpoint.href.replace(/\/$/, '');
   const otlp = (signal: string) => ({

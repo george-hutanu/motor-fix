@@ -230,7 +230,7 @@ describe('api conventions', () => {
   it('logs the caller of a refused sign-in as the trusted chain names it, not as the visitor wrote it', async () => {
     app = await start();
     const callers: string[] = [];
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation((...args: unknown[]) => {
         const line = String(args[0]);
@@ -368,7 +368,7 @@ describe('api conventions', () => {
   it('writes JSON log lines that carry the request id', async () => {
     app = await start();
     const lines: string[] = [];
-    const write = jest
+    const write = vi
       .spyOn(process.stdout, 'write')
       .mockImplementation((chunk) => {
         lines.push(String(chunk));

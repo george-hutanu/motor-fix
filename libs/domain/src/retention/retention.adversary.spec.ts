@@ -65,7 +65,7 @@ describe('runRetention under hostile sweeps', () => {
   it('keeps sweeping after a failure and fails once at the end naming every failed kind', async () => {
     const { deps, lines, errors } = makeDeps();
     const boom = new Error('boom');
-    const after = jest.fn(async () => 4);
+    const after = vi.fn(async () => 4);
     const promise = runRetention(deps, now, [
       ['sign_in_code', async () => Promise.reject(boom)],
       ['phone_change', after],

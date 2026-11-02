@@ -4,12 +4,16 @@
 /* Half is halfway, or on a short stage (a small phone with the consent bar
    open) just under the map's zoom buttons, never past low. Under a header
    taller than half the stage it still shows the list's first 6rem, rising
-   as far as under the zoom buttons. */
+   as far as under the zoom buttons. Under a header taller than the whole
+   stage every rest is the cell's top: the sheet never rises out of it. */
 :host {
-  --rest: min(
-    max(50%, 6.5rem),
-    max(6.5rem, calc(100% - var(--sheet-top, 160px) - 6rem)),
-    calc(100% - var(--sheet-top, 160px))
+  --rest: max(
+    0px,
+    min(
+      max(50%, 6.5rem),
+      max(6.5rem, calc(100% - var(--sheet-top, 160px) - 6rem)),
+      calc(100% - var(--sheet-top, 160px))
+    )
   );
   background: var(--mf-panel);
   border-radius: var(--mf-radius-panel) var(--mf-radius-panel) 0 0;
@@ -26,11 +30,15 @@
 }
 
 :host([data-position="low"]) {
-  --rest: calc(100% - var(--sheet-top, 160px));
+  --rest: max(0px, calc(100% - var(--sheet-top, 160px)));
 }
 
+/* A header taller than the sheet (320 px, the consent bar asking) scrolls
+   inside it, so the filters under the brand search stay reachable. */
 .top {
   flex: none;
+  max-height: 100%;
+  overflow-y: auto;
   padding-inline: var(--mf-space-4);
 }
 
@@ -68,6 +76,19 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--mf-space-3) var(--mf-space-4) var(--mf-space-4);
+}
+
+/* Forced full by a state the half sheet would cut (the filtered empty state
+   with the consent bar asking at 390 px): the header keeps a third of the
+   sheet, less on a short phone so 11rem stay for the state, and scrolls, so the state under it shows whole. */
+:host(.forced) .top {
+  max-height: max(var(--mf-tap), min(33%, 100% - 11rem));
+}
+
+:host(.forced) .body {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {

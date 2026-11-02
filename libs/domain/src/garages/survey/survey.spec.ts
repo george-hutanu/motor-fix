@@ -12,16 +12,16 @@ const ANSWERS = {
   wantsLiveMedia: false,
 };
 
-const audit = { recordMany: jest.fn() } as unknown as AuditPort;
+const audit = { recordMany: vi.fn() } as unknown as AuditPort;
 
 // Two surveys for one garage at the same time: both find none, and the
 // second one's insert meets the first one's row.
 const raced = (error: unknown) =>
   ({
-    garageFeature: { createMany: jest.fn() },
+    garageFeature: { createMany: vi.fn() },
     garageSurvey: {
-      create: jest.fn().mockRejectedValue(error),
-      findUnique: jest.fn().mockResolvedValue(null),
+      create: vi.fn().mockRejectedValue(error),
+      findUnique: vi.fn().mockResolvedValue(null),
     },
   }) as unknown as Prisma.TransactionClient;
 

@@ -20,7 +20,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE outbox_event');
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const generation = (garageId: string) =>
@@ -165,12 +165,14 @@ describe('relaying a schedule event', () => {
     ],
   ])('neither drops nor records anything for %s', async (kind, subject) => {
     const garageId = randomUUID();
-    await recorded(kind, subject(garageId), garageId);
+    const own = await recorded(kind, subject(garageId), garageId);
 
     await new OutboxRelay(prisma, redis).relay();
 
     expect(await generation(garageId)).toBeNull();
-    expect(await slotsChanged()).toEqual([]);
+    // Only the event recorded here, when it is a slots_changed itself.
+    const after = (await slotsChanged()).map((event) => event.id);
+    expect(after).toEqual(kind === 'garage.slots_changed' ? [own.id] : []);
   });
 
   it('rolls the batch back when Valkey refuses the drop, and drops on the retry', async () => {
@@ -186,7 +188,7 @@ describe('relaying a schedule event', () => {
       randomUUID(),
     );
     const incr = redis.incr.bind(redis);
-    const refusing = jest
+    const refusing = vi
       .spyOn(redis, 'incr')
       .mockImplementation(((key: string) =>
         key.startsWith('free-slots-gen:')

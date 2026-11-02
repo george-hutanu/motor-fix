@@ -60,8 +60,8 @@ describe('setRoute outside and inside a request', () => {
 
 describe('routeLabel middleware', () => {
   it('calls next even when no request is active', () => {
-    const next = jest.fn();
-    routeLabel()({}, { once: jest.fn() }, next);
+    const next = vi.fn();
+    routeLabel()({}, { once: vi.fn() }, next);
     expect(next).toHaveBeenCalledTimes(1);
   });
 

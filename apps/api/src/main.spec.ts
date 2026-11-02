@@ -1,53 +1,53 @@
-const mockLoad = jest.fn(async (..._args: unknown[]) => ({ changed: 0 }));
+const mockLoad = vi.fn(async (..._args: unknown[]) => ({ changed: 0 }));
 const mockApp = {
-  close: jest.fn(async () => undefined),
-  enableShutdownHooks: jest.fn(),
-  get: jest.fn((..._args: unknown[]) => ({ load: mockLoad })),
-  listen: jest.fn(async () => undefined),
+  close: vi.fn(async () => undefined),
+  enableShutdownHooks: vi.fn(),
+  get: vi.fn((..._args: unknown[]) => ({ load: mockLoad })),
+  listen: vi.fn(async () => undefined),
 };
-const mockCreate = jest.fn(async (..._args: unknown[]) => mockApp);
-const mockReadEnv = jest.fn(
+const mockCreate = vi.fn(async (..._args: unknown[]) => mockApp);
+const mockReadEnv = vi.fn(
   (..._args: unknown[]): { APP_ENV: string; RELEASE_SHA?: string } => ({
     APP_ENV: 'test',
   }),
 );
-const mockRegister = jest.fn((..._args: unknown[]) => 'registered module');
-const mockConfigure = jest.fn();
-const mockWrite = jest.fn();
-const mockWarm = jest.fn(
+const mockRegister = vi.fn((..._args: unknown[]) => 'registered module');
+const mockConfigure = vi.fn();
+const mockWrite = vi.fn();
+const mockWarm = vi.fn(
   (..._args: unknown[]) => new Promise<void>(() => undefined),
 );
 
-jest.mock('node:fs', () => ({
-  ...jest.requireActual('node:fs'),
+vi.mock('node:fs', async (actualModule) => ({
+  ...(await actualModule<typeof import('node:fs')>()),
   writeFileSync: (...args: unknown[]) => mockWrite(...args),
 }));
-jest.mock('@motor-fix/contracts', () => ({
+vi.mock('@motor-fix/contracts', () => ({
   readEnv: (...args: unknown[]) => mockReadEnv(...args),
   STORAGE_ENV: ['S3_BUCKET'],
 }));
-jest.mock('@motor-fix/domain', () => ({
+vi.mock('@motor-fix/domain', () => ({
   AREAS: ['the area file'],
   AreaLoader: class AreaLoader {},
   BRANDS: ['the brand file'],
   BrandLoader: class BrandLoader {},
   CAR_MODELS: ['the car model file'],
-  initProductCounters: jest.fn(),
+  initProductCounters: vi.fn(),
   JOB_TYPES: ['the job file'],
   JobTypeLoader: class JobTypeLoader {},
   Models3dLoader: class Models3dLoader {},
   warmCache: (...args: unknown[]) => mockWarm(...args),
 }));
-jest.mock('@nestjs/core', () => ({
+vi.mock('@nestjs/core', () => ({
   NestFactory: { create: (...args: unknown[]) => mockCreate(...args) },
 }));
-jest.mock('@nestjs/platform-express', () => ({
+vi.mock('@nestjs/platform-express', () => ({
   ExpressAdapter: class ExpressAdapter {},
 }));
-jest.mock('./app.module', () => ({
+vi.mock('./app.module', () => ({
   AppModule: { register: (...args: unknown[]) => mockRegister(...args) },
 }));
-jest.mock('./bootstrap', () => ({
+vi.mock('./bootstrap', () => ({
   configureApp: (...args: unknown[]) => mockConfigure(...args),
   openApiDocument: () => ({ openapi: '3.0.0' }),
 }));
@@ -67,9 +67,8 @@ async function run(args: string[], port?: string, apiPort?: string) {
   process.argv = ['node', 'main.js', ...args];
   setEnv({ API_PORT: apiPort, PORT: port });
   try {
-    await jest.isolateModulesAsync(async () => {
-      await import('./main');
-    });
+    vi.resetModules();
+    await import('./main');
     for (let i = 0; i < 10; i++)
       await new Promise((resolve) => setImmediate(resolve));
   } finally {
@@ -79,11 +78,11 @@ async function run(args: string[], port?: string, apiPort?: string) {
 }
 
 // The first import compiles main.ts and what it imports, which can take more
-// than Jest's 5 s default on a loaded CI runner.
-jest.setTimeout(30_000);
+// than the runner's 5 s default on a loaded CI runner.
+vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
 
 describe('api entry point', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('builds the app from the environment it checks', async () => {
     await run([]);
@@ -196,10 +195,10 @@ describe('api entry point', () => {
   });
 
   it('stops with exit code 1, never serving, when the brand file cannot load', async () => {
-    const exit = jest
+    const exit = vi
       .spyOn(process, 'exit')
       .mockImplementation((() => undefined) as never);
-    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockLoad.mockRejectedValueOnce(new Error('refused'));
 
     try {

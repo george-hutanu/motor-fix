@@ -139,6 +139,7 @@ const NOT_CHANGES = new Set([
   'NotificationsService.forget',
   'NotificationsService.phoneRow',
   'NotificationsService.queueToDraft',
+  'NotificationsService.recordFallbacks',
   'NotificationsService.release',
   'NotificationsService.settleDraftReminder',
   // A browser's push address is delivery data, not a change to anyone's data.
@@ -202,6 +203,15 @@ const NOT_CHANGES = new Set([
   // Watching a live stream notes who watched, the driver's first view and
   // the peak, like a read noting when it was first seen.
   'LiveSessionsService.watched',
+  // A job's edit lock is who is editing now, not a change to the job: only
+  // the owner's forced unlock enters the history (JobLockService.force).
+  'JobLockService.mirror',
+  'JobLockService.settle',
+  'JobLockSweep.clearExpired',
+  'JobLockSweep.remirror',
+  // A driver's no to saving a garage after a finished job is a display
+  // preference, never audited (ST-293 FR-004); the row is its own record.
+  'SaveSuggestionsService.dismiss',
 ]);
 
 const uncovered = (source: string) =>

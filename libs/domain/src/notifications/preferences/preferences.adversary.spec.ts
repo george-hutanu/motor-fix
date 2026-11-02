@@ -1,6 +1,7 @@
 import type { OutsideChannel } from '@motor-fix/contracts';
 
 import {
+  fallbackFor,
   mutedChannels,
   type PreferenceRow,
   planSave,
@@ -266,5 +267,98 @@ describe('saving a channel', () => {
     expect(() => planSave([], [], [row('NOT_A_TYPE', 'email')], true)).toThrow(
       'unknown notification type NOT_A_TYPE',
     );
+  });
+});
+
+// @traces 1374-FR-005
+describe('fallbackFor under hostile input', () => {
+  const at = new Date('2026-10-20T08:00:00.000Z');
+  const record = {
+    at,
+    from: 'sms',
+    reason: 'sms_cap_reached',
+    to: 'whatsapp',
+  } as const;
+
+  it('shows a record one millisecond after the save and hides one one millisecond before it', () => {
+    expect(fallbackFor(record, 'sms', new Date(at.getTime() - 1))?.reason).toBe(
+      'sms_cap_reached',
+    );
+    expect(fallbackFor(record, 'sms', new Date(at.getTime() + 1))).toBeNull();
+  });
+
+  it('returns the same answer on a second call with the same input', () => {
+    expect(fallbackFor(record, 'sms', null)).toEqual(
+      fallbackFor(record, 'sms', null),
+    );
+  });
+
+  it('does not leak fields of the stored record beyond the four of the contract', () => {
+    const wide = { ...record, accountId: 'a-1', type: 'DUE_ITP' };
+    expect(Object.keys(fallbackFor(wide, 'sms', null) ?? {}).sort()).toEqual([
+      'at',
+      'from',
+      'reason',
+      'to',
+    ]);
+  });
+
+  it('is not changed by a later mutation of the record date', () => {
+    const mutable = { ...record, at: new Date(at) };
+    const out = fallbackFor(mutable, 'sms', null);
+    mutable.at.setFullYear(1999);
+    expect(out?.at).toBe('2026-10-20T08:00:00.000Z');
+  });
+
+  it('hides a record when the save time is an invalid date', () => {
+    expect(fallbackFor(record, 'sms', new Date('nope'))).toBeNull();
+  });
+
+  it('keeps the epoch and a far-future record readable as ISO strings', () => {
+    const epoch = { ...record, at: new Date(0) };
+    expect(fallbackFor(epoch, 'sms', null)?.at).toBe(
+      '1970-01-01T00:00:00.000Z',
+    );
+    const far = { ...record, at: new Date('2999-12-31T23:59:59.999Z') };
+    expect(fallbackFor(far, 'sms', at)?.at).toBe('2999-12-31T23:59:59.999Z');
+  });
+
+  it('is null for a chosen channel that is the record target rather than its source', () => {
+    expect(fallbackFor(record, 'whatsapp', null)).toBeNull();
+  });
+
+  it('is null when the chosen channel is an unknown string', () => {
+    expect(fallbackFor(record, 'SMS' as OutsideChannel, null)).toBeNull();
+    expect(fallbackFor(record, '' as OutsideChannel, null)).toBeNull();
+  });
+
+  it('passes every reason through unchanged', () => {
+    for (const reason of [
+      'no_device',
+      'phone_not_verified',
+      'sms_cap_reached',
+      'send_failed',
+    ] as const) {
+      expect(fallbackFor({ ...record, reason }, 'sms', null)?.reason).toBe(
+        reason,
+      );
+    }
+  });
+
+  it('treats an undefined save time like no saved row', () => {
+    expect(fallbackFor(record, 'sms', undefined)?.from).toBe('sms');
+  });
+});
+
+// @traces 1374-FR-004
+describe('the preferences view and the fallback field', () => {
+  it('leaves the fallback key off staff entries', () => {
+    const view = preferencesView(
+      [row('QUOTE_RECEIVED', 'email', true, GARAGE)],
+      false,
+    );
+    for (const p of view.preferences) {
+      expect('fallback' in p).toBe(false);
+    }
   });
 });

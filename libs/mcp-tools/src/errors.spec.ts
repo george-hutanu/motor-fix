@@ -68,7 +68,7 @@ describe('toolError', () => {
   });
 
   it('answers internal_error to an unknown failure and keeps its words out', () => {
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const answer = toolError(new Error('secret stack detail'), 'en');
@@ -219,7 +219,7 @@ describe('errors through a call', () => {
   });
 
   it('refuses bad input with validation and runs nothing', async () => {
-    const handler = jest.fn(async () => ({}));
+    const handler = vi.fn(async () => ({}));
     const tool = { ...fixtureTools[1], handler };
     const result = await callTool(
       [tool],

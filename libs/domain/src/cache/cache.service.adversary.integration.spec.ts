@@ -24,7 +24,7 @@ afterAll(() => {
   for (const redis of clients) redis.disconnect();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 async function counts() {
   const { resourceMetrics } = await metricReader.collect();
@@ -58,7 +58,7 @@ function holdStoreReplies(redis: Redis) {
   const landed = Promise.withResolvers<void>();
   const gate = Promise.withResolvers<void>();
   const unlocked = Promise.withResolvers<void>();
-  jest.spyOn(redis, 'eval').mockImplementation(async (...args) => {
+  vi.spyOn(redis, 'eval').mockImplementation(async (...args) => {
     const reply = await evaluate(...args);
     const source = String(args[0]);
     if (source.includes('ZADD')) {
@@ -153,7 +153,7 @@ describe('the cache service’s count of a fill', () => {
     await cache.read({ key: k, read, soft: 60 });
     version = 2;
     const later = Date.now() + 120_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => later);
+    vi.spyOn(Date, 'now').mockImplementation(() => later);
     const held = holdStoreReplies(redis);
     const before = await counts();
 
