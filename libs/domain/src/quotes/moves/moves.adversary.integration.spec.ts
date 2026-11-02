@@ -413,6 +413,35 @@ describe('the idempotency key', () => {
     expect(maria).toBeDefined();
   });
 
+  it('refuses a key of one booking on the same driver’s other booking', async () => {
+    const { andrei, booking, volt } = await booked();
+    const { booking: other } = await world.chain(andrei, volt.garage.id, {
+      booking: 'confirmed',
+    });
+    await prisma.booking.update({
+      data: {
+        durationMinutes: 60,
+        mechanicId: volt.answeringMechanic.id,
+        startsAt: at(12),
+      },
+      where: { id: other.id },
+    });
+    const key = randomUUID();
+    await ask(booking.id, at(14).toISOString(), asDriver(andrei), key);
+
+    const res = await ask(
+      other.id,
+      at(16).toISOString(),
+      asDriver(andrei),
+      key,
+    );
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('conflict');
+    expect(await movesOf(other.id)).toHaveLength(0);
+    expect(await movesOf(booking.id)).toHaveLength(1);
+  });
+
   it('writes one move for the same key sent twice at once', async () => {
     const { andrei, booking } = await booked();
     const key = randomUUID();

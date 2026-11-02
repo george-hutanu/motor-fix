@@ -1,9 +1,15 @@
 import type { AskBookingMoveDto, BookingMoveDto } from '@motor-fix/contracts';
-import { HttpException, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 
 import { lapsesAt, moveOf, moveState } from './move-state';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { notFound } from '../../auth/http-refusal';
+import { notFound, refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
@@ -70,10 +76,21 @@ export class MovesService {
       );
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
-      // The key holds a move of another of the driver's bookings, or the
-      // same key's other call wrote first: that move is the answer.
-      const move = await this.replayOf(this.prisma, actor.accountId, key);
-      if (!move) throw error;
+      // The same key's other call wrote first: its move is the answer. A key
+      // that already holds a move of another booking is refused, never
+      // answered with that booking's move.
+      const move = await this.replayOf(
+        this.prisma,
+        actor.accountId,
+        key,
+        bookingId,
+      );
+      if (!move)
+        throw refusal(
+          HttpStatus.CONFLICT,
+          'conflict',
+          'This key was used for another booking',
+        );
       return { created: false, move: moveOf(move) };
     }
   }
@@ -117,14 +134,14 @@ export class MovesService {
     client: Tx,
     proposedBy: string,
     key: string,
-    bookingId?: string,
+    bookingId: string,
   ) {
     const move = await client.bookingMove.findUnique({
       where: {
         proposedBy_idempotencyKey: { idempotencyKey: key, proposedBy },
       },
     });
-    return move && (!bookingId || move.bookingId === bookingId) ? move : null;
+    return move?.bookingId === bookingId ? move : null;
   }
 
   private async store(
