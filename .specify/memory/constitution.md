@@ -2,9 +2,10 @@
 Sync Impact Report (v5.2.0)
 - Version change: 5.1.1 → 5.2.0 (MINOR: Principles II and IV name Vitest,
   through the Angular unit-test builder, for the Angular projects (web,
-  ui-cockpit, overlays, i18n, media) and Jest from the root config for every
-  other project; the Enforcement rows of `post-edit-check.sh` and
-  `stop-test-gate.sh` say which runner each project gets)
+  ui-cockpit, overlays, i18n, media) and, since ST-1338, through each other
+  project's own `vitest.config.mts`: no project runs on Jest any more; the
+  Enforcement rows of `post-edit-check.sh` and `stop-test-gate.sh` say which
+  configuration each project gets)
 - Source: ST-1332, the owner's split of #1302 (2026-10-16), 2026-10-31.
 - Templates:
   - ✅ .specify/memory/constitution-card.md — lines II and IV, the version line
@@ -534,7 +535,8 @@ might be useful later" is not a defense.
   requirements into red tests, then `/speckit-implement` makes them green.
 - Unit and API tests run colocated with the source they cover: Vitest through
   the Angular unit-test builder for the Angular projects (web, ui-cockpit,
-  overlays, i18n, media), Jest from the root config for the rest (`foo.ts` / `foo.spec.ts`). API tests run against real
+  overlays, i18n, media), Vitest on the project's own `vitest.config.mts` for
+  the rest (`foo.ts` / `foo.spec.ts`). API tests run against real
   PostgreSQL and Valkey (the store, Redis protocol) in containers, never
   mocks of either.
 - Unit tests run in CI on every PR. The integration suite (the API tests on
@@ -597,9 +599,9 @@ documentation assumes it; a quiet substitute invalidates the documentation the b
 - Biome is the only linter and formatter, from the root `biome.jsonc`. No
   eslint, no prettier, no per-project Biome config; a genuinely
   project-specific need is a scoped `overrides` entry in the root file.
-- Vitest runs the Angular projects (web, ui-cockpit, overlays, i18n, media),
-  each on its own `vitest.config.ts`; Jest runs from the root config across
-  every other project.
+- Vitest runs every project: the Angular projects (web, ui-cockpit,
+  overlays, i18n, media) through the Angular unit-test builder, each on its
+  own `vitest.config.ts`, every other project on its own `vitest.config.mts`.
 - Folder rules: a module's submodules each get their own subfolder, never
   files left flat at the module's root (`notifications/bell/`, not
   `notifications/bell.service.ts` beside `bell.controller.ts`); a web
@@ -766,8 +768,8 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Principle / rule | Gate | Fires |
 | --- | --- | --- |
 | II red-first tests | `red-first-gate.mjs` (PreToolUse) | blocks `apps/*/src` and `libs/*/src` edits while the active feature has FRs and open tasks but the branch adds or modifies no `*.spec.*` / `*.test.*` file |
-| II, IV broken-edit feedback | `post-edit-check.sh` (PostToolUse) | `biome check` on the edited file, then its colocated `*.spec.ts` on its project's runner: Vitest with the project's config for the Angular projects, the root Jest config for the rest |
-| II, IV done means green | `stop-test-gate.sh` (Stop hook) | the agent may not finish with `biome check` red on changed TypeScript or `vitest run --changed` (each Angular project with a change) or `jest --onlyChanged` (the rest) red |
+| II, IV broken-edit feedback | `post-edit-check.sh` (PostToolUse) | `biome check` on the edited file, then its colocated `*.spec.ts` on Vitest with its project's config (an Angular project's `vitest.config.ts`, else the nearest `vitest.config.mts`), the root Jest config only for a spec no Vitest config claims |
+| II, IV done means green | `stop-test-gate.sh` (Stop hook) | the agent may not finish with `biome check` red on changed TypeScript or `vitest run --changed` (each Vitest project with a change) or `jest --onlyChanged` (a changed file no Vitest config claims) red |
 | Spec-drift rule | `.claude/scripts/spec-drift.mjs --staged` | pre-commit, keyed on the conventional-commit type |
 | Commit hygiene | `commit-msg-policy.js` | one-line Conventional Commit, no metadata trailers or tool mentions |
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
@@ -778,9 +780,9 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester (its own, or one it verifies was carried from the PR's tested commit over a documentation-only change, over a passing lap's QA fixes, or over a merge of `origin/main` that changes none of the PR's files (`merge of main`, `carry.mjs`)), or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
 | IV folder rules | `scripts/structure-check.ts` (CI Checks job, `.husky/pre-commit`); `config-protection.mjs` | fails on a flat submodule or a component that is not a `<name>/` folder with external `<name>.html`/`<name>.css` unless `scripts/structure-baseline.json` lists it, on a stale baseline entry, and on an entry the base branch's baseline lacks; the hook refuses an edit that grows the baseline |
-| Full verification | `.husky/pre-commit`; `lifecycle.mjs check` and `ready` | the commit hook runs identity, the folder rules and Biome on the staged files only; the CI-only checks, `npm run lint` and the affected `typecheck` and unit `test` (`JEST_SUITE=unit`, in a `scripts/heavy.sh` slot, no Docker) run at each slice end, before every tail fix push and at ready, refusing on red |
+| Full verification | `.husky/pre-commit`; `lifecycle.mjs check` and `ready` | the commit hook runs identity, the folder rules and Biome on the staged files only; the CI-only checks, `npm run lint` and the affected `typecheck` and unit `test` (`TEST_SUITE=unit`, in a `scripts/heavy.sh` slot, no Docker) run at each slice end, before every tail fix push and at ready, refusing on red |
 
-The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
+The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome, Vitest or Jest
 while that tool is not installed yet (before the Nx scaffold lands) rather than
 failing every edit.
 

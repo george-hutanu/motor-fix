@@ -44,8 +44,8 @@ check; its Enforcement section is the authority. In short:
 | --- | --- | --- |
 | `github-identity.sh` | at session start | exports `GH_TOKEN` for george-hutanu so `gh` never acts as the work account; reports git identity drift or a missing gh login |
 | `red-first-gate.mjs`, `main-checkout-gate.mjs` | before an Edit/Write | blocks `apps/*/src`, `libs/*/src` edits while the active feature has FRs + open tasks but the branch touches no `*.spec.*`/`*.test.*` file — run `/speckit-tests` first; refuses an edit to a file git tracks in the main checkout — every change rides a PR from a worktree (`SPECKIT_ALLOW_MAIN_EDIT=1` overrides) |
-| `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` (Vitest for the Angular projects, Jest otherwise) if under 5 s |
-| `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |
+| `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` on its project's Vitest config if under 5 s |
+| `stop-test-gate.sh` | before the agent finishes | `biome check` + `vitest run --changed` per changed project must be green |
 | `pr-lifecycle-gate.mjs`, `merge-gate.mjs` | before finishing; before `gh pr merge` | Constitution VII: nothing unpushed, no branch without a PR, no story PR unlinked on its tracker issue, no open PR without its stage and type labels, no green ready PR untested (unless handed off to a tail agent) or unmerged; no merge without `agent-review` success and every CI check green |
 | `pre-commit-check.sh` | before `git commit` | commit-message policy, `spec-drift --staged` |
 | `bash-guard.mjs` | before any Bash call | blocks force-push, pushes to `main`, `reset --hard`, `clean -f`, deleting `.work/` |

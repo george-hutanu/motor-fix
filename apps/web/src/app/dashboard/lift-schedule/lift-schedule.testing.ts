@@ -131,8 +131,8 @@ export async function renderPanel({
   role = 'garage',
 }: RenderOptions = {}) {
   vi.useFakeTimers({
-    advanceTimers: true,
     now: NOW,
+    shouldAdvanceTime: true,
     toNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
   });
   const me = signal(account(role, features, NONE));

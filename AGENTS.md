@@ -137,7 +137,7 @@ Read only what decides the next step; every check still runs:
   most once a minute and returns at once for a run already finished; the
   GraphQL quota is left to the Project writes, which back off on a rate
   limit. A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
-- Jest, Playwright, Nx: run into a log file, then read the exit code, the
+- Vitest, Playwright, Nx: run into a log file, then read the exit code, the
   summary and the failures — `<command> > <log> 2>&1; echo "exit $?"; tail -n 40 <log>`,
   and `grep -nE '✕|●|FAIL|Error' <log> | head -n 40` when it failed.
 
@@ -247,7 +247,7 @@ source for anything the constitution does not fix.
   interceptor answers a `sign_in_required` 401 with the sign-in dialog, then
   resends the call once.
 - Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
-  Tests: Vitest for Angular projects, else root Jest; Playwright end to end;
+  Tests: Vitest in every project, Angular through its builder; Playwright end to end;
   a spec that needs PostgreSQL or Redis is `*.integration.spec.ts`.
   Mutation is never part of a task's lifecycle.
 - CI, the test suites, mutation and release: `.claude/skills/speckit-auto/lifecycle.md`
