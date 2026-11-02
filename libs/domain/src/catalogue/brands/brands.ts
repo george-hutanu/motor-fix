@@ -1,13 +1,8 @@
-import { fold } from '@motor-fix/contracts';
+import { type BodyStyle, fold } from '@motor-fix/contracts';
 
-// The generic car body shapes a brand without a licensed model is drawn as.
-export type BodyStyle =
-  | 'saloon'
-  | 'hatchback'
-  | 'suv'
-  | 'crossover'
-  | 'estate'
-  | 'fastback';
+// The generic car body shapes a brand without a licensed model is drawn as,
+// kept once in contracts beside the 3D answer that names them.
+export type { BodyStyle };
 
 // The brand list MotorFix keeps. A brand is matched by its `key` across
 // loads, so a key never changes once shipped; renaming a brand changes only

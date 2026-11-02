@@ -111,3 +111,12 @@ p {
   font-weight: 600;
   cursor: pointer;
 }
+.sold-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mf-space-2);
+}
+.sold-failed p {
+  margin: 0;
+}

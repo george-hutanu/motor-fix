@@ -173,10 +173,18 @@ export function instant(value: unknown): Date | undefined {
   const date =
     value instanceof Date
       ? value
-      : (typeof value === 'string' && ISO.test(value)) || isNumber(value)
+      : (typeof value === 'string' && ISO.test(value) && realDay(value)) ||
+          isNumber(value)
         ? new Date(value)
         : undefined;
   return date && !Number.isNaN(date.getTime()) ? date : undefined;
+}
+
+// "2026-02-30" parses as 2 March: a day the calendar lacks is no date.
+function realDay(value: string): boolean {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 // The Bucharest day and short month of a value, and its year.
@@ -241,6 +249,14 @@ const MONTHS_LONG: Record<Language, readonly string[]> = {
     'decembrie',
   ],
 };
+
+// The Bucharest day with its month written out: "31 octombrie 2026".
+export function formatLongDay(value: unknown, language: Language): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const { day, month, year } = bucharestDay(date);
+  return `${day} ${MONTHS_LONG[language][month - 1]} ${year}`;
+}
 
 function bucharestDay(date: Date) {
   const { day, month, year } = Object.fromEntries(

@@ -371,6 +371,7 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 102-FR-004
+  // @traces 1369-FR-002
   it('keeps the team and the prices from a receptionist, and gives her the reviews and the garage profile', () => {
     expect(paths('garage', RECEPTIONIST)).toEqual([
       '',
@@ -405,6 +406,7 @@ describe('the dashboard view lists', () => {
 
   // @traces 133-FR-002 133-FR-005
   // @traces 102-FR-004
+  // @traces 1369-FR-002
   it('gives the owner and the receptionist the garage profile view, its body downloaded with the view', async () => {
     const profile = DASHBOARDS.garage.views.find(
       (view) => view.path === 'profile',

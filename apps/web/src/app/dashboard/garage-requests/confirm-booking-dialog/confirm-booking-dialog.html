@@ -22,7 +22,7 @@
           required
           aria-describedby="mf-confirm-mechanic-none mf-confirm-mechanic-error"
           [attr.aria-invalid]="mechanicMessage() ? 'true' : null"
-          [disabled]="sending()"
+          [disabled]="busy()"
           (change)="pick('mechanic', $any($event.target).value)"
         >
           <option value="" [selected]="!mechanic()">{{ 'garage.quotes.confirm.pickMechanic' | t }}</option>
@@ -48,11 +48,15 @@
           hlmInput
           id="mf-confirm-lift"
           aria-describedby="mf-confirm-lift-error"
+          [required]="choices.needsLift"
           [attr.aria-invalid]="liftMessage() ? 'true' : null"
-          [disabled]="sending()"
+          [disabled]="busy()"
           (change)="pick('lift', $any($event.target).value)"
         >
-          <option value="" [selected]="!lift()">{{ 'garage.quotes.confirm.noLift' | t }}</option>
+          @if (choices.needsLift) {
+            <option value="" [selected]="!lift()">{{ 'garage.quotes.confirm.pickLift' | t }}</option>
+          }
+          <option value="0" [selected]="lift() === '0'">{{ 'garage.quotes.confirm.noLift' | t }}</option>
           @for (n of lifts(); track n) {
             <option [value]="n" [selected]="'' + n === lift()">{{ 'garage.quotes.confirm.liftNumber' | t: { n } }}</option>
           }
@@ -63,6 +67,6 @@
   }
   <div class="actions">
     <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'garage.quotes.confirm.cancel' | t }}</button>
-    <button hlmBtn type="submit" [attr.aria-busy]="sending() || null" [disabled]="!offered() || noMechanics() || sending()">{{ 'garage.quotes.confirm.submit' | t }}</button>
+    <button hlmBtn type="submit" [attr.aria-busy]="busy() || null" [disabled]="!offered() || noMechanics() || busy()">{{ 'garage.quotes.confirm.submit' | t }}</button>
   </div>
 </form>

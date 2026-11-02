@@ -38,7 +38,13 @@ async function open(url: string, answer: () => Promise<unknown>) {
   list = jest.fn(answer);
   TestBed.configureTestingModule({
     providers: [
-      { provide: CarsService, useValue: { carsControllerList: list } },
+      {
+        provide: CarsService,
+        useValue: {
+          carHistoryControllerSold: async () => ({ items: [] }),
+          carsControllerList: list,
+        },
+      },
       { provide: Overlays, useValue: { open: jest.fn() } },
       ...heldForDriver(),
       provideRouter([
@@ -172,6 +178,7 @@ describe('Mașinile mele opened at a car whose list is already held', () => {
         {
           provide: CarsService,
           useValue: {
+            carHistoryControllerSold: async () => ({ items: [] }),
             carsControllerList: async () => ({ items: [car('c1'), car('c2')] }),
           },
         },

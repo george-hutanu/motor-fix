@@ -17,6 +17,7 @@ import type { Redis } from 'ioredis';
 
 import { type BackupLister, backupLister } from './probes/probes';
 import { liveProbes, type RunOptions, runChecks } from './run';
+import { StatusController } from './status.controller';
 import { parseThresholds, type Thresholds } from './thresholds';
 import { createPrisma } from '../auth/prisma';
 import { outbox } from '../events/event.port';
@@ -120,6 +121,11 @@ class StatusChecks implements OnApplicationBootstrap, OnApplicationShutdown {
 
 @Module({})
 export class StatusModule {
+  // The API's side: the admin's read of the tiles, on the global PRISMA.
+  static register(): DynamicModule {
+    return { controllers: [StatusController], module: StatusModule };
+  }
+
   // Without valid limits the checks stay off, as the tiles keep their state.
   static registerWorker(options: StatusOptions): DynamicModule {
     let thresholds: Thresholds;

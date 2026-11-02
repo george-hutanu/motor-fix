@@ -49,6 +49,7 @@ describe('the capabilities table under hostile input', () => {
     expect(held).not.toContain('garage.move_bookings');
   });
 
+  // @traces 1369-FR-001 1369-FR-002
   it('gives a receptionist reviews and profile but never team, prices or switches', () => {
     const held = capabilitiesOf('receptionist', none);
 
@@ -166,6 +167,40 @@ describe('the capabilities table under hostile input', () => {
     expect(
       capabilitiesOf('admin', all).some((c) => c.startsWith('garage.')),
     ).toBe(false);
+  });
+});
+
+// @traces 1369-FR-002
+describe('garage.profile under odd callers', () => {
+  it('is granted to the receptionist whatever permissions she carries', () => {
+    for (const perms of [none, all, undefined, null])
+      expect(capabilitiesOf('receptionist', perms as never)).toContain(
+        'garage.profile',
+      );
+  });
+
+  it('is refused to a mechanic whose permissions name it or carry forged values', () => {
+    const hostile = {
+      canAnswerQuotes: 'true',
+      canMoveBookings: 1,
+      canRecordFinalPrice: {},
+      'garage.profile': true,
+    } as never;
+
+    expect(capabilitiesOf('mechanic', hostile)).not.toContain('garage.profile');
+  });
+
+  it('is held by exactly the garage owner and the receptionist', () => {
+    const holders = ROLES.filter((r) =>
+      capabilitiesOf(r, all).includes('garage.profile'),
+    );
+
+    expect([...holders].sort()).toEqual(['garage', 'receptionist']);
+  });
+
+  it('is not granted to a role spelled like the receptionist', () => {
+    for (const role of ['Receptionist', 'RECEPTIONIST', 'receptionist '])
+      expect(capabilitiesOf(role as never, all)).toEqual([]);
   });
 });
 

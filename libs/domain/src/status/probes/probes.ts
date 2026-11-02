@@ -3,9 +3,10 @@ import {
   type ListObjectsV2CommandOutput,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { TILES, type TileKey } from '@motor-fix/contracts';
 
 import type { PlacesProvider } from '../../places/providers/places.provider';
-import { type Detail, type Figures, TILES, type TileKey } from '../tiles';
+import type { Detail, Figures } from '../tiles';
 
 type Channel = 'email' | 'push' | 'sms' | 'whatsapp';
 

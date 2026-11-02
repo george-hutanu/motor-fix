@@ -12,7 +12,7 @@ import {
 import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
-import { addMonths, atLocal, localDay } from './bucharest';
+import { addDays, addMonths, atLocal, localDay } from './bucharest';
 import { BRANDS } from './catalogue/brands/brands';
 import { dayOf } from './garages/documents/document-cycle/document-cycle.service';
 
@@ -363,6 +363,53 @@ describe('seed', () => {
     expect(seed('test').status).toBe(0);
 
     expect(await seeded()).toEqual(once);
+  });
+
+  // @traces 093-FR-012
+  it("gives the sweep's driver a BMW with its three dates and a next oil service and a Dacia with a later ITP, once, their dates kept current", async () => {
+    const theCars = () =>
+      prisma.car.findMany({
+        include: { brand: true, readings: true },
+        orderBy: { idempotencyKey: 'asc' },
+        where: { owner: { email: 'sofer@example.test' } },
+      });
+    const ahead = (n: number) =>
+      new Date(`${addDays(localDay(new Date()), n)}T00:00:00Z`).getTime();
+
+    expect(seed('test').status).toBe(0);
+    const [car, dacia, ...more] = await theCars();
+
+    expect(more).toEqual([]);
+    expect(car).toMatchObject({
+      brand: { key: 'bmw' },
+      idempotencyKey: 'seed-driver',
+      nextServiceKm: car.odometerKm + 4000,
+      removedAt: null,
+    });
+    expect(car.itpUntil?.getTime()).toBe(ahead(40));
+    expect(car.rcaUntil?.getTime()).toBe(ahead(300));
+    expect(car.rovinietaUntil?.getTime()).toBe(ahead(300));
+    expect(car.readings.map((r) => r.km)).toEqual([car.odometerKm]);
+    expect(dacia).toMatchObject({
+      brand: { key: 'dacia' },
+      idempotencyKey: 'seed-driver-2',
+      nextServiceKm: null,
+      removedAt: null,
+    });
+    expect(dacia.itpUntil?.getTime()).toBe(ahead(240));
+    expect(dacia.readings.map((r) => r.km)).toEqual([dacia.odometerKm]);
+
+    await prisma.car.update({
+      data: { itpUntil: new Date('2020-01-01T00:00:00Z') },
+      where: { id: car.id },
+    });
+    const counts = await rowCounts();
+    expect(seed('test').status).toBe(0);
+
+    expect(await rowCounts()).toEqual(counts);
+    const [again] = await theCars();
+    expect(again.id).toBe(car.id);
+    expect(again.itpUntil?.getTime()).toBe(ahead(40));
   });
 
   // Staging's api seeds on every deploy, after users there changed things:

@@ -15,6 +15,11 @@ import { garageJobsControllerList } from '../fn/garage-jobs/garage-jobs-controll
 import { GarageJobsControllerList$Params } from '../fn/garage-jobs/garage-jobs-controller-list';
 import { JobDto } from '../models/job-dto';
 import { JobListDto } from '../models/job-list-dto';
+import { jobLockControllerRelease } from '../fn/garage-jobs/job-lock-controller-release';
+import { JobLockControllerRelease$Params } from '../fn/garage-jobs/job-lock-controller-release';
+import { jobLockControllerTake } from '../fn/garage-jobs/job-lock-controller-take';
+import { JobLockControllerTake$Params } from '../fn/garage-jobs/job-lock-controller-take';
+import { JobLockTakenDto } from '../models/job-lock-taken-dto';
 import { jobStagesControllerCorrect } from '../fn/garage-jobs/job-stages-controller-correct';
 import { JobStagesControllerCorrect$Params } from '../fn/garage-jobs/job-stages-controller-correct';
 import { jobStagesControllerFinish } from '../fn/garage-jobs/job-stages-controller-finish';
@@ -105,6 +110,72 @@ export class GarageJobsService extends BaseService {
     return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
   }
 
+  /** Path part for operation `jobLockControllerTake()` */
+  static readonly JobLockControllerTakePath = '/api/v1/garage/jobs/{id}/lock';
+
+  /**
+   * Take the job, or refresh the caller’s own lock.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobLockControllerTake()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobLockControllerTake$Response(params: JobLockControllerTake$Params, context?: HttpContext): Promise<StrictHttpResponse<JobLockTakenDto>> {
+    const obs = jobLockControllerTake(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Take the job, or refresh the caller’s own lock.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobLockControllerTake$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobLockControllerTake(params: JobLockControllerTake$Params, context?: HttpContext): Promise<JobLockTakenDto> {
+    const resp = this.jobLockControllerTake$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobLockTakenDto>): JobLockTakenDto => r.body);
+  }
+
+  /** Path part for operation `jobLockControllerRelease()` */
+  static readonly JobLockControllerReleasePath = '/api/v1/garage/jobs/{id}/lock';
+
+  /**
+   * Release the caller’s lock; the owner forces another’s.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobLockControllerRelease()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobLockControllerRelease$Response(params: JobLockControllerRelease$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = jobLockControllerRelease(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Release the caller’s lock; the owner forces another’s.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobLockControllerRelease$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobLockControllerRelease(params: JobLockControllerRelease$Params, context?: HttpContext): Promise<void> {
+    const resp = this.jobLockControllerRelease$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
   /** Path part for operation `jobStagesControllerStart()` */
   static readonly JobStagesControllerStartPath = '/api/v1/garage/jobs/{id}/start';
 
@@ -116,7 +187,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `jobStagesControllerStart()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerStart$Response(params: JobStagesControllerStart$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
     const obs = jobStagesControllerStart(this.http, this.rootUrl, params, context);
@@ -131,7 +202,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `jobStagesControllerStart$Response()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerStart(params: JobStagesControllerStart$Params, context?: HttpContext): Promise<JobDto> {
     const resp = this.jobStagesControllerStart$Response(params, context);
@@ -149,7 +220,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `jobStagesControllerPause()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerPause$Response(params: JobStagesControllerPause$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
     const obs = jobStagesControllerPause(this.http, this.rootUrl, params, context);
@@ -164,7 +235,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `jobStagesControllerPause$Response()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerPause(params: JobStagesControllerPause$Params, context?: HttpContext): Promise<JobDto> {
     const resp = this.jobStagesControllerPause$Response(params, context);
@@ -182,7 +253,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `jobStagesControllerResume()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerResume$Response(params: JobStagesControllerResume$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
     const obs = jobStagesControllerResume(this.http, this.rootUrl, params, context);
@@ -197,7 +268,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `jobStagesControllerResume$Response()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerResume(params: JobStagesControllerResume$Params, context?: HttpContext): Promise<JobDto> {
     const resp = this.jobStagesControllerResume$Response(params, context);
@@ -215,7 +286,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `jobStagesControllerFinish()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerFinish$Response(params: JobStagesControllerFinish$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
     const obs = jobStagesControllerFinish(this.http, this.rootUrl, params, context);
@@ -230,7 +301,7 @@ export class GarageJobsService extends BaseService {
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `jobStagesControllerFinish$Response()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   jobStagesControllerFinish(params: JobStagesControllerFinish$Params, context?: HttpContext): Promise<JobDto> {
     const resp = this.jobStagesControllerFinish$Response(params, context);

@@ -72,6 +72,7 @@ import {
 } from './request-expired';
 import { REQUEST_RECEIVED } from './request-received';
 import { REQUEST_REMINDER } from './request-reminder';
+import { REVIEW_DECIDED_FORMS } from './review-decided';
 import { REVIEW_POSTED_JOB, REVIEW_POSTED_PROFILE } from './review-posted';
 import { REVIEW_REPLIED } from './review-replied';
 import { SERVICE_DUE } from './service-due';
@@ -158,6 +159,10 @@ export const TEMPLATES: Registry = {
   'REQUEST_EXPIRED.garage': REQUEST_EXPIRED_GARAGE,
   REQUEST_RECEIVED,
   REQUEST_REMINDER,
+  'REVIEW_DECIDED.reply_author': REVIEW_DECIDED_FORMS.reply_author,
+  'REVIEW_DECIDED.reply_owner': REVIEW_DECIDED_FORMS.reply_owner,
+  'REVIEW_DECIDED.review_author': REVIEW_DECIDED_FORMS.review_author,
+  'REVIEW_DECIDED.review_owner': REVIEW_DECIDED_FORMS.review_owner,
   'REVIEW_POSTED.job': REVIEW_POSTED_JOB,
   'REVIEW_POSTED.profile': REVIEW_POSTED_PROFILE,
   REVIEW_REPLIED,

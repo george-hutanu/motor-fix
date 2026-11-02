@@ -4,6 +4,11 @@
 export interface JobStepDoneDto {
 
   /**
+   * The job's updatedAt the change was made from; a change from an older read is refused
+   */
+  basedOnUpdatedAt?: string;
+
+  /**
    * true ticks the step, false unticks it
    */
   done: boolean;

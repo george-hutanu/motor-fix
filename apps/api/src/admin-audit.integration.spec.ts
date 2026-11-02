@@ -285,6 +285,13 @@ const FIXTURES: Record<
     path: async () =>
       `/api/v1/admin/platform-rule-changes/${await waiting(randomUUID())}/refuse`,
   },
+  // @traces 179-FR-001
+  // The removal of a garage-reported review, decided once.
+  'POST /api/v1/admin/review-reports/{reviewId}/decision': {
+    body: () => ({ decision: 'remove', reason: 'insults' }),
+    path: async () =>
+      `/api/v1/admin/review-reports/${await reportedReview()}/decision`,
+  },
   'POST /api/v1/admin/verification-files/{id}/decision': {
     body: () => ({
       decision: 'rejected',
@@ -471,6 +478,63 @@ async function reported() {
     [file.garage_id, file.id, admin],
   );
   return file.id;
+}
+
+// A driver's review of a finished job at an approved garage, reported by the
+// garage and waiting for an admin.
+async function reportedReview() {
+  const owner = await driver();
+  const row = (
+    await db.query(
+      `WITH g AS (INSERT INTO garage (id, name, slug, status, approved_at)
+         VALUES (gen_random_uuid(), 'Audit', $2, 'approved', now()) RETURNING id),
+       b AS (INSERT INTO brand (id, key, name, slug, updated_at)
+         VALUES (gen_random_uuid(), $2, $2, $2, now()) RETURNING id),
+       c AS (INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km)
+         SELECT gen_random_uuid(), $1, id, 'Logan', 2018, 'petrol', 98000
+         FROM b RETURNING id),
+       r AS (INSERT INTO quote_request (id, driver_id, car_id, car_brand, car_model,
+           car_year, car_fuel, description, status, created_at, expires_at,
+           idempotency_key)
+         SELECT gen_random_uuid(), $1, c.id, 'Dacia', 'Logan', 2018, 'petrol',
+           'Schimb de ulei', 'booked', now() - interval '3 days',
+           now() + interval '5 days', $2
+         FROM c RETURNING id),
+       rr AS (INSERT INTO request_recipient (id, request_id, garage_id, status,
+           source, answered_at)
+         SELECT gen_random_uuid(), r.id, g.id, 'quoted', 'search',
+           now() - interval '3 days'
+         FROM r, g RETURNING id, request_id, garage_id),
+       q AS (INSERT INTO quote (id, request_id, recipient_id, garage_id, from_bani,
+           to_bani, duration_minutes, slot, status, accepted_at, expires_at,
+           idempotency_key)
+         SELECT gen_random_uuid(), request_id, id, garage_id, 45000, 60000, 60,
+           now() - interval '2 days', 'accepted', now() - interval '3 days',
+           now() + interval '5 days', gen_random_uuid()::text
+         FROM rr RETURNING id, request_id, garage_id),
+       bk AS (INSERT INTO booking (id, quote_id, request_id, garage_id, driver_id,
+           starts_at, duration_minutes, status, confirm_by, confirmed_at,
+           completed_at)
+         SELECT gen_random_uuid(), id, request_id, garage_id, $1,
+           now() - interval '2 days', 60, 'completed', now() - interval '3 days',
+           now() - interval '3 days', now() - interval '1 day'
+         FROM q RETURNING id, garage_id),
+       j AS (INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, status,
+           started_at, finished_at)
+         SELECT gen_random_uuid(), bk.id, bk.garage_id, c.id, $1, 'done',
+           now() - interval '2 days', now() - interval '1 day'
+         FROM bk, c RETURNING id, garage_id),
+       v AS (INSERT INTO review (id, job_id, driver_id, garage_id, rating, text,
+           status)
+         SELECT gen_random_uuid(), id, $1, garage_id, 1, 'Nu recomand.', 'reported'
+         FROM j RETURNING id)
+       INSERT INTO review_report (id, review_id, reason, source, due_at)
+       SELECT gen_random_uuid(), id, 'insults', 'garage', now() + interval '47 hours'
+       FROM v RETURNING review_id`,
+      [owner, `audit-${randomUUID()}`],
+    )
+  ).rows[0] as { review_id: string };
+  return row.review_id;
 }
 
 // The reviews rule back on, with no request waiting on it.

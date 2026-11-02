@@ -38,6 +38,11 @@ async function signedIn(page: Page, email: string) {
 // as the night job writes them. The rows found there first are put back
 // afterwards. It needs DATABASE_URL, which CI's end-to-end job sets.
 test.describe('the weekly figures on the garage overview @seeded', () => {
+  // The tests read the rows beforeAll writes and afterAll restores, so they
+  // run in order in one worker: in parallel, one worker's afterAll deleted
+  // the rows another worker's test was reading.
+  test.describe.configure({ mode: 'default' });
+
   let db: Client;
   let garageId: string;
   // Set once the rows found first are read: only then were rows written.

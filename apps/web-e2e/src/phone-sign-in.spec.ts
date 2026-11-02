@@ -1,32 +1,13 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { openSignIn, ready } from './accounts.js';
-import { MAILBOX, test } from './fixtures.js';
+import { test } from './fixtures.js';
 import { freshPhone } from './fresh-phone.js';
+import { lastCode } from './whatsapp-code.js';
 
-// The WhatsApp messages as the api sent them, read from the test mailbox the
-// local run starts (mailbox.mjs); a deployed address has none.
 // The verified number of the seeded owner of Service Dobre, who used the
 // garage last (libs/domain/src/seed.ts).
 const GARAGE_PHONE = '+40700000101';
-
-async function lastCode(page: Page, phone: string): Promise<string> {
-  let code: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const res = await page.request.get(
-          `${MAILBOX}/whatsapp?to=${encodeURIComponent(phone.slice(1))}`,
-        );
-        const sent: { params: string[] }[] = await res.json();
-        code = sent.at(-1)?.params[0];
-        return code;
-      },
-      { message: 'no WhatsApp message sent', timeout: 20_000 },
-    )
-    .toMatch(/^\d{6}$/);
-  return String(code);
-}
 
 test.describe('signing in with a phone number @seeded @mailbox', () => {
   test('a garage owner asks for a code, types it and lands on the garage', async ({

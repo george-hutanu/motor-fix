@@ -24,6 +24,9 @@ const NOW = new Date('2026-10-09T09:00:00Z');
 const DAY = '2026-10-09';
 const WEB = 'https://motorfix.test';
 const KIND = 'ADMIN_RECHECK_DUE';
+// The email provider's address: the worker checks its key there on its own
+// time (brevo.ts keyStatus), which is no register.
+const EMAIL = 'http://127.0.0.1:9';
 
 let app: TestingModule;
 let task: RecheckDueTask;
@@ -33,7 +36,7 @@ beforeAll(async () => {
     imports: [
       NotificationsModule.registerWorker({
         databaseUrl,
-        email: testConfig('http://127.0.0.1:9'),
+        email: testConfig(EMAIL),
         phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
         redisUrl,
       }),
@@ -191,6 +194,9 @@ describe('the daily re-check reminder', () => {
     await task.run(NOW);
 
     expect(await bell(ana)).toHaveLength(1);
-    expect(outside).not.toHaveBeenCalled();
+    const asked = outside.mock.calls
+      .map(([url]) => String(url))
+      .filter((url) => !url.startsWith(EMAIL));
+    expect(asked).toEqual([]);
   });
 });

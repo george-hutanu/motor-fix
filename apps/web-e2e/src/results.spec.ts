@@ -791,8 +791,19 @@ test.describe('the map beside the results @seeded', () => {
     await slid(page);
   }
 
+  // A stage whose sheet header leaves under the zoom buttons' 104 px and the
+  // list's 96 px peek: the half rest cannot clear them (results-sheet.ts). The
+  // filter chips grow the header past that at 320 x 800 with the consent bar.
+  const cramped = (page: Page) =>
+    sheet(page).evaluate((host: HTMLElement) => {
+      const top = host.querySelector<HTMLElement>('.top');
+      const header = top ? Math.max(top.offsetHeight, top.scrollHeight) : 0;
+      return host.offsetHeight - header - 96 < 104;
+    });
+
   // Whole above the sheet and left of the zoom buttons, or hidden with them
-  // while the sheet covers the map's top on a stage too short to clear it.
+  // while the sheet covers the map's top on a stage too short to clear it:
+  // under 600 px, or wherever its header leaves too little (cramped).
   // The sheet learns the stage's height from a ResizeObserver, a frame or
   // more after the consent bar shows: the screen is measured once it has
   // settled on one of its two allowed states, never half-way.
@@ -800,7 +811,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect(async () => {
       const { edge, legend, legendHidden, map, zoom } = await boxes(page);
       if (legendHidden) {
-        expect(short, where).toBe(true);
+        expect(short || (await cramped(page)), where).toBe(true);
         await expect(sheet(page)).toHaveClass(/over-zoom/, { timeout: 0 });
         return;
       }
@@ -812,13 +823,14 @@ test.describe('the map beside the results @seeded', () => {
   }
 
   // Both buttons whole above the sheet and tap-sized, or both hidden: only a
-  // stage too short to clear them (320 x 568 with the consent bar) hides them.
+  // stage too short to clear them hides them — under 600 px (320 x 568 with the
+  // consent bar), or wherever the sheet's header leaves too little (cramped).
   async function zoomWhole(page: Page, where: string, short: boolean) {
     await expect(async () => {
       const { buttons, edge, zoomHidden } = await boxes(page);
       expect(buttons, where).toHaveLength(2);
       if (zoomHidden) {
-        expect(short, where).toBe(true);
+        expect(short || (await cramped(page)), where).toBe(true);
         await expect(sheet(page)).toHaveClass(/over-zoom/, { timeout: 0 });
         return;
       }
@@ -1159,7 +1171,25 @@ test.describe('the map beside the results @seeded', () => {
       .toBeGreaterThan(0);
   }
   // A point under one of the map's own controls (the zoom buttons sit top
-  // right) would press the control: the map first centres on such a point.
+  // right), the legend or the sheet would press that instead: the map first
+  // moves such a point to the middle of the longest uncovered run down the
+  // canvas's centre line, since a low sheet with a tall header (the filter
+  // chips) and the consent bar can cover the canvas's own centre.
+  // The longest run of true flags, as the indexes it starts and ends at.
+  function longestRun(flags: boolean[]) {
+    const runs: { from: number; to: number }[] = [];
+    flags.forEach((bare, i) => {
+      if (!bare) return;
+      const last = runs.at(-1);
+      if (last && last.to === i - 1) last.to = i;
+      else runs.push({ from: i, to: i });
+    });
+    return runs.reduce<{ from: number; to: number } | undefined>(
+      (best, run) =>
+        !best || run.to - run.from > best.to - best.from ? run : best,
+      undefined,
+    );
+  }
   async function clickAt(page: Page, at: readonly [number, number]) {
     const where = () =>
       page.evaluate(([lat, lng]) => {
@@ -1180,13 +1210,41 @@ test.describe('the map beside the results @seeded', () => {
       }, at);
     let spot = await where();
     if (!spot.bare) {
-      await page.evaluate(([lat, lng]) => {
-        (
+      const line = await page.evaluate(([lat, lng]) => {
+        const map = (
           window as unknown as {
-            __MF_MAP: { jumpTo(view: { center: [number, number] }): void };
+            __MF_MAP: {
+              getCanvas(): HTMLCanvasElement;
+              jumpTo(view: { center: [number, number] }): void;
+            };
           }
-        ).__MF_MAP.jumpTo({ center: [lng, lat] });
+        ).__MF_MAP;
+        map.jumpTo({ center: [lng, lat] });
+        const canvas = map.getCanvas();
+        const box = canvas.getBoundingClientRect();
+        const x = box.left + box.width / 2;
+        const top = Math.ceil(box.top);
+        const bare: boolean[] = [];
+        for (let y = top; y <= box.bottom; y += 4)
+          bare.push(document.elementFromPoint(x, y) === canvas);
+        return { bare, centre: box.top + box.height / 2, top };
       }, at);
+      const run = longestRun(line.bare);
+      if (run) {
+        const target = line.top + ((run.from + run.to) / 2) * 4;
+        await page.evaluate((dy) => {
+          (
+            window as unknown as {
+              __MF_MAP: {
+                panBy(
+                  offset: [number, number],
+                  options: { duration: number },
+                ): void;
+              };
+            }
+          ).__MF_MAP.panBy([0, dy], { duration: 0 });
+        }, line.centre - target);
+      }
       await mapSettled(page);
       spot = await where();
       expect(spot.bare).toBe(true);

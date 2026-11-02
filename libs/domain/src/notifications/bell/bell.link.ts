@@ -4,7 +4,8 @@
 // suspension or a yearly documents notice opens the garage dashboard; a decision on a driver's report
 // opens the reported garage's public profile its e-mail links to; a decision
 // on a job the garage proposed opens its Prețuri; an assistant's action
-// waiting for approval opens that approval. Any other
+// waiting for approval opens that approval; a removed review or reply opens
+// the reviews of the side it was told to. Any other
 // kind opens nothing: the bell only marks it read.
 type View =
   | 'assistant-approval'
@@ -14,6 +15,7 @@ type View =
   | 'prices'
   | 'profile'
   | 'requests'
+  | 'review-decided'
   | 'reviews';
 
 export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
@@ -56,7 +58,7 @@ export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
   REQUEST_DECLINED: 'requests',
   REQUEST_EXPIRED: 'requests',
   REVIEW_APPEAL_DECIDED: 'reviews',
-  REVIEW_DECIDED: 'reviews',
+  REVIEW_DECIDED: 'review-decided',
   REVIEW_INVITE: 'reviews',
   REVIEW_POSTED: 'garage-reviews',
   REVIEW_REPLIED: 'reviews',
@@ -107,6 +109,13 @@ function profileOf(params: unknown): string | null {
   return path && PROFILE_PATH.test(path) ? path : null;
 }
 
+// Whose side a REVIEW_DECIDED row was written for, from its variant.
+function sideOf(params: unknown): string | null {
+  if (!params || typeof params !== 'object') return null;
+  const variant = (params as { variant?: unknown }).variant;
+  return typeof variant === 'string' ? (variant.split('_')[1] ?? null) : null;
+}
+
 // The views a row opens at what it alone names, else nothing.
 const OPENS: Partial<Record<View, (row: Row) => string | null>> = {
   'assistant-approval': ({ subjectId }) =>
@@ -114,6 +123,10 @@ const OPENS: Partial<Record<View, (row: Row) => string | null>> = {
       ? `/app/assistant/approvals/${subjectId}`
       : null,
   profile: ({ params }) => profileOf(params),
+  // A removal told to the garage's owner opens the garage's Recenzii; the
+  // author's opens their own.
+  'review-decided': ({ params }) =>
+    sideOf(params) === 'owner' ? '/app/garage/reviews' : `${ROOT}/reviews`,
 };
 
 export function bellLink(row: Row): string | null {

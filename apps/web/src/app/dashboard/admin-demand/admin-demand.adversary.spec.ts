@@ -79,6 +79,13 @@ async function open(options: { overview?: boolean } = {}) {
             reads += 1;
             return answer();
           },
+          demandControllerSupply: async () => ({
+            areas: [],
+            firstDay: '2026-09-18',
+            lastDay: '2026-10-17',
+            rows: [],
+            writtenAt: null,
+          }),
         },
       },
     ],

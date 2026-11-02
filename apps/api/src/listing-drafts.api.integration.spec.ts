@@ -52,10 +52,21 @@ const create = (payload: object = body(), address = freshAddress()) =>
     .set('X-Forwarded-For', address)
     .send(payload);
 
-// A survey holds no free text any more, so the size is made of photo keys.
-const PHOTO = `garage-photos/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/${'x'.repeat(64)}`;
-const filesOf = (bytes: number) =>
-  Array.from({ length: Math.ceil(bytes / (PHOTO.length + 3)) }, () => PHOTO);
+// The envelope caps the photos at 20, so the size is made of the most
+// prices a draft holds, each name a control character JSON writes in six
+// bytes: about 280 KB, past the draft's limit and under the body's.
+const OVERSIZED = {
+  steps: {
+    '3': {
+      jobs: Array.from({ length: 500 }, () => ({
+        brandId: '3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10',
+        fromBani: 1,
+        name: '\u0001'.repeat(80),
+        toBani: 2,
+      })),
+    },
+  },
+};
 
 describe('the listing draft routes', () => {
   it('creates a draft without a session and answers its key', async () => {
@@ -209,9 +220,7 @@ describe('the listing draft routes', () => {
   });
 
   it('refuses a draft above its limit with draft_too_large', async () => {
-    const res = await create(
-      body({ data: { files: filesOf(300 * 1024) } }),
-    ).expect(413);
+    const res = await create(body({ data: OVERSIZED })).expect(413);
 
     expect(res.body).toMatchObject({ code: 'draft_too_large' });
   });

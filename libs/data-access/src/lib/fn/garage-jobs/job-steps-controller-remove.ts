@@ -11,6 +11,11 @@ import { RequestBuilder } from '../../request-builder';
 export interface JobStepsControllerRemove$Params {
   id: string;
   stepId: string;
+
+/**
+ * The job's updatedAt the change was made from; a change from an older read is refused
+ */
+  basedOnUpdatedAt?: string;
 }
 
 export function jobStepsControllerRemove(http: HttpClient, rootUrl: string, params: JobStepsControllerRemove$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
@@ -18,6 +23,7 @@ export function jobStepsControllerRemove(http: HttpClient, rootUrl: string, para
   if (params) {
     rb.path('id', params.id, {});
     rb.path('stepId', params.stepId, {});
+    rb.query('basedOnUpdatedAt', params.basedOnUpdatedAt, {});
   }
 
   return http.request(

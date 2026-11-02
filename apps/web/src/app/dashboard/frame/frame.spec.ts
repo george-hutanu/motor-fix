@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
   AdminService,
   CarsService,
@@ -283,20 +284,27 @@ describe('Frame', () => {
     expect(url()).toBe('/');
   });
 
-  it('hides team, prices and the garage profile from a receptionist', async () => {
-    const { element } = await render('receptionist', '/app/garage', [
-      'garage.requests',
-      'garage.schedule',
-      'garage.final_price',
-      'garage.own_jobs',
-    ]);
+  // @traces 1369-FR-001 1369-FR-005
+  it('gives a receptionist the garage profile from her row of the table, never team or prices', async () => {
+    const { element } = await render(
+      'receptionist',
+      '/app/garage',
+      capabilitiesOf('receptionist', {
+        canAnswerQuotes: false,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+      }),
+    );
 
     expect(menu(element)).toEqual([
       'Panou',
       'Cereri de ofertă',
       'Programări',
       'Lucrări',
+      'Recenzii',
+      'Profilul service‑ului',
       'Setări',
+      'Istoric modificări',
     ]);
   });
 

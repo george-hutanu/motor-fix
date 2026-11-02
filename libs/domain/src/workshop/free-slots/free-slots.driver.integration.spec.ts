@@ -222,7 +222,9 @@ describe("the move's window", () => {
     const s = await setting();
     const earliest = new Date(Date.now() + 120 * MINUTE);
     const rounded = Math.ceil(earliest.getTime() / STEP) * STEP;
-    const day14 = addDays(localDay(earliest), 13);
+    // The window opens on the rounded instant's day: from 23:30 on, now + 2 h
+    // rounds up to the next day's midnight.
+    const day14 = addDays(localDay(new Date(rounded)), 13);
     // Elena is taken until 18:00 on the 14th day; the 15th is all free.
     const blockedTo = at(18, 0, day14);
     const owner = await world.account('Mihai Dinu', ['garage']);

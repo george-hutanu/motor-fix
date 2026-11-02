@@ -123,8 +123,17 @@ describe('restoring a stored draft with hostile form data', () => {
     expect(restore({ files }).draft).toBeNull();
   });
 
-  it('restores a long list of well-formed file keys unchanged', () => {
+  it('refuses a long list of well-formed file keys', () => {
     const files = Array.from({ length: 10_000 }, () => FILE);
+
+    expect(restore({ files }).draft).toBeNull();
+  });
+
+  it('restores twenty distinct well-formed file keys unchanged', () => {
+    const files = Array.from(
+      { length: 20 },
+      (_, n) => `${FILE}-${String(n).padStart(2, '0')}`,
+    );
 
     expect(restore({ files }).draft?.data).toEqual({ files });
   });

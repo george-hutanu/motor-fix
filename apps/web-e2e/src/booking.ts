@@ -48,26 +48,44 @@ export async function freeSlot(request: APIRequestContext) {
 }
 
 // One request of the driver's, quoted by Militari and accepted by the driver,
-// so its booking waits for the garage's confirmation.
-export async function accepted(request: APIRequestContext) {
-  return (await acceptedBooking(request)).requestId;
+// so its booking waits for the garage's confirmation; at the slot given, so
+// two bookings can contend for one place, and of the driver named, so a test
+// can spare the seeded driver's 20 requests a day.
+export async function accepted(
+  request: APIRequestContext,
+  slot?: string,
+  email = DRIVER,
+) {
+  return (await acceptedBooking(request, email, slot)).requestId;
 }
 
-async function acceptedBooking(request: APIRequestContext, email = DRIVER) {
+async function acceptedBooking(
+  request: APIRequestContext,
+  email = DRIVER,
+  slot?: string,
+) {
   const militari = await accessToken(request, MILITARI);
   const me = await request.get('/api/v1/me', { headers: bearer(militari) });
   const { garageId } = (await me.json()) as { garageId: string };
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
   const driver = await accessToken(request, email);
-  const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
-  const { items } = (await cars.json()) as {
-    items: { id: string; model: string }[];
+  // The first list after a sign-in is the one warmed then (cars.controller.ts),
+  // older than a car ownDriver writes straight to PostgreSQL: it can come
+  // back empty, and the next one reads the table.
+  const listCars = async () => {
+    const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
+    expect(cars.ok()).toBe(true);
+    return ((await cars.json()) as { items: { id: string; model: string }[] })
+      .items;
   };
+  let items = await listCars();
+  if (items.length === 0) items = await listCars();
   const car = items.find((item) => item.model === 'Logan') ?? items[0];
+  expect(car, `${email} has no car`).toBeDefined();
   const sent = await request.post('/api/v1/quote-requests', {
     data: {
-      carId: car.id,
+      carId: car?.id,
       description: `Schimb de ulei și filtre ${randomUUID().slice(0, 8)}`,
       garageIds: [garageId],
       jobTypeIds: [oil.id],
@@ -82,7 +100,7 @@ async function acceptedBooking(request: APIRequestContext, email = DRIVER) {
       durationMinutes: 60,
       fromLei: 300,
       requestId,
-      slot: await freeSlot(request),
+      slot: slot ?? (await freeSlot(request)),
       toLei: 400,
     },
     headers: { ...bearer(militari), 'Idempotency-Key': randomUUID() },

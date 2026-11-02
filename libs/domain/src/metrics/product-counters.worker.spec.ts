@@ -44,10 +44,18 @@ describe("the worker's product counters at start", () => {
     initProductCounters('worker');
 
     const all = await series();
-    const emails = Object.values(TEMPLATES).filter((text) => text.email);
+    const emails = Object.entries(TEMPLATES).filter(
+      ([name, text]) => text.email && !name.startsWith('REVIEW_DECIDED.'),
+    );
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
     );
+    // @traces 179-FR-019
+    expect(
+      named(all, 'motorfix_emails_sent_total').filter((one) =>
+        String(one.labels['template']).startsWith('REVIEW_DECIDED.'),
+      ),
+    ).toEqual([]);
     // Its own 62, one per e-mailed template, and one per support e-mail kind
     // and outcome.
     expect(all).toHaveLength(emails.length + 62 + SUPPORT_EMAILS.length);

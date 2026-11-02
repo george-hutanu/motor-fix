@@ -188,7 +188,7 @@ describe('the map legend on a phone, from its own stylesheet', () => {
 
   it('keeps the narrow block to the legend alone', () => {
     const narrow = flat.match(
-      /@media \(max-width: 359\.98px\) \{(.*?\}) \}/,
+      /@media \(max-width: 767\.98px\) \{ (\.legend \{[^{}]*\}) \}/,
     )?.[1];
 
     expect(narrow?.match(/[^{}]+\{/g)?.map((s) => s.trim())).toEqual([

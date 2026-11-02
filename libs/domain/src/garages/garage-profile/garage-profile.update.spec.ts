@@ -128,6 +128,7 @@ describe("the owner's profile save: who may save", () => {
     expect(h.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  // @traces 1369-FR-004
   it.each(['receptionist', 'mechanic'] as const)(
     'answers 403 forbidden to the %s, even with a body that breaks every rule',
     async (role) => {

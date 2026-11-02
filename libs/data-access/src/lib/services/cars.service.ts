@@ -27,6 +27,8 @@ import { CarSaleControllerSend$Params } from '../fn/cars/car-sale-controller-sen
 import { CarSaleDto } from '../models/car-sale-dto';
 import { carsControllerCreate } from '../fn/cars/cars-controller-create';
 import { CarsControllerCreate$Params } from '../fn/cars/cars-controller-create';
+import { carsControllerDueItems } from '../fn/cars/cars-controller-due-items';
+import { CarsControllerDueItems$Params } from '../fn/cars/cars-controller-due-items';
 import { carsControllerList } from '../fn/cars/cars-controller-list';
 import { CarsControllerList$Params } from '../fn/cars/cars-controller-list';
 import { carsControllerRemove } from '../fn/cars/cars-controller-remove';
@@ -48,6 +50,7 @@ import { clientRepairsControllerList } from '../fn/cars/client-repairs-controlle
 import { ClientRepairsControllerList$Params } from '../fn/cars/client-repairs-controller-list';
 import { clientRepairsControllerRemove } from '../fn/cars/client-repairs-controller-remove';
 import { ClientRepairsControllerRemove$Params } from '../fn/cars/client-repairs-controller-remove';
+import { DueItemsDto } from '../models/due-items-dto';
 import { RepairListDto } from '../models/repair-list-dto';
 import { repairsControllerEdit } from '../fn/cars/repairs-controller-edit';
 import { RepairsControllerEdit$Params } from '../fn/cars/repairs-controller-edit';
@@ -589,6 +592,39 @@ export class CarsService extends BaseService {
   carsControllerCreate(params: CarsControllerCreate$Params, context?: HttpContext): Promise<CarDto> {
     const resp = this.carsControllerCreate$Response(params, context);
     return resp.then((r: StrictHttpResponse<CarDto>): CarDto => r.body);
+  }
+
+  /** Path part for operation `carsControllerDueItems()` */
+  static readonly CarsControllerDueItemsPath = '/api/v1/cars/due-items';
+
+  /**
+   * What is coming up across the caller's cars: ordered, with each row's state.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `carsControllerDueItems()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carsControllerDueItems$Response(params?: CarsControllerDueItems$Params, context?: HttpContext): Promise<StrictHttpResponse<DueItemsDto>> {
+    const obs = carsControllerDueItems(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * What is coming up across the caller's cars: ordered, with each row's state.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `carsControllerDueItems$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carsControllerDueItems(params?: CarsControllerDueItems$Params, context?: HttpContext): Promise<DueItemsDto> {
+    const resp = this.carsControllerDueItems$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DueItemsDto>): DueItemsDto => r.body);
   }
 
   /** Path part for operation `carsControllerRemove()` */

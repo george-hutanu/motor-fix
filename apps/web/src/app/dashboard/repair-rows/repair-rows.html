@@ -1,0 +1,14 @@
+<ul>
+  @for (row of rows(); track row.id) {
+    <li>
+      <span class="dot" [class.logged]="row.source === 'logged'" aria-hidden="true"></span>
+      <div class="body">
+        <p class="what">{{ row.what }}</p>
+        <p class="sub">{{ row.doneOn | day }}@if (row.garageName) { · {{ row.garageName }}}</p>
+      </div>
+      @if (label(row); as key) {
+        <span class="label">{{ key | t }}</span>
+      }
+    </li>
+  }
+</ul>

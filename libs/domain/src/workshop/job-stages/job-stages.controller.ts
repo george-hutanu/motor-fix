@@ -1,4 +1,9 @@
-import { FinalPriceDto, JobDto, ReceiveJobDto } from '@motor-fix/contracts';
+import {
+  BasedOnUpdatedAtDto,
+  FinalPriceDto,
+  JobDto,
+  ReceiveJobDto,
+} from '@motor-fix/contracts';
 import {
   Body,
   Controller,
@@ -17,6 +22,8 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -29,6 +36,8 @@ const uuid = () => new ParseUUIDPipe();
 const FORBIDDEN = 'forbidden: the desk, or a mechanic not on this job';
 const MISSING = 'not_found: not this garage’s job';
 const MOVED = 'invalid_transition (with currentStatus)';
+const LOCKED = 'job_locked (with holder): another person holds the job';
+const UNAVAILABLE = 'try_again: the lock store is unreachable';
 const PRICED = 'forbidden: a mechanic; the owner and the desk record the price';
 
 // The owner and the job's own mechanic move a job through its stages; the
@@ -47,9 +56,17 @@ export class JobStagesController {
   @ApiOkResponse({ type: JobDto })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: `not_received; ${MOVED}` })
-  start(@CurrentActor() actor: Actor, @Param('id', uuid()) id: string) {
-    return this.stages.move(actor, id, 'start');
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({
+    description: `job_changed (with job); not_received; ${MOVED}`,
+  })
+  start(
+    @CurrentActor() actor: Actor,
+    @Param('id', uuid()) id: string,
+    @Body() body: BasedOnUpdatedAtDto,
+  ) {
+    return this.stages.move(actor, id, 'start', body?.basedOnUpdatedAt);
   }
 
   @Post('pause')
@@ -58,9 +75,15 @@ export class JobStagesController {
   @ApiOkResponse({ type: JobDto })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: MOVED })
-  pause(@CurrentActor() actor: Actor, @Param('id', uuid()) id: string) {
-    return this.stages.move(actor, id, 'pause');
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({ description: `job_changed (with job); ${MOVED}` })
+  pause(
+    @CurrentActor() actor: Actor,
+    @Param('id', uuid()) id: string,
+    @Body() body: BasedOnUpdatedAtDto,
+  ) {
+    return this.stages.move(actor, id, 'pause', body?.basedOnUpdatedAt);
   }
 
   @Post('resume')
@@ -71,9 +94,15 @@ export class JobStagesController {
   @ApiOkResponse({ type: JobDto })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: MOVED })
-  resume(@CurrentActor() actor: Actor, @Param('id', uuid()) id: string) {
-    return this.stages.move(actor, id, 'resume');
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({ description: `job_changed (with job); ${MOVED}` })
+  resume(
+    @CurrentActor() actor: Actor,
+    @Param('id', uuid()) id: string,
+    @Body() body: BasedOnUpdatedAtDto,
+  ) {
+    return this.stages.move(actor, id, 'resume', body?.basedOnUpdatedAt);
   }
 
   @Post('finish')
@@ -82,9 +111,17 @@ export class JobStagesController {
   @ApiOkResponse({ type: JobDto })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: `job_not_started; ${MOVED}` })
-  finish(@CurrentActor() actor: Actor, @Param('id', uuid()) id: string) {
-    return this.stages.move(actor, id, 'finish');
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({
+    description: `job_changed (with job); job_not_started; ${MOVED}`,
+  })
+  finish(
+    @CurrentActor() actor: Actor,
+    @Param('id', uuid()) id: string,
+    @Body() body: BasedOnUpdatedAtDto,
+  ) {
+    return this.stages.move(actor, id, 'finish', body?.basedOnUpdatedAt);
   }
 
   @Post('receive')
@@ -98,13 +135,22 @@ export class JobStagesController {
     description: 'forbidden: a mechanic not on this job',
   })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: 'job_closed; invalid_state' })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({
+    description: 'job_changed (with job); job_closed; invalid_state',
+  })
   receive(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
     @Body() body: ReceiveJobDto,
   ) {
-    return this.stages.receive(actor, id, body.odometerKm);
+    return this.stages.receive(
+      actor,
+      id,
+      body.odometerKm,
+      body.basedOnUpdatedAt,
+    );
   }
 
   @Post('handover')
@@ -117,15 +163,22 @@ export class JobStagesController {
   @ApiBadRequestResponse({ description: 'validation_failed' })
   @ApiForbiddenResponse({ description: PRICED })
   @ApiNotFoundResponse({ description: MISSING })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
   @ApiConflictResponse({
-    description: `job_not_done; already_handed_over (with finalPriceBani); ${MOVED} of the booking`,
+    description: `job_changed (with job); job_not_done; already_handed_over (with finalPriceBani); ${MOVED} of the booking`,
   })
   handover(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
     @Body() body: FinalPriceDto,
   ) {
-    return this.stages.handover(actor, id, body.finalPriceBani);
+    return this.stages.handover(
+      actor,
+      id,
+      body.finalPriceBani,
+      body.basedOnUpdatedAt,
+    );
   }
 
   @Patch('final-price')
@@ -137,14 +190,22 @@ export class JobStagesController {
   @ApiBadRequestResponse({ description: 'validation_failed' })
   @ApiForbiddenResponse({ description: PRICED })
   @ApiNotFoundResponse({ description: MISSING })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
   @ApiConflictResponse({
-    description: 'not_handed_over; correction_window_closed',
+    description:
+      'job_changed (with job); not_handed_over; correction_window_closed',
   })
   correct(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
     @Body() body: FinalPriceDto,
   ) {
-    return this.stages.correct(actor, id, body.finalPriceBani);
+    return this.stages.correct(
+      actor,
+      id,
+      body.finalPriceBani,
+      body.basedOnUpdatedAt,
+    );
   }
 }

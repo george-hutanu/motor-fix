@@ -401,3 +401,22 @@ describe('another account', () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+// @traces 1394-FR-003
+describe('the sold cars', () => {
+  it('are read once, then again when a car is taken over', async () => {
+    let n = 0;
+    const load = jest.fn(async () => ({
+      items: Array.from({ length: n++ }, (_, i) => ({ id: `sold-${i}` })),
+    }));
+    const watching = open('soldCars', load as never, ['car_transfer.accepted']);
+    await settle();
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(watching.view.value()).toEqual({ items: [] });
+
+    live.emit('car_transfer.accepted');
+    await later(300);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(watching.view.value()).toEqual({ items: [{ id: 'sold-0' }] });
+  });
+});

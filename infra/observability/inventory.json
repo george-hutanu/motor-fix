@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 261,
+    "count": 274,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -335,7 +335,8 @@
         "worker-queue-growing",
         "worker-jobs-failed"
       ],
-      "story": "ST-881"
+      "story": "ST-881, ST-1249",
+      "reason": "the listing wizard queues one sizing job per confirmed garage photo, and the owner gallery (ST-1249) queues one per confirmed upload through the same service; the worker makes the copies, a last failure fires worker-jobs-failed"
     },
     {
       "kind": "queue",
@@ -386,6 +387,19 @@
       ],
       "reason": "counted by motorfix_review_reply_announced_total (built, muted, skipped) on motorfix-product, with one ReviewReplied log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
       "story": "ST-75"
+    },
+    {
+      "kind": "queue",
+      "name": "review-decided",
+      "source": "libs/domain/src/notifications/review-decided/review-decided.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_decision_announced_total (built, muted, skipped) on motorfix-product, with one ReviewDecided log line per event naming the review id; BullMQ queue metrics cover depth and failures",
+      "story": "ST-179"
     },
     {
       "kind": "queue",
@@ -1050,6 +1064,15 @@
       "story": "ST-75"
     },
     {
+      "kind": "product-counter",
+      "name": "motorfix_review_decision_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each removal told to the review author and the garage owners by outcome (built, muted, skipped), with the fan-out log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-179"
+    },
+    {
       "kind": "endpoint",
       "name": "garage-brands",
       "source": "libs/domain/src/garages/garage-brands/garage-brands.controller.ts",
@@ -1692,6 +1715,28 @@
       "story": "ST-276, ST-406"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-job-lock",
+      "source": "libs/domain/src/workshop/job-lock/job-lock.controller.ts",
+      "metric": "http.server.request.duration by http.route POST and DELETE /api/v1/garage/jobs/:id/lock",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a take sets the Redis key job:lock:{id} (five minutes) and writes its copy on the job row; a release or the owner's force deletes the key and clears the copy, the force writing one job.lock_forced audit entry in the same transaction; each outcome is counted in motorfix_job_lock_outcomes_total{action}; Redis unreachable answers 503 try_again, counted as unavailable, with one JobLock warning line; a 423 job_locked is the rule working",
+      "story": "ST-395"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_job_lock_outcomes_total",
+      "source": "libs/domain/src/workshop/job-lock/job-lock.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts what became of a job's edit lock by action (take, refresh, release, force, locked, stale, expired, unavailable), on the Job locks row; a lock store that stops answering shows as unavailable here and in the redis alerts, and a sweep that throws is a failed job-locks job, which worker-jobs-failed sees",
+      "story": "ST-395"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_job_steps_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
@@ -1844,6 +1889,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "car-models-3d",
+      "source": "libs/domain/src/catalogue/car-models-3d/car-models-3d.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/car-models-3d and /api/v1/car-models-3d/files/:key, and status (200, 400, 404, 503 storage_unavailable)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the brand's 3D car and its GLB files, public; the api's start logs '3D files uploaded: <n> written' once per boot and logs an error with the count so far when the store fails, the boot going on; a store failure on a file answers 503, counted by api-error-rate; spans come from the HTTP, S3 and Prisma auto-instrumentation; no product counter, as the read is a catalogue lookup with no product action",
+      "story": "ST-35"
+    },
+    {
+      "kind": "endpoint",
       "name": "garage-legal-check",
       "source": "libs/domain/src/garages/verification/legal-check/legal-check.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/legal-check",
@@ -1898,14 +1956,14 @@
       "kind": "endpoint",
       "name": "cars",
       "source": "libs/domain/src/cars/my-cars/cars/cars.controller.ts",
-      "metric": "http.server.request.duration by http.route /api/v1/cars and /api/v1/cars/:id",
+      "metric": "http.server.request.duration by http.route /api/v1/cars, /api/v1/cars/due-items and /api/v1/cars/:id",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "POST, GET, PATCH and DELETE of the driver's cars show on the request-duration metric by route and status code; since ST-91 an add and each odometer change write a row of the cars module's odometer_reading table in the same transaction, nextServiceKm is refused with next_service_not_above_odometer or next_service_too_far as a 400, and every car answer carries serviceDueOn; each write is an audit row and a car.added, car.updated or car.removed event, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
-      "story": "ST-91"
+      "reason": "POST, GET, PATCH and DELETE of the driver's cars show on the request-duration metric by route and status code; since ST-91 an add and each odometer change write a row of the cars module's odometer_reading table in the same transaction, nextServiceKm is refused with next_service_not_above_odometer or next_service_too_far as a 400, and every car answer carries serviceDueOn; since ST-93 GET /api/v1/cars/due-items reads the active cars with their readings in one query and writes nothing, and a replayed add key of a removed car answers 404 not_found; each write is an audit row and a car.added, car.updated or car.removed event, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-91, ST-93"
     },
     {
       "kind": "product-counter",
@@ -2002,6 +2060,19 @@
       ],
       "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days, radius and the facilities group (facilities, their note, courtesy-car terms, payment methods; 400 no_courtesy_car when the terms and the ticked car disagree), one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
       "story": "ST-133, ST-1246, ST-1248"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-photos",
+      "source": "libs/domain/src/garages/photos/owner-photos/owner-photos.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/photos, /photos/upload-url, /photos/uploads and /photos/uploads/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner gallery of a listed garage: the GET is a read with no writes; the PUT saves the whole gallery in one transaction under a row lock on the garage, an audit row per photo added, removed, moved or re-captioned (position and caption only, never a file key or address) and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the removed files deleted after the commit with a failure logged as one OwnerPhotosSave error line naming the garage, never the key; the upload address is rate limited per garage (uploadUrl) and the confirm queues the listing-photos job (already listed); a 409 is a stale stamp, a missing or unprocessed upload, a 400 a broken rule or unknown photo, a 403 a mechanic or receptionist, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; spans from the HTTP, Prisma and S3 auto-instrumentation; no counter or alert of its own; no outside call beyond the object store (already listed)",
+      "story": "ST-1249"
     },
     {
       "kind": "endpoint",
@@ -2217,6 +2288,19 @@
       ],
       "reason": "the admin's read of the log, today's entries for the Jurnal panel or any range of the last 90 days for the full log, narrowed by type, severity, source and a text search, fifty a page at most behind an opaque cursor on the indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-298, ST-299"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-status",
+      "source": "libs/domain/src/status/status.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/status",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's read of the six service tiles, one query of the status_tile table that writes nothing; the checks behind the tiles are the status-checks job's, and a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-295"
     },
     {
       "kind": "endpoint",
@@ -2985,6 +3069,28 @@
       "story": "ST-177"
     },
     {
+      "kind": "endpoint",
+      "name": "admin-review-decision",
+      "source": "libs/domain/src/reviews/report-queue/report-queue.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/review-reports/{reviewId}/decision",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each decision counts motorfix_review_decisions_total, moves the one pending report under a guard so two admins cannot both decide it, removes the review or the reply and writes their audit entries and one review.decided event in one transaction; a 409 or a 404 for a non-admin is the rule working; no outside call",
+      "story": "ST-179"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_decisions_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each decision an admin tries by outcome (removed, already_decided, no_pending_report) with the target and rule, no identifiers; a refusal is the queue state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-179"
+    },
+    {
       "kind": "queue",
       "name": "moderation-timers",
       "source": "libs/domain/src/reviews/moderation-timers/moderation-timers.module.ts",
@@ -3053,6 +3159,19 @@
       ],
       "reason": "one scheduler, live-idle-check, every minute reads each live session's publisher state from the provider and stops, as the system with stop_reason idle, a session with no publisher for ten minutes straight, through the one stop routine (keep or discard as the sender last chose); counted in motorfix_live_idle_stops_total, the check timed in motorfix_live_idle_check_seconds, one LiveIdle line per stop and one warning per session the provider could not tell, ids only; a check that throws is a failed job, which worker-jobs-failed sees",
       "story": "ST-1251"
+    },
+    {
+      "kind": "queue",
+      "name": "job-locks",
+      "source": "libs/domain/src/workshop/job-lock-sweep/job-lock-sweep.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one scheduler, job-lock-sweep, every minute clears the job row's copy of a lock whose Redis key ran out (publishing job.lock_changed, counted as motorfix_job_lock_outcomes_total{action=\"expired\"}, no audit entry) and writes back a held key the row lost; a sweep that throws is a failed job, which worker-jobs-failed sees",
+      "story": "ST-395"
     },
     {
       "kind": "queue",

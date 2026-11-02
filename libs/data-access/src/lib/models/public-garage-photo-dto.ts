@@ -4,6 +4,11 @@
 export interface PublicGaragePhotoDto {
 
   /**
+   * The owner's caption, when the photo has one
+   */
+  caption?: string;
+
+  /**
    * The display copy (1,600 px), signed for an hour
    */
   displayUrl: string;

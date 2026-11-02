@@ -7,16 +7,19 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
+import { BasedOnUpdatedAtDto } from '../../models/based-on-updated-at-dto';
 import { JobDto } from '../../models/job-dto';
 
 export interface JobStagesControllerResume$Params {
   id: string;
+      body: BasedOnUpdatedAtDto
 }
 
 export function jobStagesControllerResume(http: HttpClient, rootUrl: string, params: JobStagesControllerResume$Params, context?: HttpContext): Observable<StrictHttpResponse<JobDto>> {
   const rb = new RequestBuilder(rootUrl, jobStagesControllerResume.PATH, 'post');
   if (params) {
     rb.path('id', params.id, {});
+    rb.body(params.body, 'application/json');
   }
 
   return http.request(

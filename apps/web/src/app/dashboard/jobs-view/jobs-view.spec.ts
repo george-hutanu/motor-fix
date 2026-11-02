@@ -42,6 +42,8 @@ const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
       position: 0,
     },
   ],
+  lastForcedUnlock: null,
+  lock: null,
   mechanicId: 'mechanic-1',
   mechanicName: 'Mihai Dumitru',
   noShowAt: null,
@@ -54,6 +56,7 @@ const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
   status: 'in_work',
   stepsDone: 1,
   stepsTotal: 3,
+  updatedAt: '2026-10-08T09:00:00.000Z',
   workedSeconds: 0,
   ...over,
 });

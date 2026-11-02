@@ -578,17 +578,18 @@ describe('ResultsMap, the legend on a phone', () => {
 });
 
 // @traces 1351-FR-001 1351-FR-007
-describe('ResultsMap, the legend on a phone narrower than 360 px', () => {
+describe('ResultsMap, the legend on a phone', () => {
   const narrow =
     readFileSync(join(__dirname, 'results-map.css'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\s+/g, ' ')
       .match(
-        /@media \(max-width: 359\.98px\) \{ \.legend \{([^}]*)\} \}/,
+        /@media \(max-width: 767\.98px\) \{ \.legend \{([^}]*)\} \}/,
       )?.[1] ?? '';
 
-  // Four rows with the mobile mechanic's entry: at the phone's own spacing
-  // the half sheet of a 320 x 568 screen cuts the last one.
+  // Four rows with the mobile mechanic's entry, at 320 px and at 390 px in
+  // Romanian: at the phone's own spacing a half sheet held at the zoom
+  // buttons' 104 px cuts the last one.
   it('packs its rows tighter, so the whole legend clears the half sheet', () => {
     expect(narrow).toMatch(/line-height: 1\.25;/);
     expect(narrow).toMatch(/padding-block: var\(--mf-space-1\);/);
