@@ -2782,6 +2782,65 @@
         "tags": [
           "cars"
         ]
+      },
+      "post": {
+        "operationId": "LogRepairController_log",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogRepairDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarRepairDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field, an unknown field or id, or unknown_garage: the garage is not approved"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a car the caller owns now, or removed"
+          },
+          "409": {
+            "description": "check_needed: a day after today or a reading below an earlier one; resend with confirm true"
+          },
+          "422": {
+            "description": "date_before_car_year: the day is before the car’s year"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Log a repair done at any garage on one of the caller’s cars",
+        "tags": [
+          "cars"
+        ]
       }
     },
     "/api/v1/admin/accounts/{id}/repairs": {
@@ -11133,6 +11192,65 @@
         ]
       }
     },
+    "/api/v1/garages": {
+      "get": {
+        "operationId": "PublicGaragesController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Trimmed",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 8,
+              "default": 8,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePickListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: q not 2 to 80 characters, limit not 1 to 8"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approved garages whose name holds the text",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{slug}": {
       "get": {
         "operationId": "PublicGaragesController_bySlug",
@@ -16778,6 +16896,53 @@
         "required": [
           "items",
           "truncated"
+        ]
+      },
+      "LogRepairDto": {
+        "type": "object",
+        "properties": {
+          "what": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 120,
+            "minLength": 3
+          },
+          "garageName": {
+            "type": "string",
+            "description": "Trimmed; required without garageId, ignored for the stored name with one",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "garageId": {
+            "type": "string",
+            "description": "An approved garage on MotorFix, picked from the list",
+            "format": "uuid"
+          },
+          "doneOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "odometerKm": {
+            "type": "integer",
+            "maximum": 2000000,
+            "minimum": 0
+          },
+          "costBani": {
+            "type": "integer",
+            "description": "In bani",
+            "maximum": 100000000,
+            "minimum": 0,
+            "nullable": true
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "True once the driver confirmed a future date or a lower odometer"
+          }
+        },
+        "required": [
+          "what",
+          "doneOn",
+          "odometerKm"
         ]
       },
       "RepairListDto": {
@@ -27172,6 +27337,42 @@
           "fromBani",
           "toBani",
           "warnings"
+        ]
+      },
+      "GaragePickDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "city"
+        ]
+      },
+      "GaragePickListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "By name",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaragePickDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "PublicGarageDto": {

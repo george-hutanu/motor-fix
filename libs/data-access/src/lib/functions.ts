@@ -135,6 +135,8 @@ export type { CarHistoryControllerSoldRepairs$Params as CarHistoryControllerSold
 export { carHistoryControllerSoldRepairs as carHistoryControllerSoldRepairs } from './fn/cars/car-history-controller-sold-repairs';
 export type { CarHistoryControllerRepairs$Params as CarHistoryControllerRepairs$Params } from './fn/cars/car-history-controller-repairs';
 export { carHistoryControllerRepairs as carHistoryControllerRepairs } from './fn/cars/car-history-controller-repairs';
+export type { LogRepairControllerLog$Params as LogRepairControllerLog$Params } from './fn/cars/log-repair-controller-log';
+export { logRepairControllerLog as logRepairControllerLog } from './fn/cars/log-repair-controller-log';
 export type { ClientRepairsControllerList$Params as ClientRepairsControllerList$Params } from './fn/cars/client-repairs-controller-list';
 export { clientRepairsControllerList as clientRepairsControllerList } from './fn/cars/client-repairs-controller-list';
 export type { ClientRepairsControllerRemove$Params as ClientRepairsControllerRemove$Params } from './fn/cars/client-repairs-controller-remove';
@@ -413,6 +415,8 @@ export type { PriceListControllerRemoveBrandRange$Params as PriceListControllerR
 export { priceListControllerRemoveBrandRange as priceListControllerRemoveBrandRange } from './fn/garages/price-list-controller-remove-brand-range';
 export type { GarageLabourControllerSet$Params as GarageLabourControllerSet$Params } from './fn/garages/garage-labour-controller-set';
 export { garageLabourControllerSet as garageLabourControllerSet } from './fn/garages/garage-labour-controller-set';
+export type { PublicGaragesControllerSearch$Params as PublicGaragesControllerSearch$Params } from './fn/garages/public-garages-controller-search';
+export { publicGaragesControllerSearch as publicGaragesControllerSearch } from './fn/garages/public-garages-controller-search';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
