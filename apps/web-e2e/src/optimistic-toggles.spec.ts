@@ -12,6 +12,7 @@ import {
   ready,
   settled,
   signIn,
+  signUpDriver,
 } from './accounts.js';
 import { test } from './fixtures.js';
 
@@ -94,11 +95,11 @@ async function holdThenFail(page: Page, url: string | RegExp, method: string) {
   return release;
 }
 
-async function signedIn(page: Page, email: string) {
+async function signedIn(page: Page, email: string, home = '/app/garage') {
   await ready(page, '/ro');
   await openSignIn(page);
   await signIn(page, email);
-  await expect(page).toHaveURL('/app/garage');
+  await expect(page).toHaveURL(home);
 }
 
 async function accessToken(request: APIRequestContext, email: string) {
@@ -114,15 +115,13 @@ const toast = (page: Page, text: string) =>
 
 const TEST_MESSAGE = 'Mesaj de test: notificările funcționează.';
 
-// The garage owner's bell with every row read, then `count` new test rows.
-async function unread(request: APIRequestContext, count: number) {
-  const own = await accessToken(request, ACCOUNTS.garage);
+// A new driver of the test's own with `count` unread test rows in the bell,
+// signed in on the page: a bell another test also writes to (or a copy of
+// this one, run beside it) would count their rows too.
+async function unread(page: Page, request: APIRequestContext, count: number) {
+  const email = await signUpDriver(request, 'clopotel');
+  const own = await accessToken(request, email);
   const headers = { Authorization: `Bearer ${own}` };
-  expect(
-    (
-      await request.post('/api/v1/notifications/read-all', { headers })
-    ).status(),
-  ).toBe(204);
   const { id } = (await (
     await request.get('/api/v1/me', { headers })
   ).json()) as { id: string };
@@ -134,6 +133,7 @@ async function unread(request: APIRequestContext, count: number) {
     });
     expect(res.status()).toBe(202);
   }
+  await signedIn(page, email, '/app/driver');
 }
 
 const bell = (page: Page) => page.getByRole('button', { name: /^Notificări/ });
@@ -169,77 +169,68 @@ test.describe('a toggle shows before the server answers @seeded', () => {
     await expect(push).toHaveAttribute('aria-checked', before ?? 'false');
   });
 
-  // Both read the garage owner's whole bell: each marks it read, then adds
-  // its three rows, so run side by side the badge counts six. One worker,
-  // one after the other.
-  test.describe('the bell', () => {
-    test.describe.configure({ mode: 'default' });
-
-    // @traces 1411-FR-003
-    test('a bell row reads at once and the count drops before the answer, then both come back with one message when the read fails', async ({
+  // @traces 1411-FR-003
+  test('a bell row reads at once and the count drops before the answer, then both come back with one message when the read fails', async ({
+    page,
+    request,
+  }) => {
+    const release = await holdThenFail(
       page,
-      request,
-    }) => {
-      await unread(request, 3);
-      const release = await holdThenFail(
-        page,
-        '**/api/v1/notifications/*/read',
-        'POST',
-      );
-      await signedIn(page, ACCOUNTS.garage);
-      await expect(badge(page)).toHaveText('3');
-      await bell(page).click();
-      const list = page.getByRole('dialog', { name: 'Notificări' });
-      const row = list.locator('li', { hasText: TEST_MESSAGE }).first();
-      await expect(row).toHaveClass(/unread/);
-      await slow3g(page);
-      await watch(row, { attributeFilter: ['class'] });
+      '**/api/v1/notifications/*/read',
+      'POST',
+    );
+    await unread(page, request, 3);
+    await expect(badge(page)).toHaveText('3');
+    await bell(page).click();
+    const list = page.getByRole('dialog', { name: 'Notificări' });
+    const row = list.locator('li', { hasText: TEST_MESSAGE }).first();
+    await expect(row).toHaveClass(/unread/);
+    await slow3g(page);
+    await watch(row, { attributeFilter: ['class'] });
 
-      await row.getByRole('button').click();
+    await row.getByRole('button').click();
 
-      await shownWithin(page);
-      await expect(row).not.toHaveClass(/unread/);
-      await expect(badge(page)).toHaveText('2');
-      release();
-      await expect(row).toHaveClass(/unread/);
-      await expect(badge(page)).toHaveText('3');
-      await expect(
-        toast(page, 'Notificarea nu a putut fi marcată ca citită.'),
-      ).toHaveCount(1);
-    });
+    await shownWithin(page);
+    await expect(row).not.toHaveClass(/unread/);
+    await expect(badge(page)).toHaveText('2');
+    release();
+    await expect(row).toHaveClass(/unread/);
+    await expect(badge(page)).toHaveText('3');
+    await expect(
+      toast(page, 'Notificarea nu a putut fi marcată ca citită.'),
+    ).toHaveCount(1);
+  });
 
-    // @traces 1411-FR-002 1411-FR-003
-    test('mark all reads every row at once, then every row is unread again with one message when it is refused', async ({
+  // @traces 1411-FR-002 1411-FR-003
+  test('mark all reads every row at once, then every row is unread again with one message when it is refused', async ({
+    page,
+    request,
+  }) => {
+    const release = await holdThenFail(
       page,
-      request,
-    }) => {
-      await unread(request, 3);
-      const release = await holdThenFail(
-        page,
-        '**/api/v1/notifications/read-all',
-        'POST',
-      );
-      await signedIn(page, ACCOUNTS.garage);
-      await expect(badge(page)).toHaveText('3');
-      await bell(page).click();
-      const list = page.getByRole('dialog', { name: 'Notificări' });
-      // Only this test's three are unread: earlier runs leave their rows, read.
-      const unreadRows = list.locator('li.unread', { hasText: TEST_MESSAGE });
-      await expect(unreadRows).toHaveCount(3);
+      '**/api/v1/notifications/read-all',
+      'POST',
+    );
+    await unread(page, request, 3);
+    await expect(badge(page)).toHaveText('3');
+    await bell(page).click();
+    const list = page.getByRole('dialog', { name: 'Notificări' });
+    // A new account's bell holds only this test's three.
+    const unreadRows = list.locator('li.unread', { hasText: TEST_MESSAGE });
+    await expect(unreadRows).toHaveCount(3);
 
-      await list
-        .getByRole('button', { exact: true, name: 'Marchează tot ca citit' })
-        .click();
+    await list
+      .getByRole('button', { exact: true, name: 'Marchează tot ca citit' })
+      .click();
 
-      await expect(list.locator('li.unread')).toHaveCount(0);
-      await expect(badge(page)).toHaveCount(0);
-      release();
-      await expect(unreadRows).toHaveCount(3);
-      await expect(badge(page)).toHaveText('3');
-      await expect(
-        toast(page, 'Notificarea nu a putut fi marcată ca citită.'),
-      ).toHaveCount(1);
-    });
+    await expect(list.locator('li.unread')).toHaveCount(0);
+    await expect(badge(page)).toHaveCount(0);
+    release();
+    await expect(unreadRows).toHaveCount(3);
+    await expect(badge(page)).toHaveText('3');
+    await expect(
+      toast(page, 'Notificarea nu a putut fi marcată ca citită.'),
+    ).toHaveCount(1);
   });
 
   test('a price-list job hides at once, then is back on the profile with a line saying so when the save fails', async ({
