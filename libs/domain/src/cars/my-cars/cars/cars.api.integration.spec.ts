@@ -384,6 +384,29 @@ describe('the Idempotency-Key header', () => {
     expect(await cars(id)).toBe(1);
   });
 
+  // @traces 093-FR-010
+  it('answers 404 to the same key once its car is removed and creates nothing', async () => {
+    const { auth, id } = await driver();
+    const { id: brandId } = await brand('BMW');
+    const key = randomUUID();
+    const first = await add(auth, bmw320d(brandId), key);
+    const gone = await http()
+      .delete(`/cars/${first.body.id}`)
+      .set('Authorization', auth);
+
+    const again = await add(auth, bmw320d(brandId), key);
+
+    expect(gone.status).toBe(204);
+    expect(again.status).toBe(404);
+    expect(again.body.code).toBe('not_found');
+    expect(await cars(id)).toBe(1);
+    const row = await prisma.car.findUniqueOrThrow({
+      where: { id: first.body.id },
+    });
+    expect(row.removedAt).not.toBeNull();
+    expect((await list(auth)).body.items).toEqual([]);
+  });
+
   it('creates a second car for a different key', async () => {
     const { auth, id } = await driver();
     const { id: brandId } = await brand('BMW');

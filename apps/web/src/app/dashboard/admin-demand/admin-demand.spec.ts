@@ -1,6 +1,7 @@
 // @traces 103-FR-006 103-FR-007 103-FR-008 103-FR-009 103-FR-010 103-FR-013
 // @traces 404-FR-007 404-FR-008 404-FR-010 404-FR-011
 // @traces 1368-FR-001
+// @traces 1416-FR-001 1416-FR-002 1416-FR-012
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -65,9 +66,11 @@ const FULL: AdminDemandDto = {
 
 let answer: () => Promise<AdminDemandDto>;
 let reads: number;
+let supplyReads: number;
 
 beforeEach(() => {
   reads = 0;
+  supplyReads = 0;
   answer = async () => FULL;
   globalThis.matchMedia = (query: string) =>
     ({
@@ -99,6 +102,16 @@ async function open(
           demandControllerDemand: () => {
             reads += 1;
             return answer();
+          },
+          demandControllerSupply: async () => {
+            supplyReads += 1;
+            return {
+              areas: [],
+              firstDay: '2026-09-18',
+              lastDay: '2026-10-17',
+              rows: [],
+              writtenAt: null,
+            };
           },
         },
       },
@@ -340,6 +353,29 @@ describe('AdminDemand, the view', () => {
     expect(list?.querySelector('h2')?.textContent?.trim()).toBe(
       'Lista de mărci',
     );
+  });
+});
+
+describe('AdminDemand, the demand and supply table', () => {
+  it('sits in the view once, between the reports and the brand list, read once', async () => {
+    const el = await open();
+
+    const tables = el.querySelectorAll('mf-admin-demand-supply');
+    expect(tables).toHaveLength(1);
+    expect(supplyReads).toBe(1);
+    const order = [
+      ...el.querySelectorAll(
+        '.reports, mf-admin-demand-supply, mf-admin-brands',
+      ),
+    ].map((node) => node.tagName.toLowerCase());
+    expect(order).toEqual(['div', 'mf-admin-demand-supply', 'mf-admin-brands']);
+  });
+
+  it('is not in the overview panel, which makes no supply read', async () => {
+    const el = await open({ overview: true });
+
+    expect(el.querySelector('mf-admin-demand-supply')).toBeNull();
+    expect(supplyReads).toBe(0);
   });
 });
 

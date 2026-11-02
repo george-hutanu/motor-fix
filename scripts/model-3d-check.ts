@@ -16,7 +16,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { generateGeneric } from './models-3d-generic.ts';
+import { generateGeneric } from '../libs/domain/src/catalogue/models-3d/generic/generic.ts';
 import {
   checkModels3d,
   placeholders,

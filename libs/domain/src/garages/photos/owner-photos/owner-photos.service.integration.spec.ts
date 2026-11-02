@@ -97,15 +97,18 @@ describe('who reaches the gallery', () => {
     ).toBe(404);
     await reset();
     const suspended = await world('suspended');
+    // Each started only when awaited: a refusal nobody awaits yet is unhandled.
     const writes = [
-      parts.service.uploadAddress(suspended.owner, suspended.nord.id, FILE),
-      parts.save.save(suspended.owner, suspended.nord.id, {
-        photos: [{ id: suspended.a.id }],
-        version: '0',
-      }),
+      () =>
+        parts.service.uploadAddress(suspended.owner, suspended.nord.id, FILE),
+      () =>
+        parts.save.save(suspended.owner, suspended.nord.id, {
+          photos: [{ id: suspended.a.id }],
+          version: '0',
+        }),
     ];
     for (const write of writes) {
-      expect(await refusalOf(write)).toMatchObject({
+      expect(await refusalOf(write())).toMatchObject({
         body: { code: 'gone' },
         status: 410,
       });

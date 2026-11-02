@@ -1,0 +1,161 @@
+/* One column under the two reports, as wide as both. */
+:host {
+  display: grid;
+  min-width: 0;
+}
+.subtitle,
+.updated {
+  margin: 0;
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.subtitle {
+  font-size: var(--mf-size-body);
+}
+.updated {
+  margin-top: var(--mf-space-1);
+  font-size: var(--mf-size-label);
+}
+/* The filters stack on a phone and sit side by side from a tablet up. */
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+  margin: var(--mf-space-4) 0;
+}
+.tools label {
+  display: grid;
+  flex: 1 1 12rem;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+.label {
+  font-size: var(--mf-size-small);
+  font-weight: 600;
+  color: var(--mf-text-secondary);
+}
+select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-2);
+  font: inherit;
+  font-size: var(--mf-size-field);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+.supply {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  padding: 0 var(--mf-space-3) var(--mf-space-2) 0;
+  text-align: start;
+  font-size: var(--mf-size-small);
+  font-weight: 600;
+  color: var(--mf-text-secondary);
+}
+td {
+  padding: var(--mf-space-3) var(--mf-space-3) var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+  vertical-align: middle;
+}
+th:last-child,
+td:last-child {
+  padding-inline-end: 0;
+}
+.lead {
+  min-width: 0;
+}
+.name,
+.figures {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.name {
+  font-weight: 700;
+  color: var(--mf-text);
+}
+.figures {
+  margin-top: var(--mf-space-1);
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.count {
+  text-align: end;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Phones and narrow tablets: each row is a card of one column; the column
+   names stay for screen readers. */
+@media (max-width: 767px) {
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .supply,
+  tbody {
+    display: block;
+  }
+  tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mf-space-1);
+    padding: var(--mf-space-3) 0;
+    border-top: 1px solid var(--mf-line);
+  }
+  tr:first-child {
+    border-top: 0;
+  }
+  td {
+    display: block;
+    padding: 0;
+    border-top: 0;
+    min-width: 0;
+  }
+  td.state.none {
+    display: none;
+  }
+  .count {
+    text-align: start;
+    white-space: normal;
+  }
+}
+.skeletons {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.skeleton-row {
+  padding: var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+}
+.skeleton-row:first-child {
+  border-top: 0;
+}
+.skeleton {
+  display: block;
+  height: 1em;
+  width: 70%;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.empty,
+.failed p {
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.failed {
+  display: grid;
+  justify-items: start;
+  gap: var(--mf-space-3);
+}

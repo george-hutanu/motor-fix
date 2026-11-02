@@ -1,4 +1,4 @@
-import { imageBaseUrl, photoConfig } from './env';
+import { imageBaseUrl, models3dBaseUrl, photoConfig } from './env';
 
 // @traces 1192-FR-011 1192-FR-008
 
@@ -105,6 +105,35 @@ describe('imageBaseUrl, hostile values', () => {
   it('accepts an upper-case scheme, as URL schemes are case-insensitive', () => {
     expect(imageBaseUrl({ IMAGE_BASE_URL: 'HTTPS://img.motorfix.ro' })).toBe(
       'HTTPS://img.motorfix.ro',
+    );
+  });
+});
+
+// @traces 035-FR-006
+describe('models3dBaseUrl', () => {
+  it('defaults to the API file route', () => {
+    expect(models3dBaseUrl({})).toBe('/api/v1/car-models-3d/files');
+  });
+
+  it.each([
+    ['https://cdn.motorfix.ro/models-3d', 'https://cdn.motorfix.ro/models-3d'],
+    ['https://cdn.motorfix.ro/models-3d/', 'https://cdn.motorfix.ro/models-3d'],
+    ['http://localhost:9000/models-3d', 'http://localhost:9000/models-3d'],
+    ['/files/3d', '/files/3d'],
+    ['/files/3d/', '/files/3d'],
+  ])('takes %j as %j', (value, base) => {
+    expect(models3dBaseUrl({ MODELS_3D_BASE_URL: value })).toBe(base);
+  });
+
+  it.each([
+    'cdn.motorfix.ro/models-3d',
+    '//cdn.motorfix.ro/models-3d',
+    'ftp://cdn.motorfix.ro',
+    'javascript:alert(1)',
+    'https://',
+  ])('refuses %j', (value) => {
+    expect(() => models3dBaseUrl({ MODELS_3D_BASE_URL: value })).toThrow(
+      /MODELS_3D_BASE_URL/,
     );
   });
 });

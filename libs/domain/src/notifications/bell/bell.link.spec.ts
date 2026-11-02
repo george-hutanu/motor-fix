@@ -221,3 +221,32 @@ describe("a row about an assistant's action waiting for approval", () => {
     ).toBeNull();
   });
 });
+
+// @traces 179-FR-012
+describe('a row about a reported review an admin removed', () => {
+  it.each(['review_owner', 'reply_owner'])(
+    "opens the garage's Recenzii for %s",
+    (variant) => {
+      expect(
+        bellLink({
+          kind: 'REVIEW_DECIDED',
+          params: { variant },
+          subjectId: CAR,
+        }),
+      ).toBe('/app/garage/reviews');
+    },
+  );
+
+  it.each(['review_author', 'reply_author'])(
+    'opens Recenziile mele for %s',
+    (variant) => {
+      expect(
+        bellLink({
+          kind: 'REVIEW_DECIDED',
+          params: { variant },
+          subjectId: CAR,
+        }),
+      ).toBe('/app/driver/reviews');
+    },
+  );
+});

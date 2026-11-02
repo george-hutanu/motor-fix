@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-31
+updated: 2026-11-02
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -31,6 +31,7 @@ features:
   - 1261-result-filters
   - 1398-open-now-results-filters
   - 1399-results-filters
+  - 062-outside-repair
 ---
 
 # Capability: Garage search
@@ -864,6 +865,10 @@ _From 1399-results-filters._
 ### 1399-FR-010 — Tests before code (Principle II). Web unit tests (Jest, colocated, in the `filters/` module's and the panel's own specs first, with the fewest lines in `results.spec.ts`) MUST cover: the bar read for each allowed value, each refused value and a repeated key of the three filters; the bar write for a choice, a re-choice, a cleared choice, the card switch and "Scoate filtrele" with the five on; the count with mixed filters; the chips' order, labels in both languages and removal; the three parameters on the list, page and pins requests, none on the pin's `ids=` read, the five on every card re-read with a filter on and none without; the fade-out and the answer's lower total on a re-read that leaves a garage out; no `log=1` on a change; the warm not run with a new filter on. Playwright end to end (`apps/web-e2e`, `@seeded @database`, extending `results-filters.spec.ts`) MUST, with garages seeded so the API's verdict does not depend on the run's instant (one at 180 lei/h, rated 4.6 with card payment marked; one at 260 lei/h, unrated, without card payment, near a place of its own), choose "200" and check the list, the summary's matching total, the chip, "Filtre · 1" and the dimmed pin; add "4,5+" and the card switch and check "Filtre · 3" and the three chips; change the brand and check the three parameters kept in the bar and the chips; open the bar's link in a fresh page and check the panel's choices; at the second place choose "150" and use "Scoate filtrele" on the empty state; and assert no request carried `log=1` after a change.
 
 _From 1399-results-filters._
+
+### 062-FR-009 — `GET /api/v1/garages?q=<text>&limit=<n>` (capability `driver.cars`; on the garages controller beside `GET /garages/:slug`, a session required, never `@Public()`) MUST answer `{ items }`: the `approved` garages whose name contains `q` ignoring case (no diacritic folding; `%`, `_` and `\` in `q` are literal, escaped before the match), ordered by name then id, at most `limit` (1 to 8, default 8), each `{ id, name, city }` with `city` the garage's `cityName` or null, and nothing more (no slug, address, phone, rating, hours or status); `q` is required, 2 to 80 characters after trimming, a `q` holding a control character or a lone surrogate, and `limit` out of range or not an integer answers 400 `validation_failed`. A non-driver role answers 404, a visitor 401; the route joins no public-routes list.
+
+_From 062-outside-repair._
 
 ## Retired
 

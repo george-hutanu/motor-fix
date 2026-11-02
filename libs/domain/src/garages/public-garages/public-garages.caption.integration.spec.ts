@@ -65,7 +65,10 @@ beforeAll(async () => {
   redis = new Redis(redisUrl);
   // A reorder and a caption touch no file: the uploads are not needed here.
   const storage = app.get(StorageService);
-  const listing = {} as ListingPhotosService;
+  // No file is added, so the sizes the save reads back are none.
+  const listing = {
+    describe: async () => [],
+  } as unknown as ListingPhotosService;
   const limits = {} as RateLimits;
   save = new OwnerPhotosSave(
     prisma,

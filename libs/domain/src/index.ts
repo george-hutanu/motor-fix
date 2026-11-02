@@ -77,6 +77,7 @@ export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-del
 export { CarAccountDeletedModule } from './cars/account-deleted/account-deleted.module';
 export { ClientRepairsModule } from './cars/client-repairs/client-repairs.module';
 export { CarHistoryModule } from './cars/history/history.module';
+export { LogRepairModule } from './cars/log-repair/log-repair.module';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export {
   CAR_REMINDERS_CONSUMER,
@@ -94,11 +95,13 @@ export {
   BRANDS,
 } from './catalogue/brands/brands';
 export { type CarForBrand, carForBrand } from './catalogue/car-models';
+export { CarModels3dModule } from './catalogue/car-models-3d/car-models-3d.module';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
 export { CAR_MODELS } from './catalogue/models-3d/models-3d';
 export { Models3dLoader } from './catalogue/models-3d/models-3d.loader';
+export { Models3dStore } from './catalogue/models-3d/models-3d.store';
 export { EVENT_PORT, type EventPort, outbox } from './events/event.port';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
@@ -190,6 +193,7 @@ export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-re
 export { REPAIR_UPDATED_CONSUMER } from './notifications/repair-updated/repair-updated.fan-out';
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
+export { REVIEW_DECIDED_CONSUMER } from './notifications/review-decided/review-decided.fan-out';
 export { REVIEW_POSTED_CONSUMER } from './notifications/review-posted/review-posted.fan-out';
 export { REVIEW_REPLIED_CONSUMER } from './notifications/review-replied/review-replied.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';

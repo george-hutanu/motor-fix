@@ -135,6 +135,8 @@ export type { CarHistoryControllerSoldRepairs$Params as CarHistoryControllerSold
 export { carHistoryControllerSoldRepairs as carHistoryControllerSoldRepairs } from './fn/cars/car-history-controller-sold-repairs';
 export type { CarHistoryControllerRepairs$Params as CarHistoryControllerRepairs$Params } from './fn/cars/car-history-controller-repairs';
 export { carHistoryControllerRepairs as carHistoryControllerRepairs } from './fn/cars/car-history-controller-repairs';
+export type { LogRepairControllerLog$Params as LogRepairControllerLog$Params } from './fn/cars/log-repair-controller-log';
+export { logRepairControllerLog as logRepairControllerLog } from './fn/cars/log-repair-controller-log';
 export type { ClientRepairsControllerList$Params as ClientRepairsControllerList$Params } from './fn/cars/client-repairs-controller-list';
 export { clientRepairsControllerList as clientRepairsControllerList } from './fn/cars/client-repairs-controller-list';
 export type { ClientRepairsControllerRemove$Params as ClientRepairsControllerRemove$Params } from './fn/cars/client-repairs-controller-remove';
@@ -151,6 +153,8 @@ export type { CarsControllerList$Params as CarsControllerList$Params } from './f
 export { carsControllerList as carsControllerList } from './fn/cars/cars-controller-list';
 export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from './fn/cars/cars-controller-create';
 export { carsControllerCreate as carsControllerCreate } from './fn/cars/cars-controller-create';
+export type { CarsControllerDueItems$Params as CarsControllerDueItems$Params } from './fn/cars/cars-controller-due-items';
+export { carsControllerDueItems as carsControllerDueItems } from './fn/cars/cars-controller-due-items';
 export type { CarsControllerRemove$Params as CarsControllerRemove$Params } from './fn/cars/cars-controller-remove';
 export { carsControllerRemove as carsControllerRemove } from './fn/cars/cars-controller-remove';
 export type { CarsControllerUpdate$Params as CarsControllerUpdate$Params } from './fn/cars/cars-controller-update';
@@ -191,6 +195,8 @@ export type { JobDecisionsControllerReject$Params as JobDecisionsControllerRejec
 export { jobDecisionsControllerReject as jobDecisionsControllerReject } from './fn/admin/job-decisions-controller-reject';
 export type { ReportQueueControllerList$Params as ReportQueueControllerList$Params } from './fn/admin/report-queue-controller-list';
 export { reportQueueControllerList as reportQueueControllerList } from './fn/admin/report-queue-controller-list';
+export type { ReportQueueControllerDecide$Params as ReportQueueControllerDecide$Params } from './fn/admin/report-queue-controller-decide';
+export { reportQueueControllerDecide as reportQueueControllerDecide } from './fn/admin/report-queue-controller-decide';
 export type { DemandControllerDemand$Params as DemandControllerDemand$Params } from './fn/admin/demand-controller-demand';
 export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
 export type { DemandControllerSupply$Params as DemandControllerSupply$Params } from './fn/admin/demand-controller-supply';
@@ -237,6 +243,8 @@ export type { VerificationFileControllerReopen$Params as VerificationFileControl
 export { verificationFileControllerReopen as verificationFileControllerReopen } from './fn/admin/verification-file-controller-reopen';
 export type { VerificationFileControllerCorrect$Params as VerificationFileControllerCorrect$Params } from './fn/admin/verification-file-controller-correct';
 export { verificationFileControllerCorrect as verificationFileControllerCorrect } from './fn/admin/verification-file-controller-correct';
+export type { StatusControllerRead$Params as StatusControllerRead$Params } from './fn/admin/status-controller-read';
+export { statusControllerRead as statusControllerRead } from './fn/admin/status-controller-read';
 export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
 export { systemLogControllerList as systemLogControllerList } from './fn/admin/system-log-controller-list';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
@@ -279,6 +287,10 @@ export type { PopularBrandsControllerTiles$Params as PopularBrandsControllerTile
 export { popularBrandsControllerTiles as popularBrandsControllerTiles } from './fn/brands/popular-brands-controller-tiles';
 export type { JobTypesControllerSearch$Params as JobTypesControllerSearch$Params } from './fn/catalogue/job-types-controller-search';
 export { jobTypesControllerSearch as jobTypesControllerSearch } from './fn/catalogue/job-types-controller-search';
+export type { CarModels3DControllerRead$Params as CarModels3DControllerRead$Params } from './fn/catalogue/car-models-3-d-controller-read';
+export { carModels3DControllerRead as carModels3DControllerRead } from './fn/catalogue/car-models-3-d-controller-read';
+export type { GetCarModel3DFile$Params as GetCarModel3DFile$Params } from './fn/catalogue/get-car-model-3-d-file';
+export { getCarModel3DFile as getCarModel3DFile } from './fn/catalogue/get-car-model-3-d-file';
 export type { PublicHolidaysControllerList$Params as PublicHolidaysControllerList$Params } from './fn/public-holidays/public-holidays-controller-list';
 export { publicHolidaysControllerList as publicHolidaysControllerList } from './fn/public-holidays/public-holidays-controller-list';
 export type { GarageSearchControllerForBrand$Params as GarageSearchControllerForBrand$Params } from './fn/search/garage-search-controller-for-brand';
@@ -403,6 +415,8 @@ export type { PriceListControllerRemoveBrandRange$Params as PriceListControllerR
 export { priceListControllerRemoveBrandRange as priceListControllerRemoveBrandRange } from './fn/garages/price-list-controller-remove-brand-range';
 export type { GarageLabourControllerSet$Params as GarageLabourControllerSet$Params } from './fn/garages/garage-labour-controller-set';
 export { garageLabourControllerSet as garageLabourControllerSet } from './fn/garages/garage-labour-controller-set';
+export type { PublicGaragesControllerSearch$Params as PublicGaragesControllerSearch$Params } from './fn/garages/public-garages-controller-search';
+export { publicGaragesControllerSearch as publicGaragesControllerSearch } from './fn/garages/public-garages-controller-search';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
