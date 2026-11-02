@@ -63,12 +63,15 @@ test.describe('one job status on every screen @seeded @database', () => {
       );
       jobId = job.rows[0]?.id ?? '';
       expect(jobId).not.toBe('');
-      const call = async (verb: string) => {
+      const call = async (verb: string, data?: object) => {
         const res = await request.post(`/api/v1/garage/jobs/${jobId}/${verb}`, {
+          data,
           headers: garage,
         });
         expect(res.ok(), `${verb}: ${res.status()}`).toBe(true);
       };
+      // A job starts only once the car is received.
+      await call('receive', { odometerKm: 98_100 });
       await call('start');
 
       await page.setViewportSize({ height: 844, width: 390 });
