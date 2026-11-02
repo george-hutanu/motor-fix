@@ -78,6 +78,8 @@ config_of() {
   [ -n "$config" ] && echo "$config"
 }
 configs="$(printf '%s\n' "$changed" | while read -r f; do config_of "$f"; done | sort -u)"
+# Jest is asked only about the files no Vitest config claims.
+others="$(printf '%s\n' "$changed" | while read -r f; do [ -n "$(config_of "$f")" ] || echo "$f"; done)"
 
 if [ -n "$configs" ] && [ -x node_modules/.bin/vitest ]; then
   for config in $configs; do
@@ -92,6 +94,7 @@ if [ -n "$configs" ] && [ -x node_modules/.bin/vitest ]; then
   done
 fi
 
+[ -n "$others" ] || exit 0
 [ -x node_modules/.bin/jest ] || exit 0
 HEAVY_WAIT="${HEAVY_WAIT:-300}" $heavy npx --no-install jest --onlyChanged --passWithNoTests --maxWorkers=2 >&2 2>&1
 code=$?

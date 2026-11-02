@@ -171,7 +171,7 @@
       ],
       "description": "Refuse to end a session whose uncommitted code changes leave npm test + lint red",
       "fail_closed": true,
-      "fingerprint": "626fbb9a26fc"
+      "fingerprint": "8983c74566fa"
     },
     {
       "id": "stop:pr-lifecycle",
