@@ -48,8 +48,8 @@ const base = (git(["merge-base", "HEAD", "origin/main"]) || git(["merge-base", "
 const changed = [
   ...new Set(
     [
-      base ? git(["diff", "--name-only", `${base}..HEAD`]) : "",
-      git(["diff", "--name-only", "HEAD"]),
+      base ? git(["-c", "core.quotePath=false", "diff", "--name-only", `${base}..HEAD`]) : "",
+      git(["-c", "core.quotePath=false", "diff", "--name-only", "HEAD"]),
       git(["ls-files", "--others", "--exclude-standard"]),
     ]
       .join("\n")
@@ -72,7 +72,7 @@ const atBase = () => (filesAtBase ??= new Set(git(["ls-tree", "-r", "--name-only
 const addedOf = (file) => {
   if (!addedByFile) {
     addedByFile = new Map();
-    for (const diff of base ? [git(["diff", "--no-color", `${base}..HEAD`]), git(["diff", "--no-color", "HEAD"])] : []) {
+    for (const diff of base ? [git(["-c", "core.quotePath=false", "diff", "--no-color", `${base}..HEAD`]), git(["-c", "core.quotePath=false", "diff", "--no-color", "HEAD"])] : []) {
       let lines;
       for (const l of diff.split("\n")) {
         if (l.startsWith("diff --git ")) lines = undefined;

@@ -220,8 +220,8 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           TEST_SUITE: unit
-        # No pass-with-no-tests flag: the Angular unit-test builder refuses it, and
-        # both presets pass a project with no spec of the chosen suite.
+        # No --passWithNoTests: the Angular unit-test builder refuses it, and
+        # vitest.preset.mts already passes a project with no spec of the suite.
         run: npx nx $NX_SCOPE -t test
 
   # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,

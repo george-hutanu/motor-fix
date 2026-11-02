@@ -268,7 +268,9 @@ describe('ci workflow', () => {
   // Vitest config already passes a project with no spec of the suite.
   // @traces 1332-angular-vitest-FR-013
   it('runs the unit tests without a flag only Jest knows', () => {
-    expect(step(job('unit'), 'Unit tests')).not.toContain('--passWithNoTests');
+    expect(setting(step(job('unit'), 'Unit tests'), 'run')).toBe(
+      'npx nx $NX_SCOPE -t test',
+    );
   });
 
   // On a pull request the baseline may not list a file the base branch's

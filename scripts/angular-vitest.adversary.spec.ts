@@ -53,11 +53,12 @@ describe('the five Angular projects on the unit-test builder', () => {
       const target = json(`${dir}/project.json`).targets.test;
       expect(target.executor).toBe('@angular/build:unit-test');
       expect(target.options.runner).toBe('vitest');
-      // Isolation comes from the runner config (vitest.shared.ts), which the
-      // builder merges over its own isolate: false default.
-      expect(readFileSync(join(root, 'vitest.shared.ts'), 'utf8')).toMatch(
-        /isolate: true/,
-      );
+      // Isolation comes from the runner config the builder reads, merged
+      // over its own isolate: false default.
+      process.env['NX_TASK_TARGET_TARGET'] = 'test';
+      expect(
+        (angularTest(dir) as { test: { isolate?: boolean } }).test.isolate,
+      ).toBe(true);
       expect(target.options.runnerConfig).toBe(`${dir}/vitest.config.ts`);
     },
   );
