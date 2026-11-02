@@ -53,6 +53,7 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
   finishedAt: null,
   handedOverAt: null,
   id: 'job-1',
+  inWorkSince: null,
   jobs: [
     {
       id: 'rj-1',

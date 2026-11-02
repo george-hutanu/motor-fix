@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  Allow,
   ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
@@ -27,6 +28,7 @@ import {
   RequestJobDto,
 } from './quotes.dto';
 import { JOB_STATUSES, JOB_STEPS_MAX, type JobStatus } from './request-status';
+import { DAY } from './time-blocks.dto';
 
 const NULLABLE_TIME = { format: 'date-time', nullable: true, type: String };
 
@@ -166,8 +168,17 @@ export class JobSummaryDto {
   })
   odometerKm!: number | null;
 
-  @ApiProperty({ description: 'Whole seconds spent in work' })
+  @ApiProperty({
+    description: 'Whole seconds spent in work, the running stretch left out',
+  })
   workedSeconds!: number;
+
+  @ApiProperty({
+    ...NULLABLE_TIME,
+    description:
+      'When the running stretch in work began; null when not in work',
+  })
+  inWorkSince!: string | null;
 
   @ApiProperty(NULLABLE_TIME)
   startedAt!: string | null;
@@ -339,8 +350,6 @@ export class JobListDto {
   total!: number;
 }
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
 export class JobListQueryDto extends ListQueryDto {
   @ApiPropertyOptional({
     description: 'The first day listed, in Bucharest; today when absent',
@@ -351,6 +360,105 @@ export class JobListQueryDto extends ListQueryDto {
   @Matches(DAY)
   @IsISO8601({ strict: true })
   from?: string;
+}
+
+export class MeDayQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'A Bucharest day, at most 30 days from today either way; today when absent',
+    example: '2026-11-02',
+    format: 'date',
+  })
+  // Checked by the service, so a malformed day is a 422 like a far one.
+  @Allow()
+  date?: string;
+}
+
+// The car as the queue names it; never its owner's contact.
+export class MeDayCarDto {
+  @ApiProperty()
+  brand!: string;
+
+  @ApiProperty()
+  model!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  plate!: string | null;
+}
+
+export class MeDayRowDto {
+  @ApiProperty({ format: 'uuid' })
+  bookingId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  jobId!: string;
+
+  @ApiProperty({
+    description:
+      "The day's earliest stretch; for a job carried over, its last stretch before today",
+    format: 'date-time',
+  })
+  start!: string;
+
+  @ApiProperty({
+    description: 'Carried from an earlier day; only ever on today',
+  })
+  carryOver!: boolean;
+
+  @ApiProperty({ type: MeDayCarDto })
+  car!: MeDayCarDto;
+
+  @ApiProperty()
+  driverFirstName!: string;
+
+  @ApiProperty({
+    description: "The quoted jobs' names in the caller's language",
+    type: [String],
+  })
+  jobs!: string[];
+
+  @ApiPropertyOptional({
+    description: "The stretch's lift, while the garage schedules lifts",
+  })
+  lift?: number;
+
+  @ApiProperty({ enum: JOB_STATUSES })
+  status!: JobStatus;
+
+  @ApiProperty()
+  stepsDone!: number;
+
+  @ApiProperty()
+  stepsTotal!: number;
+
+  @ApiProperty({
+    ...NULLABLE_TIME,
+    description:
+      'When the running stretch in work began; null when not in work',
+  })
+  inWorkSince!: string | null;
+
+  @ApiProperty({
+    description: 'Whole seconds spent in work, the running stretch left out',
+  })
+  workedSeconds!: number;
+
+  @ApiProperty({ nullable: true, type: JobLockDto })
+  lock!: JobLockDto | null;
+}
+
+export class MeDayDto {
+  @ApiProperty({ example: '2026-11-02', format: 'date' })
+  date!: string;
+
+  @ApiProperty({ description: 'The rows of the day' })
+  jobs!: number;
+
+  @ApiProperty({ description: 'The rows in work' })
+  inWork!: number;
+
+  @ApiProperty({ type: [MeDayRowDto] })
+  rows!: MeDayRowDto[];
 }
 
 const trimmed = ({ value }: { value: unknown }) =>

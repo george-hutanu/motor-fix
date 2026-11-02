@@ -712,3 +712,30 @@ describe('the admin’s logged repair routes', () => {
     },
   );
 });
+
+// @traces 122-FR-013
+describe('the mechanic’s day route', () => {
+  it('is an OpenAPI operation with its contract types that the inventory lists with its metric and alerts', () => {
+    const api = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    );
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const day = api.paths['/api/v1/me/day'].get;
+    const entry = inventory.entries.find(
+      (each: { name: string }) => each.name === 'mechanic-day',
+    );
+
+    expect(Object.keys(day.responses).sort()).toEqual(['200', '404', '422']);
+    expect(JSON.stringify(day.responses['200'])).toContain('MeDayDto');
+    expect(api.components.schemas.JobSummaryDto.properties).toHaveProperty(
+      'inWorkSince',
+    );
+    expect(entry).toMatchObject({
+      alerts: ['api-error-rate', 'api-latency'],
+      kind: 'endpoint',
+    });
+    expect(entry.metric).toMatch(/\/api\/v1\/me\/day(,| |$)/);
+  });
+});

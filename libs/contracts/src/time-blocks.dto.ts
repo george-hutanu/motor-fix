@@ -17,7 +17,7 @@ import {
 import { BookingMechanicDto } from './quotes.dto';
 
 export const TIME_BLOCK_NOTE_MAX = 200;
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
+export const DAY = /^\d{4}-\d{2}-\d{2}$/;
 // An instant: a date, a time and its zone, so no server clock reads it.
 const INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;

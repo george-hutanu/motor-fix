@@ -27,6 +27,7 @@ const base: JobSummaryDto = {
   finishedAt: null,
   handedOverAt: null,
   id: 'j',
+  inWorkSince: null,
   jobs: [
     {
       id: 'rj',

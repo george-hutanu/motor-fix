@@ -278,10 +278,7 @@ describe('pausing and resuming a job', () => {
   it('pauses by hand, counting the time in work', async () => {
     const s = await setting();
     await stage(s.job.id, 'start', s.hand);
-    await prisma.jobStageEntry.updateMany({
-      data: { at: new Date(Date.now() - 65_000) },
-      where: { jobId: s.job.id, toStatus: 'in_work' },
-    });
+    await inWorkFor(s.job.id, 65_000);
 
     const res = await stage(s.job.id, 'pause', s.hand);
 
@@ -424,15 +421,68 @@ describe('pausing and resuming a job', () => {
   it('adds no time on a finish from a pause', async () => {
     const s = await setting();
     await stage(s.job.id, 'start', s.hand);
-    await prisma.jobStageEntry.updateMany({
-      data: { at: new Date(Date.now() - 12_000) },
-      where: { jobId: s.job.id, toStatus: 'in_work' },
-    });
+    await inWorkFor(s.job.id, 12_000);
     await stage(s.job.id, 'pause', s.hand);
 
     const res = await stage(s.job.id, 'finish', s.hand);
 
     expect(res.body).toMatchObject({ status: 'done', workedSeconds: 12 });
+  });
+});
+
+// Moves the job's running clock and its history back, as if it had been in
+// work that long.
+async function inWorkFor(jobId: string, ms: number) {
+  await prisma.$executeRaw`
+    UPDATE job_stage_entry SET at = at - ${ms} * interval '1 millisecond'
+    WHERE job_id = ${jobId}::uuid`;
+  await prisma.$executeRaw`
+    UPDATE job SET in_work_since = in_work_since - ${ms} * interval '1 millisecond'
+    WHERE id = ${jobId}::uuid`;
+}
+
+// @traces 122-FR-003 122-FR-004
+describe('the running clock through the stage calls', () => {
+  it('pauses the first car with its time in work when the mechanic starts a second', async () => {
+    const s = await setting();
+    const golf = await jobOf(s.dinamo, s.andrei, 'to_do');
+    await stage(s.job.id, 'start', s.hand);
+    await inWorkFor(s.job.id, 4_380_000);
+
+    const res = await stage(golf.id, 'start', s.hand);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      inWorkSince: expect.any(String),
+      status: 'in_work',
+      workedSeconds: 0,
+    });
+    expect(await reread(s.job.id)).toMatchObject({
+      inWorkSince: null,
+      status: 'paused',
+      workedSeconds: 4380,
+    });
+    const started = (await entries(golf.id)).at(-1);
+    expect(await reread(golf.id)).toMatchObject({
+      inWorkSince: started?.at,
+      status: 'in_work',
+    });
+  });
+
+  it('names the clock beside the time in work on the job read', async () => {
+    const s = await setting();
+    await stage(s.job.id, 'start', s.hand);
+    const { inWorkSince } = await reread(s.job.id);
+
+    const running = await get(`/garage/jobs/${s.job.id}`, s.owner);
+    await stage(s.job.id, 'pause', s.hand);
+    const stopped = await get(`/garage/jobs/${s.job.id}`, s.owner);
+
+    expect(running.body).toMatchObject({
+      inWorkSince: inWorkSince?.toISOString(),
+      workedSeconds: 0,
+    });
+    expect(stopped.body).toMatchObject({ inWorkSince: null });
   });
 });
 

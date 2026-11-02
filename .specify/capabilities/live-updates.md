@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-31
+updated: 2026-11-02
 features:
   - 253-live-connection
   - 254-live-audience
@@ -44,6 +44,7 @@ features:
   - 395-job-lock
   - 059-profile-direct-requests
   - 154-free-slots
+  - 122-one-job-status
 ---
 
 # Capability: Live updates
@@ -549,6 +550,10 @@ _From 154-free-slots._
 ### 154-FR-016 — (from #620) A Jest test MUST list every public event kind the live hub allows through its public keys (the hub exposes that list) and fail, naming the kind, when no domain source file outside the tests records an event of that kind and the kind is not in the test's `UNBUILT` map (kind → the open story that will feed it, plan.md Complexity Tracking); it also fails when an `UNBUILT` kind gains a publisher, so the map only shrinks; it passes once `garage.slots_changed` has its publisher (FR-013) and is not in the map.
 
 _From 154-free-slots._
+
+### 122-FR-011 — Every `job.*` and `booking.*` event of a job whose booking has a mechanic MUST carry `mechanic:{mechanicId}` in its audience, and a test MUST prove each kind reaches that channel and no other mechanic's; the read of FR-005 writes nothing: no audit entry, no event, no stage entry.
+
+_From 122-one-job-status._
 
 ## Retired
 

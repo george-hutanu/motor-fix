@@ -1522,14 +1522,16 @@ class Demo {
     const jobId = await this.id(
       `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status, started_at,
          finished_at, handed_over_at, received_at, final_price_bani, final_price_recorded_by, odometer_km,
-         worked_seconds, created_at)
+         worked_seconds, in_work_since, created_at)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6::job_status,
          CASE WHEN $6::text <> 'to_do' THEN $7::timestamptz END,
          CASE WHEN $8::boolean THEN $7::timestamptz + $9::int * interval '1 minute' END,
          CASE WHEN $8::boolean THEN $7::timestamptz + ($9::int + 30) * interval '1 minute' END,
          CASE WHEN $6::text <> 'to_do' THEN $7::timestamptz END,
          CASE WHEN $8::boolean THEN $10::int END, CASE WHEN $8::boolean THEN $11::uuid END, $12::int,
-         CASE WHEN $8::boolean THEN $9::int * 60 ELSE 0 END, least(now(), $7::timestamptz - interval '1 day'))
+         CASE WHEN $8::boolean THEN $9::int * 60 ELSE 0 END,
+         CASE WHEN $6::text = 'in_work' THEN least(now(), $7::timestamptz) END,
+         least(now(), $7::timestamptz - interval '1 day'))
        RETURNING id`,
       [
         o.booking,

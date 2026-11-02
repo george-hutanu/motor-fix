@@ -28,6 +28,11 @@ export interface JobDto {
   finishedAt: string | null;
   handedOverAt: string | null;
   id: string;
+
+  /**
+   * When the running stretch in work began; null when not in work
+   */
+  inWorkSince: string | null;
   jobs: Array<RequestJobDto>;
   lastForcedUnlock: (LastForcedUnlockDto & {
 }) | null;
@@ -87,7 +92,7 @@ export interface JobDto {
   updatedAt: string;
 
   /**
-   * Whole seconds spent in work
+   * Whole seconds spent in work, the running stretch left out
    */
   workedSeconds: number;
 }

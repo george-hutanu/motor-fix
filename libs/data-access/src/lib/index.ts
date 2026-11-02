@@ -261,6 +261,9 @@ export type { MechanicDayOffDto } from './models/mechanic-day-off-dto';
 export type { MechanicReviewDto } from './models/mechanic-review-dto';
 export type { MechanicReviewsPageDto } from './models/mechanic-reviews-page-dto';
 export type { MechanicScheduleDto } from './models/mechanic-schedule-dto';
+export type { MeDayCarDto } from './models/me-day-car-dto';
+export type { MeDayDto } from './models/me-day-dto';
+export type { MeDayRowDto } from './models/me-day-row-dto';
 export type { MediaFileAddressDto } from './models/media-file-address-dto';
 export type { MediaItemDto } from './models/media-item-dto';
 export type { MediaListDto } from './models/media-list-dto';
@@ -594,6 +597,8 @@ export type { PhoneChangeControllerRequest$Params as PhoneChangeControllerReques
 export { phoneChangeControllerRequest as phoneChangeControllerRequest } from './fn/me/phone-change-controller-request';
 export type { PhoneChangeControllerConfirm$Params as PhoneChangeControllerConfirm$Params } from './fn/me/phone-change-controller-confirm';
 export { phoneChangeControllerConfirm as phoneChangeControllerConfirm } from './fn/me/phone-change-controller-confirm';
+export type { MechanicDayControllerGet$Params as MechanicDayControllerGet$Params } from './fn/me/mechanic-day-controller-get';
+export { mechanicDayControllerGet as mechanicDayControllerGet } from './fn/me/mechanic-day-controller-get';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
 export type { ConsentsControllerRecord$Params as ConsentsControllerRecord$Params } from './fn/consents/consents-controller-record';

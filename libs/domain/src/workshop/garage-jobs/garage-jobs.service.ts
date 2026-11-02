@@ -99,6 +99,7 @@ function summaryOf(actor: Actor, row: SummaryRow): JobSummaryDto {
     finishedAt: iso(row.finishedAt),
     handedOverAt: iso(row.handedOverAt),
     id: row.id,
+    inWorkSince: iso(row.inWorkSince),
     jobs: jobsOf(row.booking.request.jobs),
     lastForcedUnlock:
       row.lockForcedAt && row.lockForcedHolderId
@@ -138,7 +139,12 @@ function summaryOf(actor: Actor, row: SummaryRow): JobSummaryDto {
 }
 
 // The job's copy of who holds it; Redis decides, the sweep keeps this in step.
-function lockOf(row: SummaryRow): JobSummaryDto['lock'] {
+export function lockOf(
+  row: Pick<
+    Job,
+    'lockHolderId' | 'lockHolderRole' | 'lockSince' | 'lockLastChangeAt'
+  > & { lockHolder: Pick<Account, 'name'> | null },
+): JobSummaryDto['lock'] {
   if (
     !row.lockHolderId ||
     !row.lockHolderRole ||

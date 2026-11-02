@@ -56,7 +56,11 @@ describe('bucharestDayStart across the clock changes', () => {
     expect(bucharestDayStart(once).getTime()).toBe(once.getTime());
   });
 
-  it('is midnight on the Bucharest wall clock for every half hour of two years', () => {
+  // 35 040 steps of Intl formatting: over 5 s on a busy runner, so the
+  // walk gets its own time rather than fewer steps.
+  it('is midnight on the Bucharest wall clock for every half hour of two years', {
+    timeout: 30_000,
+  }, () => {
     const bad: string[] = [];
     const from = Date.UTC(2026, 0, 1);
     for (let t = from; t < from + 730 * 86_400_000; t += 1_800_000) {

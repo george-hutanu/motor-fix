@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { HttpException } from '@nestjs/common';
 
@@ -219,11 +221,15 @@ const stages = (jobId: string) =>
   });
 
 // The latest entry into work, moved back so the job has been in work a while.
-// Moves the whole history back, so the entries keep their order.
+// Moves the whole history and the running clock back, so the entries keep
+// their order.
 async function inWorkFor(jobId: string, ms: number) {
   await prisma.$executeRaw`
     UPDATE job_stage_entry SET at = at - ${ms} * interval '1 millisecond'
     WHERE job_id = ${jobId}::uuid`;
+  await prisma.$executeRaw`
+    UPDATE job SET in_work_since = in_work_since - ${ms} * interval '1 millisecond'
+    WHERE id = ${jobId}::uuid`;
 }
 
 const worked = async (jobId: string) =>
@@ -303,6 +309,104 @@ describe('the time a job spends in work', () => {
     expect(
       await prisma.job.findUniqueOrThrow({ where: { id: job.id } }),
     ).toMatchObject({ finishedAt: expect.any(Date), status: 'done' });
+  });
+});
+
+const reread = (jobId: string) =>
+  prisma.job.findUniqueOrThrow({ where: { id: jobId } });
+
+const MIGRATION = join(
+  __dirname,
+  '../../prisma/migrations/20261102120000_job_in_work_since/migration.sql',
+);
+
+// The database under test is already migrated, so only the migration's data
+// statements can be run again over rows seeded after it.
+const backfill = () =>
+  readFileSync(MIGRATION, 'utf8')
+    .split(/;\s*$/m)
+    .map((sql) => sql.replace(/--.*$/gm, '').trim())
+    .filter((sql) => /^UPDATE\b/i.test(sql));
+
+// @traces 122-FR-002 122-FR-003
+describe('the running clock of a job in work', () => {
+  it('starts on a move into work and stops on every move out of it', async () => {
+    const job = await jobIn('to_do');
+
+    await move(job.id, 'in_work');
+    const [start] = await stages(job.id);
+    expect(await reread(job.id)).toMatchObject({ inWorkSince: start.at });
+
+    await move(job.id, 'paused');
+    expect(await reread(job.id)).toMatchObject({ inWorkSince: null });
+
+    await move(job.id, 'in_work');
+    const resumed = (await stages(job.id)).at(-1);
+    expect(await reread(job.id)).toMatchObject({ inWorkSince: resumed?.at });
+
+    await move(job.id, 'paused', undefined, true);
+    expect(await reread(job.id)).toMatchObject({ inWorkSince: null });
+
+    await move(job.id, 'in_work');
+    await move(job.id, 'done');
+    expect(await reread(job.id)).toMatchObject({
+      inWorkSince: null,
+      status: 'done',
+    });
+  });
+
+  it('measures the time in work from the clock, not from the stage entries', async () => {
+    const job = await jobIn('to_do');
+    await move(job.id, 'in_work');
+    await prisma.$executeRaw`
+      UPDATE job SET in_work_since = in_work_since - interval '75500 milliseconds'
+      WHERE id = ${job.id}::uuid`;
+
+    await move(job.id, 'paused');
+
+    expect(await reread(job.id)).toMatchObject({
+      inWorkSince: null,
+      workedSeconds: 75,
+    });
+  });
+
+  it('is left alone by a write that moves nothing', async () => {
+    const job = await jobIn('to_do');
+    await move(job.id, 'in_work');
+    const { inWorkSince } = await reread(job.id);
+
+    await prisma.job.update({
+      data: { etaAt: new Date(), odometerKm: 120_000 },
+      where: { id: job.id },
+    });
+
+    expect(await reread(job.id)).toMatchObject({ inWorkSince });
+    expect(inWorkSince).toEqual(expect.any(Date));
+  });
+
+  it('is backfilled for a job in work from its latest entry into work, then its start', async () => {
+    const statements = backfill();
+    expect(statements.length).toBeGreaterThanOrEqual(1);
+    const fromEntry = await jobIn('to_do');
+    await move(fromEntry.id, 'in_work');
+    await inWorkFor(fromEntry.id, 3_600_000);
+    const [entry] = await stages(fromEntry.id);
+    const started = new Date('2027-12-06T08:07:00Z');
+    const fromStart = await jobIn('in_work');
+    await prisma.job.update({
+      data: { startedAt: started },
+      where: { id: fromStart.id },
+    });
+    const bare = await jobIn('in_work');
+    const paused = await jobIn('paused');
+    await prisma.$executeRaw`UPDATE job SET in_work_since = NULL`;
+
+    for (const sql of statements) await prisma.$executeRawUnsafe(sql);
+
+    expect(await reread(fromEntry.id)).toMatchObject({ inWorkSince: entry.at });
+    expect(await reread(fromStart.id)).toMatchObject({ inWorkSince: started });
+    expect((await reread(bare.id)).inWorkSince).toEqual(expect.any(Date));
+    expect(await reread(paused.id)).toMatchObject({ inWorkSince: null });
   });
 });
 

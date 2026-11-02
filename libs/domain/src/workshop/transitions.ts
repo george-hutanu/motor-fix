@@ -30,19 +30,30 @@ const JOB: TransitionSpec<JobStatus> = {
     }),
 };
 
-// A resumed job keeps the time it first started.
-function jobColumns(to: JobStatus, row: LockedRow) {
-  const now = new Date();
-  if (to === 'in_work') return row.started_at ? {} : { startedAt: now };
-  if (to === 'paused') return { pausedAt: now };
-  if (to === 'done') return { finishedAt: now };
-  return {};
+// A resumed job keeps the time it first started. The running stretch lives in
+// in_work_since: set on the way into work, folded into worked_seconds and
+// cleared on the way out.
+function jobColumns(to: JobStatus, row: LockedRow, at: Date) {
+  const since = row.in_work_since;
+  return {
+    ...(to === 'in_work' && !row.started_at && { startedAt: at }),
+    ...(to === 'paused' && { pausedAt: at }),
+    ...(to === 'done' && { finishedAt: at }),
+    ...(since && {
+      workedSeconds: {
+        increment: Math.max(
+          0,
+          Math.floor((at.getTime() - since.getTime()) / 1000),
+        ),
+      },
+    }),
+    inWorkSince: to === 'in_work' ? at : null,
+  };
 }
 
 // Every move also adds a stage entry, the tracker's history, with the
 // garage's own words for the driver when it gave some, the job's mechanic at
-// that moment and whether the platform made the move on its own. A move out
-// of work adds the whole seconds since the latest move into it.
+// that moment and whether the platform made the move on its own.
 export async function moveJob(
   tx: Prisma.TransactionClient,
   ports: TransitionPorts,
@@ -52,6 +63,10 @@ export async function moveJob(
   },
 ) {
   const { text, auto = false, ...rest } = move;
+  // One clock, this process's, writes the entry's time and the job's clock
+  // and measures from them, so a database clock running apart cannot shave
+  // or add seconds.
+  const at = new Date();
   const moved = await applyTransition(tx, JOB, ports, {
     ...rest,
     scope: (row) => ({
@@ -59,25 +74,8 @@ export async function moveJob(
       garageId: row.garage_id,
       jobId: move.id,
     }),
-    set: (row) => jobColumns(move.to, row),
+    set: (row) => jobColumns(move.to, row, at),
   });
-  // One clock, this process's, writes every entry's time and measures from
-  // it, so a database clock running apart cannot shave or add seconds.
-  const at = new Date();
-  if (moved.from === 'in_work') {
-    const since = await tx.jobStageEntry.findFirst({
-      orderBy: { at: 'desc' },
-      select: { at: true },
-      where: { jobId: move.id, toStatus: 'in_work' },
-    });
-    const seconds = since
-      ? Math.max(0, Math.floor((at.getTime() - since.at.getTime()) / 1000))
-      : 0;
-    await tx.job.update({
-      data: { workedSeconds: { increment: seconds } },
-      where: { id: move.id },
-    });
-  }
   if (move.to === 'done' || move.to === 'cancelled')
     await stopLiveSessions(tx, ports.audit, { jobId: move.id }, 'job_closed');
   await tx.jobStageEntry.create({

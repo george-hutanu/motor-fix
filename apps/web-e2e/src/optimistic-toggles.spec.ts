@@ -12,6 +12,7 @@ import {
   ready,
   settled,
   signIn,
+  signUpDriver,
 } from './accounts.js';
 import { test } from './fixtures.js';
 
@@ -94,11 +95,11 @@ async function holdThenFail(page: Page, url: string | RegExp, method: string) {
   return release;
 }
 
-async function signedIn(page: Page, email: string) {
+async function signedIn(page: Page, email: string, home = '/app/garage') {
   await ready(page, '/ro');
   await openSignIn(page);
   await signIn(page, email);
-  await expect(page).toHaveURL('/app/garage');
+  await expect(page).toHaveURL(home);
 }
 
 async function accessToken(request: APIRequestContext, email: string) {
@@ -114,10 +115,28 @@ const toast = (page: Page, text: string) =>
 
 const TEST_MESSAGE = 'Mesaj de test: notificările funcționează.';
 
-// The garage owner's bell with every row read, then `count` new test rows.
-async function unread(request: APIRequestContext, count: number) {
-  const own = await accessToken(request, ACCOUNTS.garage);
+// A new driver of the test's own with `count` unread test rows in the bell,
+// signed in on the page: a bell another test also writes to (or a copy of
+// this one, run beside it) would count their rows too.
+async function unread(page: Page, request: APIRequestContext, count: number) {
+  const email = await signUpDriver(request, 'clopotel');
+  const own = await accessToken(request, email);
   const headers = { Authorization: `Bearer ${own}` };
+  // A new account gets a row of its own (the welcome), written from the
+  // outbox after sign-up: wait for it, then read it.
+  await expect
+    .poll(
+      async () =>
+        (
+          (await (
+            await request.get('/api/v1/notifications/unread-count', {
+              headers,
+            })
+          ).json()) as { count: number }
+        ).count,
+      { timeout: 15_000 },
+    )
+    .toBeGreaterThan(0);
   expect(
     (
       await request.post('/api/v1/notifications/read-all', { headers })
@@ -134,6 +153,7 @@ async function unread(request: APIRequestContext, count: number) {
     });
     expect(res.status()).toBe(202);
   }
+  await signedIn(page, email, '/app/driver');
 }
 
 const bell = (page: Page) => page.getByRole('button', { name: /^Notificări/ });
@@ -174,13 +194,12 @@ test.describe('a toggle shows before the server answers @seeded', () => {
     page,
     request,
   }) => {
-    await unread(request, 3);
     const release = await holdThenFail(
       page,
       '**/api/v1/notifications/*/read',
       'POST',
     );
-    await signedIn(page, ACCOUNTS.garage);
+    await unread(page, request, 3);
     await expect(badge(page)).toHaveText('3');
     await bell(page).click();
     const list = page.getByRole('dialog', { name: 'Notificări' });
@@ -207,17 +226,16 @@ test.describe('a toggle shows before the server answers @seeded', () => {
     page,
     request,
   }) => {
-    await unread(request, 3);
     const release = await holdThenFail(
       page,
       '**/api/v1/notifications/read-all',
       'POST',
     );
-    await signedIn(page, ACCOUNTS.garage);
+    await unread(page, request, 3);
     await expect(badge(page)).toHaveText('3');
     await bell(page).click();
     const list = page.getByRole('dialog', { name: 'Notificări' });
-    // Only this test's three are unread: earlier runs leave their rows, read.
+    // A new account's bell holds only this test's three.
     const unreadRows = list.locator('li.unread', { hasText: TEST_MESSAGE });
     await expect(unreadRows).toHaveCount(3);
 

@@ -114,7 +114,9 @@ describe('the 3D catalogue data, attacked', () => {
   it('survives non-ASCII node names and a very long node list in the generator', () => {
     const names = Array.from({ length: 10_000 }, (_, i) => `nød_${i}_ăîșț`);
 
-    expect(glb(names)).toEqual(glb(names));
+    // Compared as buffers: toEqual walks a large Uint8Array element by
+    // element and ran past the 5 s timeout on a busy runner.
+    expect(Buffer.from(glb(names)).equals(Buffer.from(glb(names)))).toBe(true);
     expect(glb(['body']).byteLength % 4).toBe(0);
   });
 });

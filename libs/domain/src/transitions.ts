@@ -28,6 +28,7 @@ export interface LockedRow {
   car_id?: string;
   garage_id?: string;
   started_at?: Date | null;
+  in_work_since?: Date | null;
   mechanic_id?: string | null;
 }
 

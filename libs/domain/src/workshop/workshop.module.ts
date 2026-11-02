@@ -13,6 +13,8 @@ import { JobStagesController } from './job-stages/job-stages.controller';
 import { JobStagesService } from './job-stages/job-stages.service';
 import { JobStepsController } from './job-steps/job-steps.controller';
 import { JobStepsService } from './job-steps/job-steps.service';
+import { MechanicDayController } from './mechanic-day/mechanic-day.controller';
+import { MechanicDayService } from './mechanic-day/mechanic-day.service';
 import { ScheduleService } from './schedule/schedule.service';
 import { TimeBlocksController } from './time-blocks/time-blocks.controller';
 import { TimeBlocksService } from './time-blocks/time-blocks.service';
@@ -30,6 +32,7 @@ import { AuditService } from '../audit/audit.service';
     JobLockController,
     JobStagesController,
     JobStepsController,
+    MechanicDayController,
     TimeBlocksController,
   ],
   exports: [ScheduleService],
@@ -41,6 +44,7 @@ import { AuditService } from '../audit/audit.service';
     JobLockService,
     JobStagesService,
     JobStepsService,
+    MechanicDayService,
     ScheduleService,
     TimeBlocksService,
     { provide: AUDIT_PORT, useClass: AuditService },

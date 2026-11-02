@@ -33,8 +33,10 @@ model Job {
   // Set by the first reception; a later one corrects the reading only.
   receivedAt             DateTime?       @map("received_at") @db.Timestamptz(3)
   odometerKm             Int?            @map("odometer_km")
-  // Time in work, added on every move out of in_work.
+  // Time in work, added from in_work_since on every move out of in_work.
   workedSeconds          Int             @default(0) @map("worked_seconds")
+  // When the running stretch in work began; null whenever the job is not in work.
+  inWorkSince            DateTime?       @map("in_work_since") @db.Timestamptz(3)
   createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   // The version a change is based on; set by every job-changing write, never by a lock write.
   updatedAt              DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
