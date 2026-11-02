@@ -24,21 +24,43 @@ export class CarRepairCarDto {
   year!: number;
 }
 
+const REPAIR_REVIEW_STATES = [
+  'can_write',
+  'written',
+  'removed',
+  'expired',
+  'none',
+] as const;
+
+export type RepairReviewState = (typeof REPAIR_REVIEW_STATES)[number];
+
 export class RepairReviewDto {
   @ApiProperty({
     description:
-      'write: the driver may still review; rated: a review stands; none: neither',
-    enum: ['write', 'rated', 'none'],
+      'can_write: the driver may review the job; written: his review stands; removed: MotorFix removed it; expired: the window closed; none: he may not review it',
+    enum: REPAIR_REVIEW_STATES,
   })
-  state!: 'write' | 'rated' | 'none';
+  state!: RepairReviewState;
 
-  @ApiPropertyOptional({
-    description: 'Only with rated',
+  @ApiProperty({ description: 'The job to review', format: 'uuid' })
+  jobId!: string;
+
+  @ApiProperty({
+    description: 'Only with written',
     maximum: 5,
     minimum: 1,
+    nullable: true,
     type: 'integer',
   })
-  rating?: number;
+  rating!: number | null;
+
+  @ApiProperty({
+    description: 'With written and removed',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
+  reviewId!: string | null;
 }
 
 export class CarRepairDto {
@@ -74,7 +96,7 @@ export class CarRepairDto {
 
   @ApiProperty({
     description:
-      'Null on every row until the review drawer ships and fills it for a MotorFix repair',
+      'The review of a MotorFix repair; null for a repair the driver logged',
     nullable: true,
     type: RepairReviewDto,
   })

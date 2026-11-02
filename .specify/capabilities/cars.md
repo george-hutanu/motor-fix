@@ -17,13 +17,14 @@ features:
   - 1265-car-transfer-accept
   - 1386-oil-service-lamp
   - 409-garage-corrects-repair
-  - 1400-garage-corrects-repair-web
-  - 1267-admin-corrects-repair
-  - 1392-car-transfer-link-web
-  - 1379-provider-calls-worker
   - 061-repair-list
-  - 1394-car-transfer-accept-web
+  - 1267-admin-corrects-repair
+  - 1400-garage-corrects-repair-web
+  - 1379-provider-calls-worker
   - 293-save-garage-suggest
+  - 1392-car-transfer-link-web
+  - 026-review-from-history
+  - 1394-car-transfer-accept-web
   - 093-coming-up-across-cars
 ---
 
@@ -360,9 +361,9 @@ _From 1265-car-transfer-accept._
 
 _From 1265-car-transfer-accept._
 
-### 061-FR-007 — Every row of the three history reads (`GET /api/v1/repairs`, `/cars/:id/repairs`, `/cars/sold/:id/repairs`) MUST carry, beside `id`, `doneOn`, `what`, `garageName`, `source`, `fromPreviousOwner`, `odometerKm`, `costBani` and `correctedBy` (1265-FR-011, 409-FR-015): `car` (`id`, `brandName`, `model`, `year`), `mechanicName` (for a MotorFix repair the job's mechanic's `MECHANIC.name`, hidden from the profile or not; null for a logged repair, a job with no mechanic or a deleted mechanic row) and `review`: null for every row, MotorFix or logged, until ST-26 (#91) adds the state, per the owner's resolution of 2026-10-15 on #102; the field stays nullable in the contract so ST-26 can fill it.
+### 026-FR-001 — Every MotorFix row (`source` `motorfix`) of the three history reads (`GET /api/v1/repairs`, `GET /api/v1/cars/:id/repairs`, `GET /api/v1/cars/sold/:id/repairs`) MUST carry `review` as `{ state, jobId, rating, reviewId }`: `state` one of `can_write`, `written`, `removed`, `expired`, `none`; `jobId` the repair's job id; `rating` an integer 1 to 5 only with `written`, else null; `reviewId` the review's id with `written` and `removed`, else null. A logged row (`source` `logged`) MUST keep `review` null. The contract's `RepairReviewDto` replaces today's placeholder enum (`write`, `rated`, `none`) with these five states, gains `jobId` and `reviewId`, and the OpenAPI document and the generated client are regenerated.
 
-_From 061-repair-list._
+_From 026-review-from-history._
 
 ### 1265-FR-014 — After the acceptance, the seller MUST get 404 from every car route taking the car's id (`GET /api/v1/cars/:id`, the edit, the removal, the sale, the transfer cancel), and the car MUST be absent from the seller's `GET /api/v1/cars` and present in the buyer's with `plate`, `rcaUntil` and `rovinietaUntil` `null` (the existing owner check does this: the owner changed); both accounts' warm car lists (`driver-home`, 1169-FR-003) MUST be dropped in the acceptance's request.
 
@@ -480,9 +481,9 @@ _From 061-repair-list._
 
 _From 061-repair-list._
 
-### 061-FR-009 — The reads MUST never carry the plate, the driver's or the mechanic's account, phone or e-mail, the garage's internal ids beyond `garageId`, nor any `removed` or `deleted_by_author` review's text or rating; the sold car's read keeps its cut at the sale date (1265-FR-012) and answers `review` null, as every row (FR-007).
+### 026-FR-009 — The three reads MUST never carry the plate, the driver's or the mechanic's account, phone or e-mail, the garage's internal ids beyond `garageId`, nor any `removed` or `deleted_by_author` review's text or rating; the sold car's read keeps its cut at the sale date (1265-FR-012) and answers each MotorFix row's `review` judged for its reader (FR-007), a logged row's null.
 
-_From 061-repair-list._
+_From 026-review-from-history._
 
 ### 061-FR-010 — `PATCH /api/v1/repairs/:id` and `DELETE /api/v1/repairs/:id` (capability `driver.cars`) MUST answer 404 `not_found` when the repair is not among the repairs the caller may read through an open ownership row (another driver's, deleted, of a removed or sold car, unknown), and 409 `motorfix_repair` with the message "Reparația vine dintr-o lucrare MotorFix" (Romanian only, as every refusal in the repo; the English "This repair comes from a MotorFix job" is the client's text) for a `motorfix` row, in that order after 401; a path id that is not a uuid answers 400 `validation_failed`, as on every route, and a well-formed id the caller cannot use answers 404; each changes nothing and writes no audit entry.
 
@@ -640,6 +641,34 @@ _From 1392-car-transfer-link-web._
 
 _From 1392-car-transfer-link-web._
 
+### 026-FR-002 — `state` MUST come from the reviews module's eligibility (023-FR-013, `ReviewEligibility.judge`), judged once per page for the page's MotorFix job ids in first-occurrence order (one batch: one call of the existing `ReviewEligibility.judge(actor, jobIds)`, every MotorFix job id of the page included, previous owners' jobs too; no new reviews-module API; no judgement per row and none for a page without a MotorFix row), mapped by the reason: null or `email_not_confirmed` → `can_write`; `already_reviewed` → `written`; `review_removed` → `removed`; `job_not_done`, `own_garage` or `not_found` → `none`. An unconfirmed e-mail never hides the offer (023-FR-013's `offer`).
+
+_From 026-review-from-history._
+
+### 026-FR-003 — With `written`, `rating` and `reviewId` MUST be the live review's (status `published` or `reported`); with `removed`, `reviewId` MUST be the removed review's and `rating` null (061-FR-009: no removed review's text or rating leaves the server). No other state carries a rating or id.
+
+_From 026-review-from-history._
+
+### 026-FR-004 — A review in status `deleted_by_author` MUST count as no review: the row answers `can_write` with `rating` and `reviewId` null, as the eligibility already judges (it reads live statuses only).
+
+_From 026-review-from-history._
+
+### 026-FR-005 — `expired` MUST be in the contract's enum and documented as produced by ST-120 (#234) only; this feature MUST produce it for no row, and the mapping MUST be a total function of the eligibility's reason set. Until ST-120 ships, a handed-over job older than 60 days with no review answers `can_write`.
+
+_From 026-review-from-history._
+
+### 026-FR-006 — The reads MUST change nothing else: who may read (the car's owner through an open ownership row, 1265-FR-010; another driver's car 404, 061-FR-006), the order, the paging, the filter, the sold car's cut (1265-FR-012), the rest of the row (061-FR-007) and the personal-data rule (061-FR-009) stay as they are; the reads write nothing, emit no event and notify nobody.
+
+_From 026-review-from-history._
+
+### 026-FR-007 — The state MUST be judged for the signed-in reader: a job whose driver is another account (a previous owner's job on a car bought since, 1265-FR-011) answers `none`, never the previous owner's eligibility or review; the job id goes into the page's batch like any other and `none` comes from the mapping of the eligibility's `not_found`, with no ownership check in the cars module. The sold car's read is judged for its reader, the seller.
+
+_From 026-review-from-history._
+
+### 026-FR-008 — Tests MUST be written first (Constitution II) and cover, each file naming its ids in one whole-line `// @traces` comment: in a colocated unit spec, the reason→state mapping for every reason of `ReviewRefusal` and null, `expired` reached by no reason; in Jest on real PostgreSQL (`*.integration.spec.ts`), through `GET /api/v1/repairs`, every state per row: a handed-over job with no review (`can_write`), the same with an unconfirmed e-mail (`can_write`), a `published` and a `reported` review (`written` with rating and id), a `deleted_by_author` review (`can_write`, id null), a `removed` review (`removed`, id set, rating null), a previous owner's job on a bought car (`none`), the reader as the garage's staff (`none`), a logged repair (null); the same row on `/cars/:id/repairs` and `/cars/sold/:id/repairs`, and the seller's `can_write` on his sold car's read beside the buyer's `none`; one eligibility batch per page, none for a logged-only page; another driver's car 404; the generated client regenerated from `apps/api/openapi.json`.
+
+_From 026-review-from-history._
+
 ### 1394-FR-002 — (1265-FR-017) "Preiau mașina" MUST send one `POST /api/v1/car-transfers/{token}/accept` with an empty body, be disabled while it is in flight and, on 200: fire the `car_taken_over` analytics event once (FR-007), reload the session (a garage-only buyer has just gained `driver`, 1265-FR-006; the driver role becomes the one in use through the existing role switch when the session's role is another) and navigate to Mașinile mele (`/app/driver/cars`) at the car the answer names (`carId`), whose card scrolls into view and takes the focus through the existing card focus by id (`/app/driver/cars/<id>`). It MUST show, in place of the button and under the car line: for 409 `car_limit` "Poți avea cel mult 20 de mașini." / "You can have at most 20 cars."; for 409 `open_request` "Mașina are o cerere în curs. Poți prelua mașina după ce se încheie." / "The car has a request under way. You can take the car over once it ends."; for 410 `transfer_cancelled`, `transfer_expired` and `transfer_accepted`, and for 404, the page's own state for that code (1392-FR-005's lines), the car line dropped; for 403 `own_transfer` the own-link state of FR-001. A 401 `sign_in_required` is the existing interceptor's (the sign-in dialog, then one resend); when the dialog closes without a session the page re-reads the link and shows the waiting line (a 401 reaching the page is never "any other failure"). Any other failure MUST show the existing task error with its retry under the car line and enable the button again. Each state change MUST be announced to assistive technology (a polite live region), and the focus MUST move to the page's heading region whenever the control holding it is removed (the button replaced by a text, the waiting line replaced after sign-in); a closed dialog returns it to the button that opened it.
 
 _From 1394-car-transfer-accept-web._
@@ -746,5 +775,7 @@ _From 093-coming-up-across-cars._
 - `1386-FR-004` — superseded by `1392-FR-001` (2026-10-31)
 - `092-FR-011` — superseded by `1392-FR-001` (2026-10-31)
 - `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)
+- `061-FR-007` — superseded by `026-FR-001` (2026-11-01)
+- `061-FR-009` — superseded by `026-FR-009` (2026-11-01)
 - `1392-FR-005` — superseded by `1394-FR-001` (2026-10-31)
 - `089-FR-005` — superseded by `093-FR-010` (2026-11-01)
