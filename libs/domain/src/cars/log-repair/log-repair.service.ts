@@ -47,7 +47,7 @@ export class LogRepairService {
     dto: LogRepairDto,
   ): Promise<CarRepairDto> {
     const { accountId } = actor;
-    const answer = await this.prisma.$transaction(async (tx) => {
+    const { created, row } = await this.prisma.$transaction(async (tx) => {
       const row = await tx.carOwnership.findFirst({
         include: { car: { select: { year: true } } },
         where: {
@@ -124,7 +124,6 @@ export class LogRepairService {
       });
       return { created, row };
     });
-    const { created, row } = answer;
     this.logger.log(
       `repair ${created.id} logged on car ${carId}${created.garageId ? ` at garage ${created.garageId}` : ''}`,
     );

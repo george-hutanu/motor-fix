@@ -192,7 +192,8 @@ const trimmed = ({ value }: { value: unknown }) =>
 // Sent: checked, null included; left out: not read.
 const sent = () => ValidateIf((_, value) => value !== undefined);
 
-const NO_CONTROL = /^\P{Cc}*$/u;
+// No control character and no lone surrogate, which PostgreSQL cannot store.
+const NO_CONTROL = /^[^\p{Cc}\p{Cs}]*$/u;
 
 // A repair the driver had done anywhere, logged on one of their cars.
 export class LogRepairDto {

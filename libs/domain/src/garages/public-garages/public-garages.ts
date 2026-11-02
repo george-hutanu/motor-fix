@@ -44,7 +44,7 @@ export const publicGaragesSql = (alias = 'garage') =>
 
 // Text matched literally by a LIKE: PostgreSQL's default escape is the
 // backslash, and Prisma's `contains` escapes nothing.
-export const escaped = (q: string) => q.replace(/[\\%_]/g, '\\$&');
+const escaped = (q: string) => q.replace(/[\\%_]/g, '\\$&');
 
 // The one rule of who the public profile shows: a mechanic who joined, is
 // still on the team and agreed to appear, at a published garage whose owner

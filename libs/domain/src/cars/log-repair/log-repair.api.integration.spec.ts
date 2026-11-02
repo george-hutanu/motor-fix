@@ -6,7 +6,7 @@ import { quotesApp } from '../../quotes/quotes-api.testing';
 import { CarHistoryModule } from '../history/history.module';
 import { RepairsModule } from '../repairs/repairs.module';
 
-// @traces 062-FR-001, 062-FR-002, 062-FR-003, 062-FR-004, 062-FR-005, 062-FR-006, 062-FR-012
+// @traces 062-FR-001 062-FR-002 062-FR-003 062-FR-004 062-FR-005 062-FR-006 062-FR-012
 
 const { bearer, get, post, world } = quotesApp([
   LogRepairModule,

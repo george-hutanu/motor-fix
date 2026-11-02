@@ -20,7 +20,7 @@ import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
 
-// @traces 062-FR-009, 062-FR-012
+// @traces 062-FR-009 062-FR-012
 
 const tokenSecret = 'test-secret';
 const { account, prisma, reset } = fixtures();

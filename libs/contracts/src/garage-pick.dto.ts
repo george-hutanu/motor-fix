@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsInt, IsString, Length, Max, Min } from 'class-validator';
+import { IsInt, IsString, Length, Matches, Max, Min } from 'class-validator';
 
 // The garage picker's question: part of an approved garage's name.
 export class GaragePickQueryDto {
@@ -8,6 +8,10 @@ export class GaragePickQueryDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @Length(2, 80)
+  // No control character and no lone surrogate, which PostgreSQL cannot read.
+  @Matches(/^[^\p{Cc}\p{Cs}]*$/u, {
+    message: 'q must not hold control characters',
+  })
   q!: string;
 
   @ApiPropertyOptional({
