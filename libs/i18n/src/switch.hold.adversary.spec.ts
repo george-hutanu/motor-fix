@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { MockInstance } from 'vitest';
 
 import { I18n } from './i18n';
 import {
@@ -8,6 +7,7 @@ import {
   LanguageSwitch,
   provideRememberedLanguage,
 } from './switch';
+import { watchSwitches } from './watch-switches.testing';
 
 @Component({ imports: [LanguageSwitch], template: '<mf-language-switch />' })
 class Host {}
@@ -30,16 +30,7 @@ async function otherTab(newValue: string | null, key = 'mf.lang') {
   await settle();
 }
 
-// A switch waits for its texts, loaded by a real import() that can take longer
-// than a tick; waiting ends once every switch so far has finished.
-let use: MockInstance<I18n['use']>;
-beforeEach(() => {
-  use = vi.spyOn(I18n.prototype, 'use');
-});
-async function settle() {
-  await Promise.all(use.mock.results.map((result) => result.value));
-  await new Promise((resolve) => setTimeout(resolve));
-}
+const settle = watchSwitches();
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.restoreAllMocks());

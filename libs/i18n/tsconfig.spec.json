@@ -5,5 +5,5 @@
   },
   "extends": "./tsconfig.json",
   "files": ["src/test-setup.ts"],
-  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+  "include": ["src/**/*.spec.ts", "src/**/*.testing.ts", "src/**/*.d.ts"]
 }
