@@ -53,6 +53,7 @@ import { GarageMembersControllerList$Params } from '../fn/garages/garage-members
 import { garageMembersControllerRemove } from '../fn/garages/garage-members-controller-remove';
 import { GarageMembersControllerRemove$Params } from '../fn/garages/garage-members-controller-remove';
 import { GarageMembersDto } from '../models/garage-members-dto';
+import { GaragePickListDto } from '../models/garage-pick-list-dto';
 import { garageProfileControllerRead } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileControllerRead$Params } from '../fn/garages/garage-profile-controller-read';
 import { garageProfileControllerUpdate } from '../fn/garages/garage-profile-controller-update';
@@ -109,6 +110,8 @@ import { ProfileViewsControllerRecord$Params } from '../fn/garages/profile-views
 import { PublicGarageDto } from '../models/public-garage-dto';
 import { publicGaragesControllerBySlug } from '../fn/garages/public-garages-controller-by-slug';
 import { PublicGaragesControllerBySlug$Params } from '../fn/garages/public-garages-controller-by-slug';
+import { publicGaragesControllerSearch } from '../fn/garages/public-garages-controller-search';
+import { PublicGaragesControllerSearch$Params } from '../fn/garages/public-garages-controller-search';
 import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
 import { TimeBlockDto } from '../models/time-block-dto';
 import { timeBlockOptions } from '../fn/garages/time-block-options';
@@ -1373,6 +1376,39 @@ export class GaragesService extends BaseService {
   garageLabourControllerSet(params: GarageLabourControllerSet$Params, context?: HttpContext): Promise<LabourRangeSavedDto> {
     const resp = this.garageLabourControllerSet$Response(params, context);
     return resp.then((r: StrictHttpResponse<LabourRangeSavedDto>): LabourRangeSavedDto => r.body);
+  }
+
+  /** Path part for operation `publicGaragesControllerSearch()` */
+  static readonly PublicGaragesControllerSearchPath = '/api/v1/garages';
+
+  /**
+   * Approved garages whose name holds the text.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `publicGaragesControllerSearch()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicGaragesControllerSearch$Response(params: PublicGaragesControllerSearch$Params, context?: HttpContext): Promise<StrictHttpResponse<GaragePickListDto>> {
+    const obs = publicGaragesControllerSearch(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Approved garages whose name holds the text.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `publicGaragesControllerSearch$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicGaragesControllerSearch(params: PublicGaragesControllerSearch$Params, context?: HttpContext): Promise<GaragePickListDto> {
+    const resp = this.publicGaragesControllerSearch$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GaragePickListDto>): GaragePickListDto => r.body);
   }
 
   /** Path part for operation `publicGaragesControllerBySlug()` */

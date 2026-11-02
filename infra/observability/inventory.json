@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 263,
+    "count": 265,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -3279,6 +3279,32 @@
     },
     {
       "kind": "endpoint",
+      "name": "car-repair-log",
+      "source": "libs/domain/src/cars/log-repair/log-repair.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/cars/:id/repairs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner logs a repair done at any garage on a car they hold: one transaction with the repair row, one create audit entry and a repair.logged outbox event to the owner's channel; each log that reaches the use case counted by motorfix_repairs_logged_total by outcome and check, one LogRepair log line per save naming the repair, the car and the garage id (no amount, text, name or plate); a 400 or 404 is read from the status codes; spans from the HTTP and Prisma auto-instrumentation; no alert of its own: a log is rare and user-driven, its failures are 5xx under api-error-rate",
+      "story": "ST-62"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-pick",
+      "source": "libs/domain/src/garages/public-garages/public-garages.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/garages",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver's garage picker: at most 8 approved garages by name, a read that writes nothing, so no product counter; never cached or public; spans from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-62"
+    },
+    {
+      "kind": "endpoint",
       "name": "cars-sold",
       "source": "libs/domain/src/cars/history/history.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/cars/sold",
@@ -3446,6 +3472,15 @@
       "alerts": "none",
       "reason": "counts each correction that reached the use case by writer (owner, admin) and outcome (corrected, unchanged, stale, not_found), with no repair, garage or account label; a count has no failure to alert on; the api-error-rate rule covers the service",
       "story": "ST-409"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repairs_logged_total",
+      "source": "libs/domain/src/cars/log-repair/log-repair.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each log of a repair that reached the use case by outcome (saved, check_needed, date_before_car_year, unknown_garage) and check (future_date, odometer_below_earlier, both, none), with no repair, car, garage or account label; a count has no failure to alert on; the api-error-rate rule covers the service",
+      "story": "ST-62"
     },
     {
       "kind": "product-counter",

@@ -17,6 +17,7 @@ import { CarHistoryControllerSold$Params } from '../fn/cars/car-history-controll
 import { carHistoryControllerSoldRepairs } from '../fn/cars/car-history-controller-sold-repairs';
 import { CarHistoryControllerSoldRepairs$Params } from '../fn/cars/car-history-controller-sold-repairs';
 import { CarListDto } from '../models/car-list-dto';
+import { CarRepairDto } from '../models/car-repair-dto';
 import { CarRepairListDto } from '../models/car-repair-list-dto';
 import { carSaleControllerCancel } from '../fn/cars/car-sale-controller-cancel';
 import { CarSaleControllerCancel$Params } from '../fn/cars/car-sale-controller-cancel';
@@ -48,6 +49,8 @@ import { clientRepairsControllerList } from '../fn/cars/client-repairs-controlle
 import { ClientRepairsControllerList$Params } from '../fn/cars/client-repairs-controller-list';
 import { clientRepairsControllerRemove } from '../fn/cars/client-repairs-controller-remove';
 import { ClientRepairsControllerRemove$Params } from '../fn/cars/client-repairs-controller-remove';
+import { logRepairControllerLog } from '../fn/cars/log-repair-controller-log';
+import { LogRepairControllerLog$Params } from '../fn/cars/log-repair-controller-log';
 import { RepairListDto } from '../models/repair-list-dto';
 import { repairsControllerEdit } from '../fn/cars/repairs-controller-edit';
 import { RepairsControllerEdit$Params } from '../fn/cars/repairs-controller-edit';
@@ -325,6 +328,39 @@ export class CarsService extends BaseService {
   carHistoryControllerRepairs(params: CarHistoryControllerRepairs$Params, context?: HttpContext): Promise<CarRepairListDto> {
     const resp = this.carHistoryControllerRepairs$Response(params, context);
     return resp.then((r: StrictHttpResponse<CarRepairListDto>): CarRepairListDto => r.body);
+  }
+
+  /** Path part for operation `logRepairControllerLog()` */
+  static readonly LogRepairControllerLogPath = '/api/v1/cars/{id}/repairs';
+
+  /**
+   * Log a repair done at any garage on one of the caller’s cars.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `logRepairControllerLog()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  logRepairControllerLog$Response(params: LogRepairControllerLog$Params, context?: HttpContext): Promise<StrictHttpResponse<CarRepairDto>> {
+    const obs = logRepairControllerLog(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Log a repair done at any garage on one of the caller’s cars.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `logRepairControllerLog$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  logRepairControllerLog(params: LogRepairControllerLog$Params, context?: HttpContext): Promise<CarRepairDto> {
+    const resp = this.logRepairControllerLog$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CarRepairDto>): CarRepairDto => r.body);
   }
 
   /** Path part for operation `clientRepairsControllerList()` */
