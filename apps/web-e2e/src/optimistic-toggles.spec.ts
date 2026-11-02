@@ -122,6 +122,26 @@ async function unread(page: Page, request: APIRequestContext, count: number) {
   const email = await signUpDriver(request, 'clopotel');
   const own = await accessToken(request, email);
   const headers = { Authorization: `Bearer ${own}` };
+  // A new account gets a row of its own (the welcome), written from the
+  // outbox after sign-up: wait for it, then read it.
+  await expect
+    .poll(
+      async () =>
+        (
+          (await (
+            await request.get('/api/v1/notifications/unread-count', {
+              headers,
+            })
+          ).json()) as { count: number }
+        ).count,
+      { timeout: 15_000 },
+    )
+    .toBeGreaterThan(0);
+  expect(
+    (
+      await request.post('/api/v1/notifications/read-all', { headers })
+    ).status(),
+  ).toBe(204);
   const { id } = (await (
     await request.get('/api/v1/me', { headers })
   ).json()) as { id: string };
