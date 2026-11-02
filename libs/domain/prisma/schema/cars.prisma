@@ -177,6 +177,9 @@ model Repair {
   updatedBy        String?             @map("updated_by") @db.Uuid
   updatedByRole    RepairUpdater?      @map("updated_by_role")
   updater          Account?            @relation("RepairUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+  // Who logged it; kept when a correction moves updatedBy.
+  loggedBy         String?             @map("logged_by") @db.Uuid
+  logger           Account?            @relation("RepairLogger", fields: [loggedBy], references: [id], onDelete: SetNull)
   car              Car                 @relation(fields: [carId], references: [id], onDelete: Cascade)
   job              Job?                @relation(fields: [jobId], references: [id], onDelete: Cascade)
   garage           Garage?             @relation(fields: [garageId], references: [id], onDelete: SetNull)

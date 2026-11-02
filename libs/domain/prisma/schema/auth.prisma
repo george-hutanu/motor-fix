@@ -72,6 +72,7 @@ model Account {
   carsBought              CarTransfer[]            @relation("TransferBuyer")
   carOwnerships           CarOwnership[]
   repairsUpdated          Repair[]                 @relation("RepairUpdater")
+  repairsLogged           Repair[]                 @relation("RepairLogger")
   savedGarages            SavedGarage[]
   saveSuggestionDismissals SaveSuggestionDismissal[]
   consents                AccountConsent[]
