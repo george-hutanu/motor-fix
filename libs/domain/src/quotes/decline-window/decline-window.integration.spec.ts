@@ -152,9 +152,9 @@ const toldAt = async (id: string) =>
 
 // @traces 345-FR-007
 describe('the decline-window timer', () => {
-  it('relays request.declined to the quote-timers queue', () => {
+  it('relays request.declined and the asked move to the quote-timers queue', () => {
     expect(DECLINE_WINDOW_CONSUMER).toMatchObject({
-      kinds: ['request.declined'],
+      kinds: ['request.declined', 'booking.move_proposed'],
       queue: 'quote-timers',
     });
   });
