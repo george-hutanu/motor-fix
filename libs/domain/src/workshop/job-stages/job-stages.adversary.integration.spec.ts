@@ -103,11 +103,16 @@ async function snapshot(jobId: string) {
   };
 }
 
-const backdate = (jobId: string, ms: number) =>
-  prisma.jobStageEntry.updateMany({
-    data: { at: new Date(Date.now() - ms) },
+// The running clock is the job's in_work_since; its stage entries move with
+// it so the history still reads true.
+async function backdate(jobId: string, ms: number) {
+  const at = new Date(Date.now() - ms);
+  await prisma.jobStageEntry.updateMany({
+    data: { at },
     where: { jobId, toStatus: 'in_work' },
   });
+  await prisma.job.update({ data: { inWorkSince: at }, where: { id: jobId } });
+}
 
 const UNKNOWN = '3f1c9a52-7d0e-4b8a-9c11-0a1b2c3d4e5f';
 
@@ -267,6 +272,7 @@ describe('calling a stage twice', () => {
         toStatus: 'in_work',
       },
     });
+    await backdate(s.job.id, 40_000);
     const first = await stage(s.job.id, 'finish', s.owner);
     const before = await snapshot(s.job.id);
 
@@ -304,6 +310,10 @@ describe('calling a stage twice', () => {
       data: { at: new Date(Date.now() - 30_400) },
       where: { fromStatus: 'paused', jobId: s.job.id, toStatus: 'in_work' },
     });
+    await prisma.job.update({
+      data: { inWorkSince: new Date(Date.now() - 30_400) },
+      where: { id: s.job.id },
+    });
 
     const res = await stage(s.job.id, 'finish', s.hand);
 
@@ -329,13 +339,10 @@ describe('calling a stage twice', () => {
     expect(res.body.workedSeconds).toBe(0);
   });
 
-  it('never counts negative time when the stage entry lies in the future', async () => {
+  it('never counts negative time when the running clock lies in the future', async () => {
     const s = await setting();
     await stage(s.job.id, 'start', s.hand);
-    await prisma.jobStageEntry.updateMany({
-      data: { at: new Date(Date.now() + 60_000) },
-      where: { jobId: s.job.id },
-    });
+    await backdate(s.job.id, -60_000);
 
     const res = await stage(s.job.id, 'pause', s.hand);
 

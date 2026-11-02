@@ -85,6 +85,8 @@ export type { PhoneChangeControllerRequest$Params as PhoneChangeControllerReques
 export { phoneChangeControllerRequest as phoneChangeControllerRequest } from './fn/me/phone-change-controller-request';
 export type { PhoneChangeControllerConfirm$Params as PhoneChangeControllerConfirm$Params } from './fn/me/phone-change-controller-confirm';
 export { phoneChangeControllerConfirm as phoneChangeControllerConfirm } from './fn/me/phone-change-controller-confirm';
+export type { MechanicDayControllerGet$Params as MechanicDayControllerGet$Params } from './fn/me/mechanic-day-controller-get';
+export { mechanicDayControllerGet as mechanicDayControllerGet } from './fn/me/mechanic-day-controller-get';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
 export type { ConsentsControllerRecord$Params as ConsentsControllerRecord$Params } from './fn/consents/consents-controller-record';

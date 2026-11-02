@@ -919,8 +919,8 @@ async function book(
   );
   // Started by its mechanic, so QA can tick its steps.
   const job = await db.query<{ id: string }>(
-    `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status, started_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'in_work', now())
+    `INSERT INTO job (id, booking_id, garage_id, car_id, driver_id, mechanic_id, status, started_at, in_work_since)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'in_work', now(), now())
      RETURNING id`,
     [booking.rows[0]?.id, who.garageId, who.carId, who.driverId, who.mechanic],
   );

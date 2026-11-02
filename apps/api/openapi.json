@@ -7651,6 +7651,51 @@
         ]
       }
     },
+    "/api/v1/me/day": {
+      "get": {
+        "operationId": "MechanicDayController_get",
+        "parameters": [
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "A Bucharest day, at most 30 days from today either way; today when absent",
+            "schema": {
+              "format": "date",
+              "example": "2026-11-02",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDayDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not a mechanic with a live card at a garage that works as a team"
+          },
+          "422": {
+            "description": "validation_failed: the date is not YYYY-MM-DD or is more than 30 days from today"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The signed-in mechanic’s jobs of a Bucharest day (today by default), with the work carried from earlier days first on today",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/time-blocks": {
       "get": {
         "operationId": "garageTimeBlocks",
@@ -22796,7 +22841,13 @@
           },
           "workedSeconds": {
             "type": "number",
-            "description": "Whole seconds spent in work"
+            "description": "Whole seconds spent in work, the running stretch left out"
+          },
+          "inWorkSince": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the running stretch in work began; null when not in work"
           },
           "startedAt": {
             "type": "string",
@@ -22898,6 +22949,7 @@
           "receivedAt",
           "odometerKm",
           "workedSeconds",
+          "inWorkSince",
           "startedAt",
           "pausedAt",
           "finishedAt",
@@ -23093,7 +23145,13 @@
           },
           "workedSeconds": {
             "type": "number",
-            "description": "Whole seconds spent in work"
+            "description": "Whole seconds spent in work, the running stretch left out"
+          },
+          "inWorkSince": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the running stretch in work began; null when not in work"
           },
           "startedAt": {
             "type": "string",
@@ -23219,6 +23277,7 @@
           "receivedAt",
           "odometerKm",
           "workedSeconds",
+          "inWorkSince",
           "startedAt",
           "pausedAt",
           "finishedAt",
@@ -23396,6 +23455,145 @@
         },
         "required": [
           "done"
+        ]
+      },
+      "MeDayCarDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "plate": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "plate"
+        ]
+      },
+      "MeDayRowDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "start": {
+            "type": "string",
+            "description": "The day's earliest stretch; for a job carried over, its last stretch before today",
+            "format": "date-time"
+          },
+          "carryOver": {
+            "type": "boolean",
+            "description": "Carried from an earlier day; only ever on today"
+          },
+          "car": {
+            "$ref": "#/components/schemas/MeDayCarDto"
+          },
+          "driverFirstName": {
+            "type": "string"
+          },
+          "jobs": {
+            "description": "The quoted jobs' names in the caller's language",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lift": {
+            "type": "number",
+            "description": "The stretch's lift, while the garage schedules lifts"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "to_do",
+              "in_work",
+              "paused",
+              "done",
+              "cancelled"
+            ]
+          },
+          "stepsDone": {
+            "type": "number"
+          },
+          "stepsTotal": {
+            "type": "number"
+          },
+          "inWorkSince": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the running stretch in work began; null when not in work"
+          },
+          "workedSeconds": {
+            "type": "number",
+            "description": "Whole seconds spent in work, the running stretch left out"
+          },
+          "lock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobLockDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bookingId",
+          "jobId",
+          "start",
+          "carryOver",
+          "car",
+          "driverFirstName",
+          "jobs",
+          "status",
+          "stepsDone",
+          "stepsTotal",
+          "inWorkSince",
+          "workedSeconds",
+          "lock"
+        ]
+      },
+      "MeDayDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-11-02",
+            "format": "date"
+          },
+          "jobs": {
+            "type": "number",
+            "description": "The rows of the day"
+          },
+          "inWork": {
+            "type": "number",
+            "description": "The rows in work"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeDayRowDto"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "jobs",
+          "inWork",
+          "rows"
         ]
       },
       "TimeBlocksDto": {

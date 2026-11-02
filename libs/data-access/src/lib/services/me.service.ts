@@ -30,10 +30,13 @@ import { DataExportControllerRequest$Params } from '../fn/me/data-export-control
 import { DataExportDto } from '../models/data-export-dto';
 import { emailChangeControllerRequest } from '../fn/me/email-change-controller-request';
 import { EmailChangeControllerRequest$Params } from '../fn/me/email-change-controller-request';
+import { mechanicDayControllerGet } from '../fn/me/mechanic-day-controller-get';
+import { MechanicDayControllerGet$Params } from '../fn/me/mechanic-day-controller-get';
 import { meControllerMe } from '../fn/me/me-controller-me';
 import { MeControllerMe$Params } from '../fn/me/me-controller-me';
 import { meControllerUpdate } from '../fn/me/me-controller-update';
 import { MeControllerUpdate$Params } from '../fn/me/me-controller-update';
+import { MeDayDto } from '../models/me-day-dto';
 import { MeDto } from '../models/me-dto';
 import { meEmailConfirmationControllerAskAgain } from '../fn/me/me-email-confirmation-controller-ask-again';
 import { MeEmailConfirmationControllerAskAgain$Params } from '../fn/me/me-email-confirmation-controller-ask-again';
@@ -429,6 +432,39 @@ export class MeService extends BaseService {
   phoneChangeControllerConfirm(params: PhoneChangeControllerConfirm$Params, context?: HttpContext): Promise<MeDto> {
     const resp = this.phoneChangeControllerConfirm$Response(params, context);
     return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
+  }
+
+  /** Path part for operation `mechanicDayControllerGet()` */
+  static readonly MechanicDayControllerGetPath = '/api/v1/me/day';
+
+  /**
+   * The signed-in mechanic’s jobs of a Bucharest day (today by default), with the work carried from earlier days first on today.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `mechanicDayControllerGet()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  mechanicDayControllerGet$Response(params?: MechanicDayControllerGet$Params, context?: HttpContext): Promise<StrictHttpResponse<MeDayDto>> {
+    const obs = mechanicDayControllerGet(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The signed-in mechanic’s jobs of a Bucharest day (today by default), with the work carried from earlier days first on today.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `mechanicDayControllerGet$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  mechanicDayControllerGet(params?: MechanicDayControllerGet$Params, context?: HttpContext): Promise<MeDayDto> {
+    const resp = this.mechanicDayControllerGet$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MeDayDto>): MeDayDto => r.body);
   }
 
 }

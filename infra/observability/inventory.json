@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 276,
+    "count": 277,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1711,7 +1711,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "each move locks the job and writes its stage, the request's move, the audit entries and the events in one PostgreSQL transaction; a start pauses the mechanic's other job in work in the same one; each refusal logs one 'job stage refused' line with the job id and its code; the counter motorfix_job_stage_moves_total counts every call by action and outcome; a handover also completes the booking and a correction queues the driver's message through the outbox; no outside call",
+      "reason": "each move locks the job and writes its stage, the request's move, the audit entries and the events in one PostgreSQL transaction; a start pauses the mechanic's other job in work in the same one; worked time is measured from the job's in_work_since, set on the move into work and folded into worked_seconds on the move out; each refusal logs one 'job stage refused' line with the job id and its code; the counter motorfix_job_stage_moves_total counts every call by action and outcome; a handover also completes the booking and a correction queues the driver's message through the outbox; no outside call",
       "story": "ST-276, ST-406"
     },
     {
@@ -3679,6 +3679,19 @@
       ],
       "reason": "PATCH and DELETE change nothing yet: a MotorFix repair answers 409, a logged one 501, each counted by motorfix_repair_edit_refusals_total; no alert of its own",
       "story": "ST-61"
+    },
+    {
+      "kind": "endpoint",
+      "name": "mechanic-day",
+      "source": "libs/domain/src/workshop/mechanic-day/mechanic-day.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/day",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the signed-in mechanic reads one Bucharest day of his jobs, each with the job's own status, in two PostgreSQL reads; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation; no outside call",
+      "story": "ST-122"
     }
   ]
 }

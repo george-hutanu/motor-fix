@@ -34,6 +34,7 @@ const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
   finishedAt: null,
   handedOverAt: null,
   id: 'job-1',
+  inWorkSince: null,
   jobs: [
     {
       id: 'rj-1',

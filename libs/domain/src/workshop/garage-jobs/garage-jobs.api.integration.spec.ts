@@ -82,6 +82,7 @@ describe('GET /garage/jobs', () => {
         finishedAt: null,
         handedOverAt: null,
         id: s.handJob.id,
+        inWorkSince: null,
         jobs: [
           {
             id: expect.any(String),
