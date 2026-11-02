@@ -77,6 +77,7 @@ export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-del
 export { CarAccountDeletedModule } from './cars/account-deleted/account-deleted.module';
 export { ClientRepairsModule } from './cars/client-repairs/client-repairs.module';
 export { CarHistoryModule } from './cars/history/history.module';
+export { LogRepairModule } from './cars/log-repair/log-repair.module';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export {
   CAR_REMINDERS_CONSUMER,
