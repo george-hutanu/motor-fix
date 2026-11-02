@@ -17,7 +17,7 @@ reads. The FR → test mapping also belongs to the completion report and
 `tasks.md`. Comments are held to
 the same bar as code: one only where it says something the code cannot. Then
 prove red: run the new spec files with
-`npx jest <files>` and quote the failing count in the run log. Tests that
+`npx vitest run --config <the project's vitest config> <files>` and quote the failing count in the run log. Tests that
 pass before any implementation exist are not red-first — fix the test, do not
 proceed.
 

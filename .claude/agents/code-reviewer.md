@@ -21,7 +21,7 @@ Gather your own evidence — read the actual files, not the summary you were
 handed:
 
 - `git diff <range>` and `git diff --name-only <range>` (Bash is for read-only
-  git, `npx jest`, and `node .claude/scripts/diff-audit.mjs` only — never
+  git, `npx vitest run`, and `node .claude/scripts/diff-audit.mjs` only — never
   modify anything)
 - every source and test file the diff touches, in full, plus its callers
 - the repo's known traps and the stack in AGENTS.md, already in your context

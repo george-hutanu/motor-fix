@@ -137,7 +137,7 @@ PR; an owner decision is a `needs-confirmation` question
 Apply the fixes in one pass, then:
 
 ```bash
-npx jest --onlyChanged && npm run lint && npm run typecheck
+sh scripts/heavy.sh npx nx affected -t test && npm run lint && npm run typecheck
 ```
 
 Each of these: run it into a log and read only the exit code, the summary and the failures (AGENTS.md "Agent replies": `tail -n 40`, then `grep -nE '✕|●|FAIL|Error'` on a failure).
@@ -165,7 +165,7 @@ Needs you: <finding this command must not decide>
 ## Done When
 
 - [ ] `diff-audit.mjs` and `artifact-lint.mjs` report zero ERRORs, or each survivor is explained in the report
-- [ ] `jest --onlyChanged`, `lint` and `typecheck` green after the last edit
+- [ ] the affected `test` targets, `lint` and `typecheck` green after the last edit
 - [ ] Every fix is a refactor, deletion, or added test — no behavior changed, no test weakened
 - [ ] Report delivered with before/after numbers, not adjectives
 

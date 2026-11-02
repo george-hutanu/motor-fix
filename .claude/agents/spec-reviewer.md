@@ -15,7 +15,7 @@ The invoking prompt names a feature directory (`specs/NNN-slug/`) and a diff
 range (or "working tree"). Gather your own evidence:
 
 - `git diff <range>` / `git status` for what actually changed (Bash is for
-  read-only git, `gh issue view`, `npx jest`, `npm run typecheck` and `npm run lint`
+  read-only git, `gh issue view`, `npx vitest run`, `npm run typecheck` and `npm run lint`
   only — never modify anything)
 - `specs/NNN-slug/spec.md` — requirements (FR-###), acceptance scenarios, edge cases
 - `specs/NNN-slug/plan.md` + `tasks.md` — the promised design and task list
@@ -93,8 +93,8 @@ range (or "working tree"). Gather your own evidence:
 7. **Unrequested work** — code in the diff no artifact asked for. Principle I
    makes this a finding here, not a nicety.
 
-Run the tests yourself (`npx jest --onlyChanged`, or the affected
-`*.spec.ts` files); never trust a reported green.
+Run the tests yourself (`npx vitest run --config <the project's vitest config>`
+on the affected `*.spec.ts` files); never trust a reported green.
 
 ## Triage — every finding takes one of two routes
 
