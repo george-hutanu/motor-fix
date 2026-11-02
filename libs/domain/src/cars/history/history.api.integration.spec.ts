@@ -450,7 +450,7 @@ describe('a MotorFix repair on the history reads', () => {
     },
   );
 
-  // @traces 026-FR-001 026-FR-004
+  // @traces 026-FR-001 026-FR-004 026-FR-009
   it('answers the sold car’s MotorFix repair to its former owner with the same row and his review, the buyer none', async () => {
     const { andrei, maria } = await people();
     const car = await world.car(andrei.id);
@@ -483,6 +483,7 @@ describe('a MotorFix repair on the history reads', () => {
     );
   });
 
+  // @traces 026-FR-009
   it('never answers the plate, a phone or an e-mail', async () => {
     const { andrei } = await people();
     const car = await world.car(andrei.id);

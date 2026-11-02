@@ -7,6 +7,7 @@ import type {
 
 import type { Actor } from '../../auth/policy';
 import type { Prisma } from '../../generated/prisma/client';
+import type { ReviewEligibility } from '../../reviews/eligibility/eligibility';
 
 // What an ownership row needs to decide which repairs it may read.
 export type OwnershipRow = {
@@ -149,7 +150,7 @@ export const CORRECTED_BY = {
 const day = (at: Date) => at.toISOString().slice(0, 10);
 
 // The review state a MotorFix repair shows for the eligibility's reason.
-// Nothing answers expired until the review window exists (ST-120).
+// Nothing answers expired until the review window exists.
 const REVIEW_STATE: Record<ReviewRefusal | 'null', RepairReviewState> = {
   already_reviewed: 'written',
   email_not_confirmed: 'can_write',
@@ -163,23 +164,11 @@ const REVIEW_STATE: Record<ReviewRefusal | 'null', RepairReviewState> = {
 export const reviewStateOf = (reason: ReviewRefusal | null) =>
   REVIEW_STATE[reason ?? 'null'];
 
-type Judge = {
-  judge(
-    actor: Actor,
-    jobIds: string[],
-  ): Promise<
-    {
-      jobId: string;
-      reason: ReviewRefusal | null;
-      review: { id: string; rating: number } | null;
-    }[]
-  >;
-};
-
 // The review of each MotorFix repair on a page, by job: one judgement for
-// the whole page, none for a page with no MotorFix repair.
+// the whole page, none for a page with no MotorFix repair. A job the
+// judgement leaves out answers none.
 export async function reviewsOf(
-  eligibility: Judge,
+  eligibility: Pick<ReviewEligibility, 'judge'>,
   actor: Actor,
   repairs: { jobId: string | null }[],
 ): Promise<Map<string, RepairReviewDto>> {
@@ -187,10 +176,14 @@ export async function reviewsOf(
     ...new Set(repairs.flatMap(({ jobId }) => (jobId ? [jobId] : []))),
   ];
   if (jobIds.length === 0) return new Map();
-  const verdicts = await eligibility.judge(actor, jobIds);
+  const verdicts = new Map(
+    (await eligibility.judge(actor, jobIds)).map((v) => [v.jobId, v]),
+  );
   return new Map(
-    verdicts.map(({ jobId, reason, review }) => {
-      const state = reviewStateOf(reason);
+    jobIds.map((jobId) => {
+      const verdict = verdicts.get(jobId);
+      const state = verdict ? reviewStateOf(verdict.reason) : 'none';
+      const review = verdict?.review;
       return [
         jobId,
         {

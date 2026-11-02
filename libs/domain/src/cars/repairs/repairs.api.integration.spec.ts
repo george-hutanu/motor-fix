@@ -473,7 +473,7 @@ describe('the review state of each row of GET /repairs', () => {
   it('judges a page once, whatever its length, and not at all with no MotorFix row', async () => {
     const { andrei, maria } = await people();
     const golf = await world.car(andrei.id);
-    for (let n = 0; n < 3; n += 1) {
+    for (let n = 0; n < 20; n += 1) {
       await motorFixRepair(prisma, andrei.id, golf.id, {
         daysAgo: n + 1,
         garageName: `Garaj ${n}`,
@@ -481,9 +481,12 @@ describe('the review state of each row of GET /repairs', () => {
     }
     const logan = await world.car(maria.id);
     await logged(logan.id, 3);
-    const judge = vi.spyOn(app.get(ReviewEligibility), 'judge');
+    const judge = vi.spyOn(
+      app.select(RepairsModule).get(ReviewEligibility),
+      'judge',
+    );
 
-    expect(await reviewOf(andrei.auth)).toHaveLength(3);
+    expect(await reviewOf(andrei.auth)).toHaveLength(20);
     expect(judge).toHaveBeenCalledTimes(1);
 
     judge.mockClear();
