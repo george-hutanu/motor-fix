@@ -70,6 +70,10 @@ test.describe('one job status on every screen @seeded @database', () => {
         });
         expect(res.ok(), `${verb}: ${res.status()}`).toBe(true);
       };
+      // Dan works one job at a time: starting one pauses his others, so two
+      // runs of this flow at once would pause each other's job. The lock holds
+      // from the start until the job is finished below.
+      await db.query("SELECT pg_advisory_lock(hashtext('e2e dan in work'))");
       // A job starts only once the car is received.
       await call('receive', { odometerKm: 98_100 });
       await call('start');
@@ -91,6 +95,7 @@ test.describe('one job status on every screen @seeded @database', () => {
         await request.post(`/api/v1/garage/jobs/${jobId}/finish`, {
           headers: garage,
         });
+      // db.end() closes the session, which releases the lock.
       await db.end();
     }
   });
