@@ -14,6 +14,7 @@ import type {
   CarDto,
   GarageRequestListDto,
   RequestListDto,
+  SoldCarListDto,
 } from '@motor-fix/data-access';
 
 import { type LiveView, liveView } from '../../live/view';
@@ -30,6 +31,7 @@ export interface Held {
   garageQuoted: GarageRequestListDto | null;
   garageWaiting: GarageRequestListDto | null;
   requests: RequestListDto;
+  soldCars: SoldCarListDto;
 }
 
 // How long a held value is shown with no read when its view opens again (ms).
@@ -40,6 +42,7 @@ const STALE_FOR: Record<keyof Held, number> = {
   garageQuoted: 30_000,
   garageWaiting: 30_000,
   requests: 30_000,
+  soldCars: 300_000,
 };
 
 interface Slot<T> {
@@ -72,6 +75,7 @@ export class Resources {
     garageQuoted: signal(undefined),
     garageWaiting: signal(undefined),
     requests: signal(undefined),
+    soldCars: signal(undefined),
   };
   // The read each type's views opened on, joined by a view opening meanwhile
   // for the same owner.

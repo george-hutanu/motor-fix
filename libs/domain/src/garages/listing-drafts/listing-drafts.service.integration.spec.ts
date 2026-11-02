@@ -78,10 +78,21 @@ beforeEach(async () => {
 });
 afterAll(() => prisma.$disconnect());
 
-// A survey holds no free text any more, so the size is made of photo keys.
-const PHOTO = `garage-photos/3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10/${'x'.repeat(64)}`;
-const filesOf = (bytes: number) =>
-  Array.from({ length: Math.ceil(bytes / (PHOTO.length + 3)) }, () => PHOTO);
+// The envelope caps the photos at 20, so the size is made of the most
+// prices a draft holds, each name a control character JSON writes in six
+// bytes: about 280 KB, past the draft's limit and under the body's.
+const OVERSIZED = {
+  steps: {
+    '3': {
+      jobs: Array.from({ length: 500 }, () => ({
+        brandId: '3f1b7d2a-6a43-4c55-9d1c-6f3f1b7d2a10',
+        fromBani: 1,
+        name: '\u0001'.repeat(80),
+        toBani: 2,
+      })),
+    },
+  },
+};
 
 describe('creating a draft', () => {
   it('keeps only the hashes of the browser key and the link token', async () => {
@@ -182,7 +193,10 @@ describe('creating a draft', () => {
   });
 
   it('refuses data over the size limit with draft_too_large', async () => {
-    const big = { files: filesOf(DRAFT_MAX_BYTES) };
+    const big = OVERSIZED;
+    expect(Buffer.byteLength(JSON.stringify(big))).toBeGreaterThan(
+      DRAFT_MAX_BYTES,
+    );
 
     const refused = await refusalOf(service.create(body({ data: big })));
 

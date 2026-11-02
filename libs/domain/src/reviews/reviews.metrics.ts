@@ -1,6 +1,8 @@
 import type {
+  DecisionRefusal,
   ReplyRefusal,
   ReportRefusal,
+  ReviewRemovalReason,
   ReviewReportReason,
 } from '@motor-fix/contracts';
 import { metrics } from '@opentelemetry/api';
@@ -59,4 +61,19 @@ export function recordReviewReplied(outcome: ReviewRepliedOutcome) {
       description: 'Replies garages tried to post or edit, by outcome',
     })
     .add(1, { outcome });
+}
+
+// A decision on a reported review or reply: removed with its target and rule,
+// or the code of a refusal (no target or rule); a 404 is not counted.
+export function recordReviewDecided(
+  outcome: 'removed' | DecisionRefusal,
+  target?: 'review' | 'reply',
+  reason?: ReviewRemovalReason,
+) {
+  metrics
+    .getMeter('motorfix')
+    .createCounter('motorfix_review_decisions_total', {
+      description: 'Admin decisions on reported reviews, by outcome',
+    })
+    .add(1, { outcome, ...(target && { target }), ...(reason && { reason }) });
 }

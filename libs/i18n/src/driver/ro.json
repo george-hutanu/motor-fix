@@ -85,6 +85,9 @@
     },
     "findGarage": "Caută un service",
     "findGarageFor": "Caută un service pentru {car}",
+    "history": {
+      "previousOwner": "de la proprietarul anterior"
+    },
     "itp": {
       "days": {
         "few": "ITP‑ul expiră în {count} zile",
@@ -171,6 +174,16 @@
       "send": "Trimite",
       "sent": "Linkul a plecat pe WhatsApp",
       "title": "Ai vândut {car}?"
+    },
+    "sold": {
+      "empty": "Nicio reparație până la vânzare.",
+      "hide": "Ascunde istoricul",
+      "hideFor": "Ascunde istoricul pentru {car}",
+      "line": "{car} · vândută pe {day}",
+      "loading": "Citim istoricul…",
+      "show": "Vezi istoricul",
+      "showFor": "Vezi istoricul pentru {car}",
+      "title": "Mașini vândute"
     },
     "transfer": {
       "cancel": "Anulează transferul",

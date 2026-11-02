@@ -1,3 +1,4 @@
+import type { TileKey, TileState } from '@motor-fix/contracts';
 import type { Queue } from 'bullmq';
 
 import { dueTiles, type Outcome, type ProbeDeps, probe } from './probes/probes';
@@ -10,9 +11,7 @@ import {
   limitCrossed,
   nextTile,
   stateOf,
-  type TileKey,
   type TileRow,
-  type TileState,
 } from './tiles';
 import { systemLog } from '../admin/system-log/system-log';
 import type { EventPort } from '../events/event.port';

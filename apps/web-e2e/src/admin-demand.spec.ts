@@ -1,5 +1,6 @@
 // @traces 103-FR-006 103-FR-008 103-FR-009 103-FR-011 103-FR-012
 // @traces 404-FR-008 404-FR-009 404-FR-010 404-FR-011 404-FR-013
+// @traces 1416-FR-001 1416-FR-002 1416-FR-005 1416-FR-007 1416-FR-008 1416-FR-009 1416-FR-012
 import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
@@ -196,4 +197,175 @@ test.describe('requests by brand and by job @seeded', () => {
       });
     }
   }
+});
+
+// Today at 01:00 on Bucharest's clock, whatever the offset of the day.
+const todayAtOneInBucharest = () => {
+  const day = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(new Date());
+  const clock = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    hourCycle: 'h23',
+    minute: '2-digit',
+    timeZone: 'Europe/Bucharest',
+  });
+  const winter = new Date(`${day}T01:00:00+02:00`);
+  return (
+    clock.format(winter) === '01:00'
+      ? winter
+      : new Date(`${day}T01:00:00+03:00`)
+  ).toISOString();
+};
+
+const SECTOR_3 = { code: 'sector-3', kind: 'sector', name: 'Sector 3' };
+const CLUJ = { code: 'cluj-napoca', kind: 'city', name: 'Cluj-Napoca' };
+const supplyAnswer = (rows: unknown[]) => ({
+  areas: [
+    SECTOR_3,
+    CLUJ,
+    { code: 'unknown', kind: 'unknown', name: 'Zonă necunoscută' },
+  ],
+  firstDay: '2026-10-02',
+  lastDay: '2026-10-31',
+  rows,
+  writtenAt: todayAtOneInBucharest(),
+});
+const SUPPLY_ROWS = [
+  {
+    area: SECTOR_3,
+    brand: 'BMW',
+    requests: 96,
+    requestsPerGarage: 24,
+    searches: 420,
+    supply: 4,
+    unmet: 12,
+  },
+  {
+    area: CLUJ,
+    brand: 'Tesla',
+    requests: 0,
+    requestsPerGarage: null,
+    searches: 85,
+    supply: 0,
+    unmet: 0,
+  },
+];
+
+// The searches behind the table need area cells the nightly job places, so
+// its read is stubbed as the reports' is; every request it gets is kept.
+async function stubSupply(
+  page: Page,
+  answer: (url: URL) => { status: number; json: unknown },
+) {
+  const urls: URL[] = [];
+  await page.route('**/api/v1/admin/demand/supply**', (route) => {
+    const url = new URL(route.request().url());
+    urls.push(url);
+    return route.fulfill(answer(url));
+  });
+  return urls;
+}
+
+test.describe('demand against supply per brand and area @seeded', () => {
+  for (const [device, width, height] of [
+    ['a 320 px phone', 320, 640],
+    ['a desktop', 1280, 800],
+  ] as const) {
+    test(`shows the rows, the lamp, the dash and a brand filter on ${device}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height, width });
+      await stubDemand(page);
+      const urls = await stubSupply(page, (url) => ({
+        json: supplyAnswer(
+          url.searchParams.get('brand') === 'BMW'
+            ? SUPPLY_ROWS.slice(0, 1)
+            : SUPPLY_ROWS,
+        ),
+        status: 200,
+      }));
+      await signInAsAdmin(page);
+      await expect(
+        page.locator('mf-admin-demand').getByRole('region').first(),
+      ).toBeVisible();
+      expect(urls).toHaveLength(0);
+
+      await page.goto('/app/admin/catalogue');
+      const table = page.getByRole('region', {
+        exact: true,
+        name: 'Cerere și ofertă',
+      });
+      await expect(table.getByText('actualizat azi la 01:00')).toBeVisible();
+      await expect
+        .poll(() =>
+          table
+            .locator('tbody tr')
+            // The compiled template keeps no whitespace between elements
+            // (cells, the name and figures spans), so the row's text nodes
+            // are joined with a space here.
+            .evaluateAll((rows) =>
+              rows.map((r) => {
+                const walker = document.createTreeWalker(
+                  r,
+                  NodeFilter.SHOW_TEXT,
+                );
+                const parts: string[] = [];
+                while (walker.nextNode())
+                  parts.push(walker.currentNode.textContent ?? '');
+                return parts.join(' ').replace(/\s+/g, ' ').trim();
+              }),
+            ),
+        )
+        .toEqual([
+          'BMW · Sector 3 420 căutări · 96 cereri · 4 service‑uri · 24 cereri pe service 12 fără ofertă',
+          'Tesla · Cluj-Napoca 85 căutări · 0 cereri · 0 service‑uri · — 0 fără ofertă lipsesc service‑uri',
+        ]);
+      await expect(table.locator('mf-lamp')).toHaveCount(1);
+      await expect(
+        table.getByRole('img', { name: 'fără service‑uri' }),
+      ).toHaveText('—');
+      expect(urls).toHaveLength(1);
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+
+      await table.getByRole('combobox', { name: 'Marcă' }).selectOption('BMW');
+      await expect(table.locator('tbody tr')).toHaveCount(1);
+      expect(urls).toHaveLength(2);
+      expect(urls[1].searchParams.get('brand')).toBe('BMW');
+      expect(urls[1].searchParams.has('area')).toBe(false);
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+    });
+  }
+
+  test('shows the empty text and a retry on a failed read', async ({
+    page,
+  }) => {
+    await stubDemand(page);
+    let fail = false;
+    await stubSupply(page, () =>
+      fail
+        ? { json: { code: 'internal' }, status: 500 }
+        : { json: supplyAnswer([]), status: 200 },
+    );
+    await signInAsAdmin(page);
+    await page.goto('/app/admin/catalogue');
+    const table = page.getByRole('region', {
+      exact: true,
+      name: 'Cerere și ofertă',
+    });
+    await expect(
+      table.getByText('Încă nu sunt date pentru ultimele 30 de zile.'),
+    ).toBeVisible();
+
+    fail = true;
+    await table
+      .getByRole('combobox', { name: 'Zonă' })
+      .selectOption('sector-3');
+    await expect(table.getByRole('alert')).toContainText(
+      'Tabelul nu a putut fi citit.',
+    );
+    await expect(
+      table.getByRole('button', { exact: true, name: 'Reîncearcă' }),
+    ).toBeVisible();
+  });
 });

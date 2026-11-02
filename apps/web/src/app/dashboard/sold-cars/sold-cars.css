@@ -1,0 +1,9 @@
+section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+}
+h2 {
+  margin: 0;
+  font-size: var(--mf-size-subheading);
+}

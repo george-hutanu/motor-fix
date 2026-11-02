@@ -1,6 +1,11 @@
-import type { SystemLogKind, SystemLogSource } from '@motor-fix/contracts';
+import type {
+  SystemLogKind,
+  SystemLogSource,
+  TileKey,
+  TileState,
+} from '@motor-fix/contracts';
 
-import type { Figures, TileKey, TileState } from '../../status/tiles';
+import type { Figures } from '../../status/tiles';
 
 type Severity = 'info' | 'warning' | 'error';
 

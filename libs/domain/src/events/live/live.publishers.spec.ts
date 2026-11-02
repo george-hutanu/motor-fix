@@ -11,7 +11,6 @@ const UNBUILT: Record<string, string> = {
   'facility.re_add_decided': 'admins decide on facility removals',
   'facility.removed': 'admins decide on facility removals',
   'review.appeal_decided': 'garages appeal a review, admins decide',
-  'review.decided': 'admins moderate reported reviews',
   'review.deleted': 'drivers edit or delete their review',
   'review.edited': 'drivers edit or delete their review',
 };

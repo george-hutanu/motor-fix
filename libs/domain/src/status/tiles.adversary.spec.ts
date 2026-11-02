@@ -1,4 +1,6 @@
-import { type Check, nextTile, stateOf, TILES, type TileRow } from './tiles';
+import { TILES } from '@motor-fix/contracts';
+
+import { type Check, nextTile, stateOf, type TileRow } from './tiles';
 
 const at = (seconds: number) =>
   new Date(Date.parse('2026-10-17T10:00:00Z') + seconds * 1000);

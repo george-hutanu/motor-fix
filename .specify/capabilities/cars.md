@@ -24,6 +24,9 @@ features:
   - 293-save-garage-suggest
   - 1392-car-transfer-link-web
   - 062-outside-repair
+  - 026-review-from-history
+  - 1394-car-transfer-accept-web
+  - 093-coming-up-across-cars
 ---
 
 # Capability: Cars
@@ -44,9 +47,9 @@ _From 094-itp-reminders._
 
 _From 089-add-a-car._
 
-### 089-FR-005 — The save MUST be idempotent: the request carries the key the form-saving helper issues per dialog (159-FR-004) in the `Idempotency-Key` header (as 255-FR-007 and `apps/web/src/app/dashboard/waiting.ts:227` do); a second request with the same key from the same account answers the car the first created, 201 again, and creates nothing. The key is stored on the car itself, unique per owner (`owner_id`, `idempotency_key`), in PostgreSQL (never only in Redis, Principle VI); cars are never hard-deleted, so the key lives as long as the car. A request without the header, or with a key of 0 or more than 64 characters, answers 400 `validation_failed` on the field `idempotency-key` and creates nothing.
+### 093-FR-010 — (#631) Replaying a create `Idempotency-Key` whose car has been removed MUST answer 404 `not_found` and create nothing: the replay lookup takes `removedAt: null` into account, and the account's car count is unchanged; an integration test covers it.
 
-_From 089-add-a-car._
+_From 093-coming-up-across-cars._
 
 ### 1265-FR-002 — Adding a car (089) MUST open its `owner` ownership row in the same transaction as the car, the audit entry and `car.added` (089-FR-007 unchanged in what it writes; this row joins it).
 
@@ -359,9 +362,9 @@ _From 1265-car-transfer-accept._
 
 _From 1265-car-transfer-accept._
 
-### 061-FR-007 — Every row of the three history reads (`GET /api/v1/repairs`, `/cars/:id/repairs`, `/cars/sold/:id/repairs`) MUST carry, beside `id`, `doneOn`, `what`, `garageName`, `source`, `fromPreviousOwner`, `odometerKm`, `costBani` and `correctedBy` (1265-FR-011, 409-FR-015): `car` (`id`, `brandName`, `model`, `year`), `mechanicName` (for a MotorFix repair the job's mechanic's `MECHANIC.name`, hidden from the profile or not; null for a logged repair, a job with no mechanic or a deleted mechanic row) and `review`: null for every row, MotorFix or logged, until ST-26 (#91) adds the state, per the owner's resolution of 2026-10-15 on #102; the field stays nullable in the contract so ST-26 can fill it.
+### 026-FR-001 — Every MotorFix row (`source` `motorfix`) of the three history reads (`GET /api/v1/repairs`, `GET /api/v1/cars/:id/repairs`, `GET /api/v1/cars/sold/:id/repairs`) MUST carry `review` as `{ state, jobId, rating, reviewId }`: `state` one of `can_write`, `written`, `removed`, `expired`, `none`; `jobId` the repair's job id; `rating` an integer 1 to 5 only with `written`, else null; `reviewId` the review's id with `written` and `removed`, else null. A logged row (`source` `logged`) MUST keep `review` null. The contract's `RepairReviewDto` replaces today's placeholder enum (`write`, `rated`, `none`) with these five states, gains `jobId` and `reviewId`, and the OpenAPI document and the generated client are regenerated.
 
-_From 061-repair-list._
+_From 026-review-from-history._
 
 ### 1265-FR-014 — After the acceptance, the seller MUST get 404 from every car route taking the car's id (`GET /api/v1/cars/:id`, the edit, the removal, the sale, the transfer cancel), and the car MUST be absent from the seller's `GET /api/v1/cars` and present in the buyer's with `plate`, `rcaUntil` and `rovinietaUntil` `null` (the existing owner check does this: the owner changed); both accounts' warm car lists (`driver-home`, 1169-FR-003) MUST be dropped in the acceptance's request.
 
@@ -479,9 +482,9 @@ _From 061-repair-list._
 
 _From 061-repair-list._
 
-### 061-FR-009 — The reads MUST never carry the plate, the driver's or the mechanic's account, phone or e-mail, the garage's internal ids beyond `garageId`, nor any `removed` or `deleted_by_author` review's text or rating; the sold car's read keeps its cut at the sale date (1265-FR-012) and answers `review` null, as every row (FR-007).
+### 026-FR-009 — The three reads MUST never carry the plate, the driver's or the mechanic's account, phone or e-mail, the garage's internal ids beyond `garageId`, nor any `removed` or `deleted_by_author` review's text or rating; the sold car's read keeps its cut at the sale date (1265-FR-012) and answers each MotorFix row's `review` judged for its reader (FR-007), a logged row's null.
 
-_From 061-repair-list._
+_From 026-review-from-history._
 
 ### 061-FR-010 — `PATCH /api/v1/repairs/:id` and `DELETE /api/v1/repairs/:id` (capability `driver.cars`) MUST answer 404 `not_found` when the repair is not among the repairs the caller may read through an open ownership row (another driver's, deleted, of a removed or sold car, unknown), and 409 `motorfix_repair` with the message "Reparația vine dintr-o lucrare MotorFix" (Romanian only, as every refusal in the repo; the English "This repair comes from a MotorFix job" is the client's text) for a `motorfix` row, in that order after 401; a path id that is not a uuid answers 400 `validation_failed`, as on every route, and a well-formed id the caller cannot use answers 404; each changes nothing and writes no audit entry.
 
@@ -619,9 +622,9 @@ _From 1392-car-transfer-link-web._
 
 _From 1392-car-transfer-link-web._
 
-### 1392-FR-005 — (415-FR-013, adapted to 1265-FR-003) The web app MUST serve `/:lang/transfer/:token` as a public page in the public frame that reads `GET /api/v1/car-transfers/{token}` and shows, centred, with no sign-in prompt and no action in its body: for 404 "Linkul nu există" / "This link does not exist"; for 410 `transfer_cancelled` "Linkul nu mai e valabil" / "The link is no longer valid"; for 410 `transfer_expired` "Linkul a expirat" / "The link has expired"; for 410 `transfer_accepted` "Mașina a fost deja preluată" / "The car has already been taken over"; and for any 200 answer (signed out, or signed in with the car, repair count and seller name in it) and for 403 `own_transfer` the one line "Linkul e valabil. Preluarea mașinii vine în curând." / "This link is valid. Taking the car over is coming soon." (ST-1394 replaces this view). On a client-side navigation the page shows the existing task loading state until the read answers; the page asks search engines not to index it (`noindex`, the token is a bearer link). Each state sets the document title to its text; the server render answers with the API's HTTP status for 404 and 410 and 200 otherwise; the page never shows the seller's name, the car or the repair count even when the answer carries them. The route is public: no session is asked for and no sign-in dialog opens for a 401-free read.
+### 1394-FR-001 — (1265-FR-017; replaces 1392-FR-005's valid line) The public page `/:lang/transfer/:token` MUST show, for a 200 answer with no car in it (nobody signed in, or a session the read treats as a visitor), centred in the body: "O mașină te așteaptă. Intră în cont ca să o preiei." / "A car is waiting for you. Sign in to take it over." and one button "Intră în cont" / "Sign in" that opens the existing sign-in dialog in its gate form (the screen stays; a new phone number creates a driver account, 393; the existing e-mail, Google and Apple ways stay offered); with a session already held (terms in force not accepted) the button opens the existing re-accept dialog instead; once either dialog resolves, the page MUST re-read the link with the session and show the result without navigating; a read that still answers no car, or a closed dialog, leaves the waiting line, with no second dialog opened by itself. For a 200 answer carrying `car`, `repairCount` and `sellerName` (a signed-in non-seller), it MUST show the line "<brand> <model> <year> · <repairs> · de la <seller>" / "<brand> <model> <year> · <repairs> · from <seller>", where `<repairs>` is "nicio reparație transmisă" / "no repairs passed on" at 0, "1 reparație transmisă" / "1 repair passed on" at 1 and "<n> reparații transmise" / "<n> repairs passed on" above (Romanian plural rules as the card's day counts use them), and the "· de la …" / "· from …" part omitted when `sellerName` is `null`; under it the main button "Preiau mașina" / "Take the car over". For 403 `own_transfer` it MUST show "Nu poți prelua propria mașină" / "You can't take over your own car" with no button and no car line, served 200 on the server render. The 404 and 410 lines, their server statuses, the loading state, the failed state with its retry, the `noindex` rule and the document title following the line shown are 1392-FR-005's and MUST stay; the title of the waiting and own-link states is the first sentence shown, and the buyer's view's title is the whole car line. The page MUST never show the seller's phone, the plate or the token (the answer carries none).
 
-_From 1392-car-transfer-link-web._
+_From 1394-car-transfer-accept-web._
 
 ### 1392-FR-006 — (415-FR-019) The screens MUST hold at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, the dialog's list scrolling inside it on a phone, every control a 44 px touch target, focus moving into each dialog when it opens, Escape closing it (not while a request is in flight) and focus returning to the control that opened it (or to the card when that control is gone), the ticks labelled by their repair row, the public page readable without sign-in and without the dashboard chrome, no axe violation, each dialog named by its title (`role="dialog"` labelled by it), and the copied state, the field and task errors and the done state announced to assistive technology (a polite live region).
 
@@ -679,6 +682,110 @@ _From 062-outside-repair._
 
 _From 062-outside-repair._
 
+### 026-FR-002 — `state` MUST come from the reviews module's eligibility (023-FR-013, `ReviewEligibility.judge`), judged once per page for the page's MotorFix job ids in first-occurrence order (one batch: one call of the existing `ReviewEligibility.judge(actor, jobIds)`, every MotorFix job id of the page included, previous owners' jobs too; no new reviews-module API; no judgement per row and none for a page without a MotorFix row), mapped by the reason: null or `email_not_confirmed` → `can_write`; `already_reviewed` → `written`; `review_removed` → `removed`; `job_not_done`, `own_garage` or `not_found` → `none`. An unconfirmed e-mail never hides the offer (023-FR-013's `offer`).
+
+_From 026-review-from-history._
+
+### 026-FR-003 — With `written`, `rating` and `reviewId` MUST be the live review's (status `published` or `reported`); with `removed`, `reviewId` MUST be the removed review's and `rating` null (061-FR-009: no removed review's text or rating leaves the server). No other state carries a rating or id.
+
+_From 026-review-from-history._
+
+### 026-FR-004 — A review in status `deleted_by_author` MUST count as no review: the row answers `can_write` with `rating` and `reviewId` null, as the eligibility already judges (it reads live statuses only).
+
+_From 026-review-from-history._
+
+### 026-FR-005 — `expired` MUST be in the contract's enum and documented as produced by ST-120 (#234) only; this feature MUST produce it for no row, and the mapping MUST be a total function of the eligibility's reason set. Until ST-120 ships, a handed-over job older than 60 days with no review answers `can_write`.
+
+_From 026-review-from-history._
+
+### 026-FR-006 — The reads MUST change nothing else: who may read (the car's owner through an open ownership row, 1265-FR-010; another driver's car 404, 061-FR-006), the order, the paging, the filter, the sold car's cut (1265-FR-012), the rest of the row (061-FR-007) and the personal-data rule (061-FR-009) stay as they are; the reads write nothing, emit no event and notify nobody.
+
+_From 026-review-from-history._
+
+### 026-FR-007 — The state MUST be judged for the signed-in reader: a job whose driver is another account (a previous owner's job on a car bought since, 1265-FR-011) answers `none`, never the previous owner's eligibility or review; the job id goes into the page's batch like any other and `none` comes from the mapping of the eligibility's `not_found`, with no ownership check in the cars module. The sold car's read is judged for its reader, the seller.
+
+_From 026-review-from-history._
+
+### 026-FR-008 — Tests MUST be written first (Constitution II) and cover, each file naming its ids in one whole-line `// @traces` comment: in a colocated unit spec, the reason→state mapping for every reason of `ReviewRefusal` and null, `expired` reached by no reason; in Jest on real PostgreSQL (`*.integration.spec.ts`), through `GET /api/v1/repairs`, every state per row: a handed-over job with no review (`can_write`), the same with an unconfirmed e-mail (`can_write`), a `published` and a `reported` review (`written` with rating and id), a `deleted_by_author` review (`can_write`, id null), a `removed` review (`removed`, id set, rating null), a previous owner's job on a bought car (`none`), the reader as the garage's staff (`none`), a logged repair (null); the same row on `/cars/:id/repairs` and `/cars/sold/:id/repairs`, and the seller's `can_write` on his sold car's read beside the buyer's `none`; one eligibility batch per page, none for a logged-only page; another driver's car 404; the generated client regenerated from `apps/api/openapi.json`.
+
+_From 026-review-from-history._
+
+### 1394-FR-002 — (1265-FR-017) "Preiau mașina" MUST send one `POST /api/v1/car-transfers/{token}/accept` with an empty body, be disabled while it is in flight and, on 200: fire the `car_taken_over` analytics event once (FR-007), reload the session (a garage-only buyer has just gained `driver`, 1265-FR-006; the driver role becomes the one in use through the existing role switch when the session's role is another) and navigate to Mașinile mele (`/app/driver/cars`) at the car the answer names (`carId`), whose card scrolls into view and takes the focus through the existing card focus by id (`/app/driver/cars/<id>`). It MUST show, in place of the button and under the car line: for 409 `car_limit` "Poți avea cel mult 20 de mașini." / "You can have at most 20 cars."; for 409 `open_request` "Mașina are o cerere în curs. Poți prelua mașina după ce se încheie." / "The car has a request under way. You can take the car over once it ends."; for 410 `transfer_cancelled`, `transfer_expired` and `transfer_accepted`, and for 404, the page's own state for that code (1392-FR-005's lines), the car line dropped; for 403 `own_transfer` the own-link state of FR-001. A 401 `sign_in_required` is the existing interceptor's (the sign-in dialog, then one resend); when the dialog closes without a session the page re-reads the link and shows the waiting line (a 401 reaching the page is never "any other failure"). Any other failure MUST show the existing task error with its retry under the car line and enable the button again. Each state change MUST be announced to assistive technology (a polite live region), and the focus MUST move to the page's heading region whenever the control holding it is removed (the button replaced by a text, the waiting line replaced after sign-in); a closed dialog returns it to the button that opened it.
+
+_From 1394-car-transfer-accept-web._
+
+### 1394-FR-003 — (1265-FR-018, the section) Mașinile mele MUST show, under the car list (or under the car list's empty state), a section "Mașini vândute" / "Sold cars" only when `GET /api/v1/cars/sold` answers at least one car; with none, nothing is rendered for it (no title, no empty state). Each sold car MUST be a card with the line "<brand> <model> <year> · vândută pe <day month year>" / "<brand> <model> <year> · sold on <day month year>" (the `saleDate` in the person's long date format for the language, "31 octombrie 2026" / "31 October 2026", computed with the formatter the dashboard's date lines use, Europe/Bucharest, never a literal in tests), in the API's order, with no "⋯" menu, no due-date, oil or plate line and no edit, remove or sell action; and one button "Vezi istoricul" / "See the history" (44 px target, `aria-expanded`) that on its first press reads `GET /api/v1/cars/sold/{id}/repairs` once and shows the repair rows of FR-004 read-only under the line, with "Nicio reparație până la vânzare." / "No repairs up to the sale." when the answer is empty, the existing loading state while it answers and the existing task error with a retry when it fails; while open the button reads "Ascunde istoricul" / "Hide the history" and closes the rows without a new read. The section MUST be a live resource re-read on `car_transfer.accepted` reaching the account and on the view's return, as the car list is, so the car moves from the list to the section without a reload; the section's own failure MUST show the task error with a retry below the car list without touching it. The section, its cards and the rows MUST be loaded on demand, only once the sold list answers a car (FR-006).
+
+_From 1394-car-transfer-accept-web._
+
+### 1394-FR-004 — (1265-FR-018, the label; conditional on ST-61) This story MUST build one repair-rows list, used by FR-003's history, that renders each `CarRepairDto` as a row with the date done (the person's date format), what was done, the garage name, "Adăugată de tine" / "Added by you" for a `logged` repair that is not `fromPreviousOwner` (the sale dialog's tag, 1392-FR-002) and, as the row's last column, "de la proprietarul anterior" / "from the previous owner" for a `fromPreviousOwner` repair; no row renders a review link, an invoice or any action, whatever the source. The owner's history list is ST-61's: when a list calling `GET /api/v1/cars/{id}/repairs` exists in `apps/web` on `main` at the start of this story's implement phase, it MUST render its rows through this list (or carry the same label, with no review link and no invoice on such a row) in this PR; when none exists (the state of `main` at b4091922f), the requirement is satisfied by this list alone and the PR's Notes and the finish comment on ST-61's issue (#102) name the list's path for ST-61 to adopt. (Realises the "history list (ST-61, when built)" clause of 1265-FR-018.)
+
+_From 1394-car-transfer-accept-web._
+
+### 1394-FR-005 — (1265-FR-019) The screens MUST hold at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, every control a 44 px touch target, the sign-in dialog's existing focus rules (focus moves into it when it opens, Escape closes it, focus returns to the button that opened it), the page's state changes and the section's errors announced in polite live regions, the sold car's history button labelled with the car ("Vezi istoricul pentru VW Golf" / "See the history for VW Golf" as its accessible name, so several cards do not offer identical buttons), the repair rows readable by a screen reader as a list, no axe violation, the card's scroll into view and any transition honouring `prefers-reduced-motion` (no animated scroll, no motion), and the buyer's view readable without the dashboard chrome in the public frame (1392-FR-005).
+
+_From 1394-car-transfer-accept-web._
+
+### 1394-FR-006 — (constraint, Principle I and the bundle budget) Nothing of this story MUST join the first-page bundle, whose 1 MB error budget (at 999.90 kB on `main`, 1392's measurement) is never raised: the buyer's view lives in the already lazy public transfer page; the "Mașini vândute" section, its cards and the repair rows are loaded on demand, only once the sold list answers at least one car, in the driver area's lazy chunks; the car list's change is one call and one conditional block. The plan MUST record the measured initial bundle size of the build, and the number MUST stay under 1,000.00 kB.
+
+_From 1394-car-transfer-accept-web._
+
+### 1394-FR-007 — (AGENTS.md "Observability ships with the change", 1265-FR-015) The acceptance is a product action: the web MUST fire one `car_taken_over` event through the consent-gated tracker after the accept's 200, with no property beyond the catalogue's shared ones (no car, token, phone or account), added to the web event catalogue with its allowed properties; no new service, queue, outside call or API endpoint is added, so the PR's Observability section MUST say so and name the four 1265 inventory entries the screens call (the accept, the owner's repairs, the sold list, the sold car's repairs) and 415's link read; if the inventory lists web routes, the section says whether the public page's entry changes (1392-FR-008's rule) and it does not.
+
+_From 1394-car-transfer-accept-web._
+
+### 1394-FR-008 — (1265-FR-019, the tests; 1265-FR-016's web part) Tests MUST cover, in Jest for the web app, each file naming its ids in one whole-line `// @traces` comment: the waiting line and its button for a 200 without a car; the dialog's gate resolving signed in re-reading the link and a closed dialog leaving the line; the buyer's line at 0, 1 and 5 repairs, with and without a seller name, in both languages; the own-link text with no button and the server render's 200; the accept sent once, the button disabled in flight, the 200 path (event fired once, session reloaded, navigation to the car's card), `car_limit`, `open_request`, each 410, 404, the interceptor's 401 and a failure's retry; the document title for each state; the section absent with no sold car, present with one, its line's date in both languages, the history's first read, its rows, the two labels, no review link and no invoice, the empty text, the toggle without a second read, the re-read on `car_transfer.accepted` and the section's and the history's errors. End to end (Playwright, `apps/web-e2e`): a seller sends the link for a car with one ticked logged repair (1392's flow, through the API), the buyer opens the link signed out, signs in with a new phone number and its code, sees the buyer's line, accepts and sees the car's card in Mașinile mele with no plate; the seller signs in and sees the car under Mașini vândute with today's date and its history; dates relative to today in Europe/Bucharest, never literal. The QA routes MUST name Mașinile mele as the driver (`/app/driver/cars@driver`), the public page for an unknown token in both languages (`/ro/transfer/nu-exista:404`, `/en/transfer/nu-exista:404`), and a flow that covers the waiting line, the sign-in dialog opening from it, the buyer's line, the own-link text, the acceptance landing on the card and the sold section with an open history, at 320 px, 390 px, tablet and desktop, light and dark, RO and EN, proven with `precheck.mjs --check` before dispatch.
+
+_From 1394-car-transfer-accept-web._
+
+### 093-FR-001 — The system MUST answer `GET /api/v1/cars/due-items` (capability `driver.cars`, the same refusals as `GET /api/v1/cars`: 401 without a session, 404 `not_found` for an account not acting as a driver, as `ActorGuard` answers a missing capability) with the due items of the caller's own cars that are not removed, in the `cars` module, one answer with no paging.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-002 — The answer MUST carry `items`, already ordered (FR-005), and the subtitle's counts: `carCount`, the caller's active cars, and `dueSoonCount`, the rows whose state is red or amber (for a date row: passed or due within 60 days of today, today and day 60 included; for the oil row: kilometres reached or its estimated day within 60 days; grey and green never count).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-003 — Each item MUST carry: `kind` (`itp` or `oil` today; the kind list grows with #275 and #344), `carId`, `carName` (brand name and model, "BMW 320d"; never the plate), `dueOn` (the ITP date, or the oil service's estimated day; null when there is none), `daysLeft` (whole calendar days in Europe/Bucharest from today to `dueOn`, negative when passed; null without a date), `passed` (true when the date is behind, or the oil service's kilometres are reached: `kmLeft <= 0`), `dueKm` and `kmLeft` (the oil row only: the next service's kilometres and what is left, negative when over; null on a date row), and `state` (`red`, `amber`, `green` or `grey`).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-004 — The state MUST follow the card lines' rule: grey without a date; red at 7 days or fewer, 0 and every passed date included; amber from 8 to 60; green above 60 (090-FR-003); the oil row is red once no kilometres are left, and otherwise judged by the days to its estimated day (1386-FR-003), the day computed as the car answer's `serviceDueOn` (091).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-005 — Items MUST be ordered: passed date items first, most overdue first (`daysLeft` ascending); then passed oil rows, most kilometres over first (`kmLeft` ascending; kilometres are never converted to days); then dated items by `dueOn`, soonest first; then undated items. Equal days (or both undated) are ordered by `carName`, then by kind in the order ITP, RCA, rovinietă, oil service, tyres, then by `carId`, so two reads give one order.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-006 — A car with no ITP date MUST get an undated grey ITP row; a car with no next oil service gets no oil row; a removed car gets no row and is not counted; another account's cars never appear.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-007 — The response DTO MUST come from the contracts library, the route MUST be in `apps/api/openapi.json` and the generated client regenerated (`npx nx run data-access:generate`), never edited by hand (Constitution V); the read sends no cache header beyond the API's default and is not part of the session warm (1169-FR-003).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-008 — The read MUST be answered with one query for the cars (with their readings, as the car list reads them) and no query per car.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-009 — The route MUST be listed in `infra/observability/inventory.json` with the cars module's existing metrics, logs and traces (no new service, queue, outside call or dashboard), and `scripts/observability-inventory.ts` MUST pass.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-011 — (#1215) In `specs/092-edit-remove-car/tasks.md`, T009 and T013 MUST say `car.updated` carries `carId`, `ownerId` and `changed`, with no mention of the three dates (a specs-repo change, committed through `specs-repo.mjs`).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-012 — (#1214) The QA seed (`libs/domain/src/seed.ts`) MUST give the sweep's driver (`sofer@example.test`) at least one car with ITP, RCA and rovinietă dates (and a next oil service, so the list of title 2 shows two kinds), idempotent on re-seed as the requester's car is; the end-to-end and QA checks that expected that driver to have no car MUST sign in as a driver the seed leaves without one, and the sweep's `/app/driver` screenshots MUST show the car card.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-013 — Tests MUST cover, in Vitest on real PostgreSQL and Valkey with a fixed Bucharest clock: the order for passed, dated, estimated and undated rows across cars, with ties on the day, the name and the kind; the state at 61, 60, 8, 7, 0 and −1 days and for no date; the oil row with kilometres left and with none; the 60-day count including a passed item and excluding day 61 and undated rows; removed cars excluded from rows and counts; only the caller's cars; the 404 for a non-driver; the 404 of the replayed key after removal; and the seed's car with its dates.
+
+_From 093-coming-up-across-cars._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
@@ -710,3 +817,7 @@ _From 062-outside-repair._
 - `092-FR-011` — superseded by `1392-FR-001` (2026-10-31)
 - `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)
 - `415-FR-001` — superseded by `062-FR-008` (2026-11-02)
+- `061-FR-007` — superseded by `026-FR-001` (2026-11-01)
+- `061-FR-009` — superseded by `026-FR-009` (2026-11-01)
+- `1392-FR-005` — superseded by `1394-FR-001` (2026-10-31)
+- `089-FR-005` — superseded by `093-FR-010` (2026-11-01)

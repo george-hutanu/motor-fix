@@ -12,6 +12,7 @@ import {
   isCalendarDate,
   isDocumentKind,
 } from './legal-documents/legal-documents';
+import { PHOTOS_MAX } from './listing-photos/listing-photos';
 import { isSurveySection, type SurveySection } from './listing-survey';
 import { isStep6Section, type Step6Section } from './listing-verification';
 import { type BrandsSection, isBrandsSection } from './marked-brands';
@@ -100,7 +101,8 @@ const stringUpTo = (max: number) => (value: unknown) =>
 const oneOf = (values: readonly string[]) => (value: unknown) =>
   typeof value === 'string' && values.includes(value);
 
-const isId = (value: unknown) => typeof value === 'string' && UUID.test(value);
+export const isId = (value: unknown): value is string =>
+  typeof value === 'string' && UUID.test(value);
 
 // Counted in code points, as the mechanics write and the table count them.
 export const trimmedWithin = (
@@ -262,9 +264,11 @@ const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
     (section['place'] === undefined || isPlaceSection(section['place'])),
   '6': isStep6Section,
 };
-const FILE_KEY = /^[a-z_-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
+// purpose/owner/name, the owner a lowercase uuid as storage writes it.
+const FILE_KEY =
+  /^[a-z_-]+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[\w-]{1,64}$/;
 
-const isFileKey = (key: unknown) =>
+export const isFileKey = (key: unknown): key is string =>
   typeof key === 'string' && FILE_KEY.test(key);
 
 function isDraftDocument(kind: string, value: unknown): boolean {
@@ -301,7 +305,11 @@ const ENVELOPE: Record<string, (value: unknown) => boolean> = {
   declaredAt: stringUpTo(40),
   declaredByName: stringUpTo(DECLARED_NAME_MAX),
   documents: isDraftDocuments,
-  files: (files) => Array.isArray(files) && files.every(isFileKey),
+  files: (files) =>
+    Array.isArray(files) &&
+    files.length <= PHOTOS_MAX &&
+    files.every(isFileKey) &&
+    new Set(files).size === files.length,
   steps: isSteps,
   survey: isSurveySection,
 };

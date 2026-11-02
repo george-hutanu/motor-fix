@@ -128,7 +128,8 @@ export class LogRepairService {
       `repair ${created.id} logged on car ${carId}${created.garageId ? ` at garage ${created.garageId}` : ''}`,
     );
     recordLogged('saved');
-    return toRow(created, row, actor.language ?? 'ro');
+    // A logged repair is never a MotorFix job, so it has no review.
+    return toRow(created, row, actor.language ?? 'ro', new Map());
   }
 
   // A garage from the list names the repair by its own name; one not

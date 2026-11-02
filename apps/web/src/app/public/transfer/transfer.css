@@ -32,5 +32,20 @@ h1 {
 }
 button {
   align-self: flex-start;
+  min-height: var(--mf-tap);
   white-space: normal;
+}
+h1:focus {
+  outline: none;
+}
+h1:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: 2px;
+}
+p {
+  margin: 0;
+}
+.note {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
 }

@@ -43,7 +43,13 @@ async function render(
   open = jest.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
-      { provide: CarsService, useValue: { carsControllerList: list } },
+      {
+        provide: CarsService,
+        useValue: {
+          carHistoryControllerSold: async () => ({ items: [] }),
+          carsControllerList: list,
+        },
+      },
       { provide: Overlays, useValue: { open } },
       provideRouter([]),
       ...heldForDriver(),

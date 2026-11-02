@@ -2,6 +2,7 @@ import type {
   CarDto,
   CarListDto,
   CreateCarDto,
+  DueItemsDto,
   UpdateCarDto,
 } from '@motor-fix/contracts';
 import { MAX_KM } from '@motor-fix/contracts';
@@ -15,6 +16,7 @@ import { PRISMA } from '../../../auth/prisma';
 import { addYears, localDay, today } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import { dueItems } from '../../due-items/due-items';
 import { serviceDueOn } from '../../odometer/odometer';
 import { cancelSentTransfer, isLive } from '../../transfers/transfers';
 
@@ -284,6 +286,9 @@ export class CarsService {
         include: withBrand,
         where: { ownerId_idempotencyKey: { idempotencyKey: key, ownerId } },
       });
+      if (saved?.removedAt) {
+        throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such car');
+      }
       if (saved) return answer(saved);
       const brand = await tx.brand.findFirst({
         where: { active: true, id: dto.brandId },
@@ -454,11 +459,31 @@ export class CarsService {
   }
 
   async list(actor: Actor): Promise<CarListDto> {
-    const rows = await this.prisma.car.findMany({
+    return { items: (await this.active(actor.accountId)).map(answer) };
+  }
+
+  async dueItems(ownerId: string): Promise<DueItemsDto> {
+    const rows = await this.active(ownerId);
+    const cars = rows.map((car) => ({
+      id: car.id,
+      itpUntil: day(car.itpUntil),
+      name: `${car.brand.name} ${car.model}`,
+      nextServiceKm: car.nextServiceKm,
+      odometerKm: car.odometerKm,
+      readings: car.readings.map((r) => ({
+        ...r,
+        readOn: day(r.readOn) as string,
+      })),
+    }));
+    return dueItems(cars, localDay(new Date()));
+  }
+
+  // The owner's cars that are not removed, newest first, in one query.
+  private active(ownerId: string) {
+    return this.prisma.car.findMany({
       include: withBrand,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      where: { ownerId: actor.accountId, removedAt: null },
+      where: { ownerId, removedAt: null },
     });
-    return { items: rows.map(answer) };
   }
 }

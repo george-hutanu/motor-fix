@@ -3,6 +3,7 @@ import { ratingsHarness } from './ratings.testing';
 import { AuditService } from '../../audit/audit.service';
 import { outbox } from '../../events/event.port';
 import { garageActor } from '../../quotes/quotes.testing';
+import { ReviewDecisionsService } from '../decision/decision.service';
 import { ReviewReportsService } from '../report/report.service';
 
 const h = ratingsHarness();
@@ -326,6 +327,94 @@ describe('a review its garage reports', () => {
         subjectId: event.subjectId,
       },
     });
+
+    expect(await garageFigures(g.id)).toEqual({ count: 2, rating: 4.5 });
+    expect(await mechanicFigures(m.id)).toEqual({ count: 2, rating: 4.5 });
+  });
+});
+
+// The event an admin's decision writes, run through the ratings consumer.
+async function relayDecided(reviewId: string) {
+  const event = await prisma.outboxEvent.findFirstOrThrow({
+    where: { kind: 'review.decided', subjectId: reviewId },
+  });
+  await h.handler.onEvent({
+    data: {
+      id: event.id.toString(),
+      kind: event.kind,
+      payload: event.payload as Record<string, unknown>,
+      subjectId: event.subjectId,
+    },
+  });
+}
+
+const decisions = () =>
+  new ReviewDecisionsService(prisma, new AuditService(), outbox);
+
+const admin = async () => ({
+  ...garageActor(await world.account('Ana Popescu', ['admin']), '', 'admin'),
+  garageId: null,
+  roles: ['admin' as const],
+});
+
+// @traces 179-FR-008
+describe('a reported review an admin removes', () => {
+  it('keeps it out of the figures on the event the decision writes', async () => {
+    const g = await world.garage('Atelier Dinamo');
+    const m = await elena(g.id);
+    const owner = await world.account('Mihai Dinamo', ['garage']);
+    const [first, , worst] = await reviews(
+      { garageId: g.id, mechanicId: m.id },
+      [5, 4, 1],
+    );
+    await run(first.id);
+    await new ReviewReportsService(prisma, new AuditService(), outbox).report(
+      garageActor(owner, g.id),
+      worst.id,
+      { reason: 'insults' },
+    );
+    await run(worst.id, 'review.reported');
+    expect(await garageFigures(g.id)).toEqual({ count: 2, rating: 4.5 });
+
+    await decisions().decide(await admin(), worst.id, {
+      decision: 'remove',
+      reason: 'insults',
+    });
+    await relayDecided(worst.id);
+
+    expect(await garageFigures(g.id)).toEqual({ count: 2, rating: 4.5 });
+    expect(await mechanicFigures(m.id)).toEqual({ count: 2, rating: 4.5 });
+  });
+
+  it('writes the same figures again when a reply is removed', async () => {
+    const g = await world.garage('Atelier Dinamo');
+    const m = await elena(g.id);
+    const [first] = await reviews({ garageId: g.id, mechanicId: m.id }, [5, 4]);
+    await run(first.id);
+    await prisma.reviewReply.create({
+      data: {
+        garageId: g.id,
+        postedAt: new Date(),
+        reviewId: first.id,
+        status: 'reported',
+        text: 'Mincinosule.',
+      },
+    });
+    await prisma.reviewReport.create({
+      data: {
+        dueAt: new Date(Date.now() + 3_600_000),
+        reason: 'insults',
+        reviewId: first.id,
+        source: 'author',
+        target: 'reply',
+      },
+    });
+
+    await decisions().decide(await admin(), first.id, {
+      decision: 'remove',
+      reason: 'insults',
+    });
+    await relayDecided(first.id);
 
     expect(await garageFigures(g.id)).toEqual({ count: 2, rating: 4.5 });
     expect(await mechanicFigures(m.id)).toEqual({ count: 2, rating: 4.5 });
