@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { vi } from 'vitest';
 
 import { startWebTelemetry } from './telemetry';
@@ -28,6 +31,14 @@ function run(started: boolean, faro: string | undefined) {
 }
 
 describe('the web server telemetry entry', () => {
+  // The unit-test build bundles @motor-fix/observability, so no module mock
+  // reaches the call the entry makes on load; its source must make it.
+  it('starts telemetry as the web service when loaded', () => {
+    const source = readFileSync(join(__dirname, 'telemetry.ts'), 'utf8');
+
+    expect(source.trimEnd().split('\n').at(-1)).toBe('startWebTelemetry();');
+  });
+
   it('starts telemetry as the web service', () => {
     const { startTelemetry } = run(false, undefined);
 
