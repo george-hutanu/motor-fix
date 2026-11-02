@@ -2,6 +2,7 @@ import {
   type ClosedDayAheadDto,
   FACILITIES,
   type Facility,
+  type GaragePickListDto,
   imageBaseUrl,
   isWeeklyHours,
   MOBILE_SERVICE_RADIUS_DEFAULT_KM,
@@ -40,6 +41,10 @@ import {
 export const publicGarages = () => ({ status: 'approved' as const });
 export const publicGaragesSql = (alias = 'garage') =>
   Prisma.sql`${Prisma.raw(alias)}.status = 'approved'`;
+
+// Text matched literally by a LIKE: PostgreSQL's default escape is the
+// backslash, and Prisma's `contains` escapes nothing.
+export const escaped = (q: string) => q.replace(/[\\%_]/g, '\\$&');
 
 // The one rule of who the public profile shows: a mechanic who joined, is
 // still on the team and agreed to appear, at a published garage whose owner
@@ -285,6 +290,26 @@ export class PublicGaragesService {
     if (!point || answer.businessKind === 'mobile') return answer;
     const distanceKm = await this.distanceKm(answer.id, point);
     return distanceKm === undefined ? answer : { ...answer, distanceKm };
+  }
+
+  // The garage picker: approved garages whose name holds the text, by name.
+  async pick(q: string, limit: number): Promise<GaragePickListDto> {
+    const rows = await this.prisma.garage.findMany({
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: { cityName: true, id: true, name: true },
+      take: limit,
+      where: {
+        ...publicGarages(),
+        name: { contains: escaped(q), mode: 'insensitive' },
+      },
+    });
+    return {
+      items: rows.map(({ cityName, id, name }) => ({
+        city: cityName,
+        id,
+        name,
+      })),
+    };
   }
 
   // The profile read past the cache, for an owner's save whose purge the
