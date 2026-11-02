@@ -25,6 +25,7 @@ const row = (
 ): RequestSummaryDto => ({
   booking: booking && {
     cancelledBySide: null,
+    canMove: false,
     confirmBy: '2026-10-01T09:00:00.000Z',
     finalPriceBani: null,
     garage: {
@@ -36,6 +37,9 @@ const row = (
     id: 'booking-1',
     jobStarted: true,
     lateCancellation: false,
+    move: null,
+    moveBlockedReason: 'status',
+    moveCount: 0,
     noShowAt: null,
     startsAt: '2026-10-02T06:00:00.000Z',
     status: 'confirmed',

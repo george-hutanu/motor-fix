@@ -349,10 +349,12 @@ const reviewRepliesAnnounced = () =>
     'motorfix_review_reply_announced_total',
     'Garage replies announced to the review’s author, by outcome',
   );
-// A removal notice is sent a few times a month, and the 150-series budget
-// has no room for its four forms at 0: each starts with its first e-mail.
+// A removal notice and a booking move's notices are sent a few times a
+// month, and the 150-series budget has no room for their forms at 0: each
+// starts with its first e-mail.
 const startsAtFirstCount = (template: string) =>
-  template.startsWith('REVIEW_DECIDED.');
+  template.startsWith('REVIEW_DECIDED.') ||
+  template.startsWith('BOOKING_MOVE_');
 
 const reviewDecisionsAnnounced = () =>
   counter(

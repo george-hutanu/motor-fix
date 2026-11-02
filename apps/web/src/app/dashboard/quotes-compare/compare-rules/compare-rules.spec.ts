@@ -148,6 +148,7 @@ describe('a row’s state', () => {
   it('holds every waiting quote while the newest booking waits for the garage', () => {
     const booking = {
       cancelledBySide: null,
+      canMove: false,
       confirmBy: '2026-10-18T10:00:00.000Z',
       finalPriceBani: null,
       garage: {
@@ -159,6 +160,9 @@ describe('a row’s state', () => {
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
+      move: null,
+      moveBlockedReason: 'status',
+      moveCount: 0,
       noShowAt: null,
       startsAt: '2026-10-20T06:00:00.000Z',
       status: 'awaiting_confirmation' as const,
@@ -173,6 +177,7 @@ describe('a row’s state', () => {
   it('gives a waiting quote its action back once the booking lapsed', () => {
     const booking = {
       cancelledBySide: null,
+      canMove: false,
       confirmBy: '2026-10-16T10:00:00.000Z',
       finalPriceBani: null,
       garage: {
@@ -184,6 +189,9 @@ describe('a row’s state', () => {
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
+      move: null,
+      moveBlockedReason: 'status',
+      moveCount: 0,
       noShowAt: null,
       startsAt: '2026-10-20T06:00:00.000Z',
       status: 'lapsed' as const,
@@ -279,6 +287,7 @@ describe('the request the overview shows', () => {
     const waiting = summary({
       booking: {
         cancelledBySide: null,
+        canMove: false,
         confirmBy: '2026-10-18T10:00:00.000Z',
         finalPriceBani: null,
         garage: {
@@ -290,6 +299,9 @@ describe('the request the overview shows', () => {
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
+        move: null,
+        moveBlockedReason: 'status',
+        moveCount: 0,
         noShowAt: null,
         startsAt: '2026-10-20T06:00:00.000Z',
         status: 'awaiting_confirmation',
@@ -301,6 +313,7 @@ describe('the request the overview shows', () => {
     const confirmed = summary({
       booking: {
         cancelledBySide: null,
+        canMove: false,
         confirmBy: '2026-10-18T10:00:00.000Z',
         finalPriceBani: null,
         garage: {
@@ -312,6 +325,9 @@ describe('the request the overview shows', () => {
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
+        move: null,
+        moveBlockedReason: 'status',
+        moveCount: 0,
         noShowAt: null,
         startsAt: '2026-10-20T06:00:00.000Z',
         status: 'confirmed',

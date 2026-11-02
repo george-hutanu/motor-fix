@@ -576,9 +576,9 @@
       "dashboard": "motorfix-queues",
       "alerts": [
         "decline-window-sweep-late",
-        "move-lapse-failed"
+        "worker-jobs-failed"
       ],
-      "reason": "carries the relay's request.declined events and each decline's undo-window timer and sweep; counted by motorfix_decline_windows_closed_total (sent, muted, skipped_undone, skipped_closed, already_told, by timer or sweep) with one DeclineWindow log line per window naming the recipient id; BullMQ's queue metrics cover depth and failures; decline-window-sweep-late fires when the sweep closes more than 10 windows in an hour (lost timers); it also carries the relay's booking.move_proposed events and each asked move's lapse timer (job move-lapse, swept with the rest), one MoveLapse log line per fire naming the move id, lapses counted by motorfix_booking_moves_total{outcome=\"lapsed\"}; move-lapse-failed fires when that job fails for good",
+      "reason": "carries the relay's request.declined events and each decline's undo-window timer and sweep; counted by motorfix_decline_windows_closed_total (sent, muted, skipped_undone, skipped_closed, already_told, by timer or sweep) with one DeclineWindow log line per window naming the recipient id; BullMQ's queue metrics cover depth and failures; decline-window-sweep-late fires when the sweep closes more than 10 windows in an hour (lost timers); it also carries the relay's booking.move_proposed events and each asked move's lapse timer (job move-lapse, swept with the rest), one MoveLapse log line per fire naming the move id, lapses counted by motorfix_booking_moves_total{outcome=\"lapsed\"}; worker-jobs-failed fires when that job fails for good",
       "story": "ST-345"
     },
     {
@@ -2650,9 +2650,9 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": [
-        "move-lapse-failed"
+        "worker-jobs-failed"
       ],
-      "reason": "on the product dashboard row \"Mutări de programare\" (ids 243, 244), counts each booking move by outcome (asked, lapsed, cancelled) and side, with no identifiers; one BookingMove log line per ask and one MoveLapse line per lapse naming the booking and move ids; move-lapse-failed fires when a move-lapse timer job on quote-timers fails for good",
+      "reason": "on the product dashboard row \"Mutări de programare\" (ids 243, 244), counts each booking move by outcome (asked, lapsed, cancelled) and side, with no identifiers; one BookingMove log line per ask and one MoveLapse line per lapse naming the booking and move ids; a move-lapse timer job on quote-timers that fails for good counts in motorfix_jobs_total{job_name=\"move-lapse\", outcome=\"failed\"}, which worker-jobs-failed watches",
       "story": "ST-184"
     },
     {

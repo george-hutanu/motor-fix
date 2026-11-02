@@ -52,6 +52,7 @@ const ctx: ToolContext = {
   accounts: loader,
   approvals: {} as ToolContext['approvals'],
   confirmations: {} as ToolContext['confirmations'],
+  driver: {} as ToolContext['driver'],
   featureOn: async () => true,
   garage: {} as ToolContext['garage'],
   maintenance: { on: async () => false },

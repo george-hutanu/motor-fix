@@ -139,6 +139,7 @@ const GARAGE = {
 type Booking = NonNullable<RequestSummaryDto['booking']>;
 const booking = (over: Partial<Booking> = {}): Booking => ({
   cancelledBySide: null,
+  canMove: false,
   confirmBy: new Date(Date.now() + HOURS).toISOString(),
   finalPriceBani: null,
   garage: GARAGE,
@@ -146,6 +147,9 @@ const booking = (over: Partial<Booking> = {}): Booking => ({
   id: 'booking-1',
   jobStarted: false,
   lateCancellation: false,
+  move: null,
+  moveBlockedReason: 'status',
+  moveCount: 0,
   noShowAt: null,
   startsAt: new Date(Date.now() + 24 * HOURS).toISOString(),
   status: 'confirmed',

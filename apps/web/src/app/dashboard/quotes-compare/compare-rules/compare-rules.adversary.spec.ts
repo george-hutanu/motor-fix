@@ -265,6 +265,7 @@ describe('the header, the edges', () => {
 describe('a row’s state, the edges', () => {
   const awaiting = {
     cancelledBySide: null,
+    canMove: false,
     confirmBy: '2026-10-18T10:00:00.000Z',
     finalPriceBani: null,
     garage: {
@@ -276,6 +277,9 @@ describe('a row’s state, the edges', () => {
     id: 'booking-1',
     jobStarted: false,
     lateCancellation: false,
+    move: null,
+    moveBlockedReason: 'status',
+    moveCount: 0,
     noShowAt: null,
     startsAt: '2026-10-20T06:00:00.000Z',
     status: 'awaiting_confirmation' as const,
@@ -308,6 +312,7 @@ describe('a row’s state, the edges', () => {
     (status) => {
       const booking = {
         cancelledBySide: null,
+        canMove: false,
         confirmBy: '2026-10-18T10:00:00.000Z',
         finalPriceBani: null,
         garage: {
@@ -319,6 +324,9 @@ describe('a row’s state, the edges', () => {
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
+        move: null,
+        moveBlockedReason: 'status',
+        moveCount: 0,
         noShowAt: null,
         startsAt: '2026-10-20T06:00:00.000Z',
         status,
@@ -364,6 +372,7 @@ describe('the request the overview shows, the edges', () => {
         summary({
           booking: {
             cancelledBySide: null,
+            canMove: false,
             confirmBy: '2026-10-18T10:00:00.000Z',
             finalPriceBani: null,
             garage: {
@@ -375,6 +384,9 @@ describe('the request the overview shows, the edges', () => {
             id: 'booking-1',
             jobStarted: false,
             lateCancellation: false,
+            move: null,
+            moveBlockedReason: 'status',
+            moveCount: 0,
             noShowAt: null,
             startsAt: '2026-10-20T06:00:00.000Z',
             status,
@@ -519,6 +531,7 @@ describe('a row’s state, more edges', () => {
   it('holds an open waiting quote while a booking awaits confirmation', () => {
     const booking = {
       cancelledBySide: null,
+      canMove: false,
       confirmBy: '2026-10-18T10:00:00.000Z',
       finalPriceBani: null,
       garage: {
@@ -530,6 +543,9 @@ describe('a row’s state, more edges', () => {
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
+      move: null,
+      moveBlockedReason: 'status',
+      moveCount: 0,
       noShowAt: null,
       startsAt: '2026-10-20T06:00:00.000Z',
       status: 'awaiting_confirmation' as const,
@@ -546,6 +562,7 @@ describe('the request the overview shows, more edges', () => {
       summary({
         booking: {
           cancelledBySide: null,
+          canMove: false,
           confirmBy: '2026-10-18T10:00:00.000Z',
           finalPriceBani: null,
           garage: {
@@ -557,6 +574,9 @@ describe('the request the overview shows, more edges', () => {
           id: 'booking-1',
           jobStarted: false,
           lateCancellation: false,
+          move: null,
+          moveBlockedReason: 'status',
+          moveCount: 0,
           noShowAt: null,
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
@@ -574,6 +594,7 @@ describe('the request the overview shows, more edges', () => {
       summary({
         booking: {
           cancelledBySide: null,
+          canMove: false,
           confirmBy: '2026-10-18T10:00:00.000Z',
           finalPriceBani: null,
           garage: {
@@ -585,6 +606,9 @@ describe('the request the overview shows, more edges', () => {
           id: 'booking-1',
           jobStarted: false,
           lateCancellation: false,
+          move: null,
+          moveBlockedReason: 'status',
+          moveCount: 0,
           noShowAt: null,
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
@@ -610,6 +634,7 @@ describe('the request the overview shows, more edges', () => {
       summary({
         booking: {
           cancelledBySide: null,
+          canMove: false,
           confirmBy: '2026-10-18T10:00:00.000Z',
           finalPriceBani: null,
           garage: {
@@ -621,6 +646,9 @@ describe('the request the overview shows, more edges', () => {
           id: 'booking-1',
           jobStarted: false,
           lateCancellation: false,
+          move: null,
+          moveBlockedReason: 'status',
+          moveCount: 0,
           noShowAt: null,
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',

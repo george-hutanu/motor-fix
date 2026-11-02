@@ -140,6 +140,7 @@ describe('Cererile mele once a quote is accepted', () => {
     row({
       booking: {
         cancelledBySide: null,
+        canMove: false,
         confirmBy: new Date(Date.now() + confirmIn).toISOString(),
         finalPriceBani: null,
         garage: {
@@ -151,6 +152,9 @@ describe('Cererile mele once a quote is accepted', () => {
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
+        move: null,
+        moveBlockedReason: 'status',
+        moveCount: 0,
         noShowAt: null,
         startsAt: '2026-10-20T06:00:00.000Z',
         status: status as 'awaiting_confirmation',
@@ -265,6 +269,7 @@ describe('Cererile mele’s clock after an acceptance', () => {
           row({
             booking: {
               cancelledBySide: null,
+              canMove: false,
               confirmBy,
               finalPriceBani: null,
               garage: {
@@ -276,6 +281,9 @@ describe('Cererile mele’s clock after an acceptance', () => {
               id: 'booking-1',
               jobStarted: false,
               lateCancellation: false,
+              move: null,
+              moveBlockedReason: 'status',
+              moveCount: 0,
               noShowAt: null,
               startsAt: '2026-10-20T06:00:00.000Z',
               status: 'awaiting_confirmation',
@@ -317,6 +325,7 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
     row({
       booking: {
         cancelledBySide: null,
+        canMove: false,
         confirmBy: new Date(Date.now() + HOUR).toISOString(),
         finalPriceBani: null,
         garage: {
@@ -328,6 +337,9 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
+        move: null,
+        moveBlockedReason: 'status',
+        moveCount: 0,
         noShowAt: null,
         startsAt: STARTS,
         status,
@@ -396,6 +408,7 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
           row({
             booking: {
               cancelledBySide: null,
+              canMove: false,
               confirmBy: new Date(Date.now() + HOUR).toISOString(),
               finalPriceBani: null,
               garage: {
@@ -407,6 +420,9 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
               id: 'booking-1',
               jobStarted: false,
               lateCancellation: false,
+              move: null,
+              moveBlockedReason: 'status',
+              moveCount: 0,
               noShowAt: null,
               startsAt: STARTS,
               status: 'awaiting_confirmation',
@@ -921,6 +937,7 @@ const GARAGE = {
 type Booking = NonNullable<RequestSummaryDto['booking']>;
 const booking = (over: Partial<Booking> = {}): Booking => ({
   cancelledBySide: null,
+  canMove: false,
   confirmBy: new Date(Date.now() + HOURS).toISOString(),
   finalPriceBani: null,
   garage: GARAGE,
@@ -928,6 +945,9 @@ const booking = (over: Partial<Booking> = {}): Booking => ({
   id: 'booking-1',
   jobStarted: false,
   lateCancellation: false,
+  move: null,
+  moveBlockedReason: 'status',
+  moveCount: 0,
   noShowAt: null,
   startsAt: new Date(Date.now() + 24 * HOURS).toISOString(),
   status: 'confirmed',
@@ -1048,7 +1068,11 @@ describe('Cererile mele: the lines a cancel leaves', () => {
         row({
           booking: booking({
             cancelledBySide: 'driver',
+            canMove: false,
             lateCancellation: true,
+            move: null,
+            moveBlockedReason: 'status',
+            moveCount: 0,
             noShowAt: null,
             status: 'cancelled',
           }),
@@ -1070,7 +1094,11 @@ describe('Cererile mele: the lines a cancel leaves', () => {
           row({
             booking: booking({
               cancelledBySide: 'driver',
+              canMove: false,
               lateCancellation: true,
+              move: null,
+              moveBlockedReason: 'status',
+              moveCount: 0,
               noShowAt: null,
               status: 'cancelled',
             }),
