@@ -222,7 +222,14 @@ jobs:
           TEST_SUITE: unit
         # No --passWithNoTests: the Angular unit-test builder refuses it, and
         # vitest.preset.mts already passes a project with no spec of the suite.
-        run: npx nx $NX_SCOPE -t test
+        # Web's builder run beside domain's Vitest ran the runner out of memory
+        # (runs 41390683959 and 41390810006 cancelled seven minutes in), so web
+        # runs once the rest has finished, and either failure fails the step.
+        run: |
+          status=0
+          npx nx $NX_SCOPE -t test --exclude=web || status=$?
+          npx nx $NX_SCOPE -t test --exclude='*,!web' || status=$?
+          exit $status
 
   # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,
   # like E2E: a PR never runs it. A workflow_call carries its caller's event

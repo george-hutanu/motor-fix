@@ -268,9 +268,25 @@ describe('ci workflow', () => {
   // Vitest config already passes a project with no spec of the suite.
   // @traces 1332-FR-013
   it('runs the unit tests without a flag only Jest knows', () => {
-    expect(setting(step(job('unit'), 'Unit tests'), 'run')).toBe(
-      'npx nx $NX_SCOPE -t test',
-    );
+    const commands = step(job('unit'), 'Unit tests')
+      .split('\n')
+      .filter((line) => line.includes('npx nx'));
+
+    expect(commands).toHaveLength(2);
+    for (const line of commands)
+      expect(line).not.toContain('--passWithNoTests');
+  });
+
+  // Web's Angular builder beside domain's Vitest runs the runner out of
+  // memory, so web runs after the other projects, in the same step.
+  it('runs the web unit tests after the other projects, failing on either', () => {
+    const block = step(job('unit'), 'Unit tests');
+    const rest = block.indexOf('npx nx $NX_SCOPE -t test --exclude=web ||');
+    const web = block.indexOf("npx nx $NX_SCOPE -t test --exclude='*,!web' ||");
+
+    expect(rest).toBeGreaterThan(-1);
+    expect(web).toBeGreaterThan(rest);
+    expect(block).toContain('exit $status');
   });
 
   // On a pull request the baseline may not list a file the base branch's
