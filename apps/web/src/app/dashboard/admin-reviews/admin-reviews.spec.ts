@@ -10,6 +10,7 @@ import {
   type ReportQueueItemDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 import type { Mock } from 'vitest';
 
@@ -70,6 +71,7 @@ let resync: Subject<void>;
 let asked: number[];
 let announce: Mock;
 let answer: (page?: number) => Promise<ReportQueueDto>;
+let decision: Mock;
 
 async function settle() {
   for (let i = 0; i < 5; i++) {
@@ -96,6 +98,7 @@ async function open(
     providers: [
       provideRouter([]),
       { provide: LiveAnnouncer, useValue: { announce } },
+      { provide: Overlays, useValue: { open: decision } },
       {
         provide: Live,
         useValue: {
@@ -142,6 +145,7 @@ const message = (kind: EventKind): LiveMessage => ({
 
 beforeEach(() => {
   answer = queue(3);
+  decision = vi.fn(async () => 'cancelled');
 });
 
 afterEach(() => {
@@ -478,5 +482,152 @@ describe('the time on screen', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// @traces 1423-FR-004 1423-FR-005
+
+describe('an item this admin decided', () => {
+  // The queue without the reports listed, as the server reads it once they
+  // are decided.
+  const without =
+    (total: number, ...gone: number[]) =>
+    async (page = 1): Promise<ReportQueueDto> => {
+      const read = await queue(total)(page);
+      const items = read.items.filter(
+        (i) => !gone.some((n) => i.report.id === `report-${n}`),
+      );
+      return { ...read, items, total: total - gone.length };
+    };
+
+  async function remove(el: HTMLElement, at = 0) {
+    decision.mockResolvedValueOnce({ outcome: 'removed' });
+    items(el)[at].querySelector<HTMLButtonElement>('button.remove')?.click();
+    await settle();
+  }
+
+  const decided = (el: HTMLElement) =>
+    items(el).map((i) => text(i.querySelector('[role="status"]')) ?? '');
+
+  it('shows the removed line in place of its actions, and the panel link counts one fewer', async () => {
+    answer = queue(7);
+    const el = await open({ overview: true });
+
+    await remove(el);
+
+    expect(decided(el)[0]).toBe(
+      'Ștearsă. Autorul și service-ul au fost anunțați.',
+    );
+    expect(items(el)[0].querySelector('button.remove')).toBeNull();
+    expect(text(el.querySelector('a.all'))).toBe('Vezi toate (6)');
+  });
+
+  it('stays in place through a live re-read that no longer lists it', async () => {
+    answer = queue(3);
+    const el = await open();
+    await remove(el, 1);
+    answer = without(3, 2);
+
+    events.next(message('review.decided'));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+
+    expect(articles(el).map((a) => a.getAttribute('aria-label'))).toEqual([
+      'Service 1 · recenzie de 2,0',
+      'Service 2 · recenzie de 2,0',
+      'Service 3 · recenzie de 2,0',
+    ]);
+    expect(decided(el)[1]).toBe(
+      'Ștearsă. Autorul și service-ul au fost anunțați.',
+    );
+  });
+
+  it('counts the panel link once whether or not the re-read still lists it', async () => {
+    answer = queue(7);
+    const el = await open({ overview: true });
+    await remove(el);
+    answer = without(7, 1);
+
+    events.next(message('review.decided'));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+
+    expect(text(el.querySelector('a.all'))).toBe('Vezi toate (6)');
+  });
+
+  it('drops the panel link once every item left is shown', async () => {
+    answer = queue(6);
+    const el = await open({ overview: true });
+
+    await remove(el);
+
+    expect(el.querySelector('a.all')).toBeNull();
+  });
+
+  it('hides the oldest line when the only report is decided', async () => {
+    answer = queue(1, new Date(Date.now() - 5 * HOUR).toISOString());
+    const el = await open();
+
+    await remove(el);
+
+    expect(el.querySelector('.oldest')).toBeNull();
+  });
+
+  it('reads the oldest line from the reports left when the oldest is decided', async () => {
+    const oldest = new Date(Date.now() - 2 * 24 * HOUR - HOUR).toISOString();
+    const next = new Date(Date.now() - 5 * HOUR).toISOString();
+    answer = async (page = 1) => {
+      const read = await queue(2, oldest)(page);
+      const [first, second] = read.items;
+      return {
+        ...read,
+        items: [
+          { ...first, report: { ...first.report, createdAt: oldest } },
+          { ...second, report: { ...second.report, createdAt: next } },
+        ],
+      };
+    };
+    const el = await open();
+
+    await remove(el);
+
+    expect(text(el.querySelector('.oldest'))).toBe(
+      'Cea mai veche raportare așteaptă de 5 ore',
+    );
+  });
+
+  it('says another admin decided it first, with no actions', async () => {
+    const el = await open();
+    decision.mockResolvedValueOnce({ by: 'Ana', outcome: 'already_decided' });
+    items(el)[0].querySelector<HTMLButtonElement>('button.remove')?.click();
+    await settle();
+
+    expect(text(items(el)[0].querySelector('.decided'))).toBe(
+      'Deja decisă de Ana',
+    );
+    expect(items(el)[0].querySelector('button.remove')).toBeNull();
+  });
+
+  it('leaves the list on More, which reads the queue afresh', async () => {
+    answer = queue(25);
+    const el = await open();
+    await remove(el);
+    answer = without(25, 1);
+
+    button(el, 'Mai multe')?.click();
+    await settle();
+
+    expect(items(el)).toHaveLength(24);
+    expect(decided(el).every((line) => line === '')).toBe(true);
+    expect(button(el, 'Mai multe')).toBeUndefined();
+  });
+
+  it('keeps every item as it was when the dialog is cancelled', async () => {
+    const el = await open();
+    items(el)[0].querySelector<HTMLButtonElement>('button.remove')?.click();
+    await settle();
+
+    expect(decided(el).every((line) => line === '')).toBe(true);
+    expect(items(el)[0].querySelector('button.remove')).not.toBeNull();
   });
 });
