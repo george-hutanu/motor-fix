@@ -61,7 +61,7 @@ const off = (t: Team, key: string) =>
     data: { enabled: false, garageId: t.garage.id, key },
   });
 
-// @traces 122-one-job-status-FR-007 122-one-job-status-FR-009 122-one-job-status-FR-010
+// @traces 122-FR-007 122-FR-009 122-FR-010
 describe('the mechanic’s day read', () => {
   it('lists the confirmed and completed bookings of the day in start order, with the counts', async () => {
     const t = await team('Atelier Dinamo');

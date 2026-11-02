@@ -13,7 +13,7 @@ const writes = async () => [
   await prisma.jobStageEntry.count(),
 ];
 
-// @traces 122-one-job-status-FR-005 122-one-job-status-FR-006
+// @traces 122-FR-005 122-FR-006
 describe('GET /me/day', () => {
   it('answers the signed-in mechanic’s day, today in Bucharest by default', async () => {
     const t = await team('Atelier Dinamo');

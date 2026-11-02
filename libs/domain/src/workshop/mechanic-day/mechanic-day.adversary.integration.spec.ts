@@ -45,7 +45,7 @@ async function bookedJob(
 const ids = (day: { rows: { bookingId: string }[] }) =>
   day.rows.map((r) => r.bookingId);
 
-// @traces 122-one-job-status-FR-006 122-one-job-status-FR-007 122-one-job-status-FR-008
+// @traces 122-FR-006 122-FR-007 122-FR-008
 describe('the mechanic’s day read under hostile input', () => {
   it('refuses a date thirty-one days either way from the service and accepts thirty', async () => {
     const t = await team('Atelier Dinamo');
@@ -114,6 +114,27 @@ describe('the mechanic’s day read under hostile input', () => {
     const day = await service.get(hand(t), {}, NOW);
 
     expect(day).toEqual({ date: '2027-12-06', inWork: 0, jobs: 0, rows: [] });
+  });
+
+  it('carries over by the booking’s mechanic, as the day’s rows do, whoever the job names', async () => {
+    const t = await team('Atelier Dinamo');
+    const mine = await bookedJob(t, '2027-12-03T07:00:00Z', { job: 'in_work' });
+    const theirs = await bookedJob(t, '2027-12-03T08:00:00Z', {
+      job: 'in_work',
+      mechanicId: t.answeringMechanic.id,
+    });
+    await prisma.job.update({
+      data: { mechanicId: t.answeringMechanic.id },
+      where: { id: mine.job.id },
+    });
+    await prisma.job.update({
+      data: { mechanicId: t.plainMechanic.id },
+      where: { id: theirs.job.id },
+    });
+
+    const day = await service.get(hand(t), {}, NOW);
+
+    expect(ids(day)).toEqual([mine.booking.id]);
   });
 
   it('keeps a removed mechanic card out of the service as not found', async () => {

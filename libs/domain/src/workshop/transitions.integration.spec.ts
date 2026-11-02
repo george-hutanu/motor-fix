@@ -328,7 +328,7 @@ const backfill = () =>
     .map((sql) => sql.replace(/--.*$/gm, '').trim())
     .filter((sql) => /^UPDATE\b/i.test(sql));
 
-// @traces 122-one-job-status-FR-002 122-one-job-status-FR-003
+// @traces 122-FR-002 122-FR-003
 describe('the running clock of a job in work', () => {
   it('starts on a move into work and stops on every move out of it', async () => {
     const job = await jobIn('to_do');

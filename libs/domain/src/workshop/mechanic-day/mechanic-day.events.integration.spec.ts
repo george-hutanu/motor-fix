@@ -27,7 +27,7 @@ async function setting() {
   };
 }
 
-// @traces 122-one-job-status-FR-011
+// @traces 122-FR-011
 describe('the mechanic’s channel', () => {
   it('hears every job and booking event of the mechanic’s jobs, and no other mechanic does', async () => {
     const s = await setting();
@@ -49,21 +49,36 @@ describe('the mechanic’s channel', () => {
       await stage(second.job.id, 'start', s.owner),
       await stage(second.job.id, 'pause'),
       await stage(first.job.id, 'resume'),
+    ];
+    const step = await send(
+      'post',
+      `/garage/jobs/${first.job.id}/steps`,
+      s.owner,
+      { text: 'Filtru de ulei' },
+      { 'Idempotency-Key': 'step-1' },
+    );
+    answers.push(
+      step,
       await send(
-        'post',
-        `/garage/jobs/${first.job.id}/steps`,
-        s.owner,
-        { text: 'Filtru de ulei' },
-        { 'Idempotency-Key': 'step-1' },
+        'put',
+        `/garage/jobs/${first.job.id}/steps/${step.body.id}/done`,
+        s.hand,
+        { done: true },
       ),
       await stage(first.job.id, 'finish'),
+      await send('post', `/garage/jobs/${first.job.id}/handover`, s.owner, {
+        finalPriceBani: 115_000,
+      }),
+      await send('patch', `/garage/jobs/${first.job.id}/final-price`, s.owner, {
+        finalPriceBani: 110_000,
+      }),
       await send(
         'post',
         `/bookings/${cancelled.booking.id}/cancel`,
         bearer(s.andrei, 'driver'),
         { reason: 'found_another_garage' },
       ),
-    ];
+    );
 
     expect(answers.map((res) => res.status < 300 || res.body)).toEqual(
       answers.map(() => true),
@@ -86,11 +101,15 @@ describe('the mechanic’s channel', () => {
     expect(new Set(rows.map((row) => row.kind))).toEqual(
       new Set([
         'booking.cancelled',
+        'booking.completed',
         'job.done',
+        'job.final_price_corrected',
+        'job.handed_over',
         'job.paused',
         'job.received',
         'job.resumed',
         'job.started',
+        'job.step_done',
         'job.steps_changed',
       ]),
     );

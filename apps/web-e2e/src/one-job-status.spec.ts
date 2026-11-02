@@ -34,7 +34,7 @@ async function ownDriver(request: APIRequestContext) {
 
 // @seeded: Militari and its mechanic Dan; @database: his card's id.
 test.describe('one job status on every screen @seeded @database', () => {
-  // @traces 122-one-job-status-FR-001 122-one-job-status-FR-014
+  // @traces 122-FR-001 122-FR-014
   test('the owner’s pause reaches the mechanic’s Panou within two seconds', async ({
     page,
     request,

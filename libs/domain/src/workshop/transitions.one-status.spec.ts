@@ -20,7 +20,7 @@ function statusColumns() {
     .sort();
 }
 
-// @traces 122-one-job-status-FR-001 122-one-job-status-FR-014
+// @traces 122-FR-001 122-FR-014
 describe('the job’s one status', () => {
   it('is stored on the job alone, its history aside', () => {
     expect(statusColumns()).toEqual([

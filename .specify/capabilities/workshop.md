@@ -1,6 +1,6 @@
 ---
 capability: workshop
-updated: 2026-10-31
+updated: 2026-11-02
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
@@ -20,6 +20,7 @@ features:
   - 1410-predare-quote-dialog
   - 154-free-slots
   - 293-save-garage-suggest
+  - 122-one-job-status
 ---
 
 # Capability: Workshop
@@ -212,13 +213,9 @@ _From 276-job-start-done._
 
 _From 395-job-lock._
 
-### 276-FR-005 — A start or a resume MUST, when the garage's `team_mechanics` switch is on (on when the garage has no row) and the job has a mechanic, pause in the same transaction every other `in_work` job of the same garage with the same `mechanic_id`, whoever pressed: each with a stage entry `auto` = true, an audit entry recorded as a platform move (actor role `system`, no account) and `job.paused` `{ from, to, auto: true }`; the triggering `job.started` or `job.resumed` MUST carry `pausedJobIds`, the ids it paused (empty when none). With the switch off nothing is paused, whatever the mechanic ids.
+### 122-FR-003 — Every move out of `in_work` MUST add to `worked_seconds` the whole seconds from `in_work_since` to the transaction's clock, floored, and MUST do that in the same transaction as the status change and its stage entry; a finish from `paused` adds nothing. This replaces the "latest stage entry into `in_work`" rule of 276-FR-006; the automatic pause of 276-FR-005 follows it too, so one start pauses the other job, grows its `worked_seconds`, clears its `in_work_since` and sets the new job's `in_work_since` in one transaction.
 
-_From 276-job-start-done._
-
-### 276-FR-006 — The job MUST store `worked_seconds` (whole seconds, 0 at creation): every move out of `in_work` (a pause by hand, an automatic pause, a finish) adds now − the time of the job's latest stage entry to `in_work`, floored to whole seconds; a finish from `paused` adds nothing. The job read MUST return it as `workedSeconds`.
-
-_From 276-job-start-done._
+_From 122-one-job-status._
 
 ### 276-FR-007 — The events MUST be `job.started` `{ from, to, pausedJobIds }`, `job.paused` `{ from, to, auto }`, `job.resumed` `{ from, to, pausedJobIds }` and `job.done` `{ from, to }`, each with the `job` audience (the driver's account, the garage, the job's mechanic), written in the stage's transaction. No notification is sent by this story: the driver's JOB_READY message is #164's, read from `job.done`.
 
@@ -584,6 +581,54 @@ _From 1410-predare-quote-dialog._
 
 _From 1410-predare-quote-dialog._
 
+### 122-FR-001 — A job's status MUST be stored only as `JOB.status`; the mechanic's day, the driver's tracker (275), the garage's job lists (424-FR-011) and the limited dashboard's Lucrări MUST each derive the stage they show from that column, and a schema test MUST fail if the `JobStatus` enum is referenced by any column other than `JOB.status`, `JOB_STAGE_ENTRY.from_status` and `JOB_STAGE_ENTRY.to_status` in `libs/domain/prisma/schema/*.prisma`, or if a migration creates a view (the stage entries are the history, not a copy).
+
+_From 122-one-job-status._
+
+### 122-FR-002 — The data model MUST gain `JOB.in_work_since` (timestamp with zone, null): set to the transaction's clock by every move into `in_work` (start, resume), cleared by every move out of it (a pause by hand, an automatic pause, a finish), unchanged by every other write; the migration MUST fill it for every job `in_work` at that moment with `COALESCE(the time of its latest stage entry into in_work, started_at, now())`, so a job `in_work` never has a null `in_work_since`; the column is additive and nullable, so a failed migration leaves no partial state (one transaction) and a rollback is dropping the column, which loses no other data.
+
+_From 122-one-job-status._
+
+### 122-FR-004 — The job read MUST return `inWorkSince` (null when not in work) next to `workedSeconds`, so a client shows the open stretch as server now − `inWorkSince`, never from its own clock alone.
+
+_From 122-one-job-status._
+
+### 122-FR-005 — The API MUST offer `GET /api/v1/me/day?date=YYYY-MM-DD` for the signed-in mechanic only: the caller's role is `mechanic` for a garage whose `team_mechanics` feature is on, and the day is that of the MECHANIC row of the caller's account in that garage. A caller whose mechanic card is missing or removed is answered 404 too. Anyone else (owner, receptionist, driver, admin, a mechanic of a garage with `team_mechanics` off) MUST be answered 404; there is no parameter naming another mechanic. An AI assistant acting for the mechanic reads it as the mechanic.
+
+_From 122-one-job-status._
+
+### 122-FR-006 — `date` MUST be a calendar day, defaulting to today in Europe/Bucharest, accepted from 30 days back to 30 days ahead of today inclusive; a malformed or out-of-range date MUST be answered 422.
+
+_From 122-one-job-status._
+
+### 122-FR-007 — The day MUST list the caller's bookings with `BOOKING.mechanic_id` = their mechanic row and status `confirmed` or `completed` that have a BOOKING_SEGMENT whose start falls in the Bucharest calendar day asked for, one row per booking on each such day, the row's `start` being that day's earliest stretch start; `awaiting_confirmation`, `lapsed`, `cancelled` and `no_show` bookings MUST never be listed.
+
+_From 122-one-job-status._
+
+### 122-FR-008 — When the day asked for is today, the list MUST also carry, first, every carry-over job: a job of the caller's bookings that has no stretch starting today and is `in_work` or `paused`, or is `done` with its move into `done` today in Bucharest, marked `carryOver` = true with `start` its latest stretch's start before today (else its first stretch's start); on any other date carry-over jobs MUST NOT be listed. The order is carry-over first, then `start`, then booking id.
+
+_From 122-one-job-status._
+
+### 122-FR-009 — Each row MUST carry `bookingId`, `jobId`, `start`, `carryOver`, the car's brand, model and plate, the driver's first name, the job types (the booking's job names), `lift` only when the garage's `lift_schedule` feature is on and the booking has one (else absent), `status` (`JOB.status`), `stepsDone` and `stepsTotal`, `inWorkSince` and `workedSeconds`, and `lock` (the holder's id, role, first name and since, as the job read returns it, so the same shape on both reads; null when free). It MUST NOT carry the driver's phone, e-mail or any other contact detail, nor the request's internal notes.
+
+_From 122-one-job-status._
+
+### 122-FR-010 — The answer MUST carry `date` and the counts `jobs` (rows) and `inWork` (rows whose `status` is `in_work`); a day with no rows is an empty list with both counts 0.
+
+_From 122-one-job-status._
+
+### 122-FR-012 — The domain MUST offer one read, by garage and calendar month (Bucharest), returning the number of JOB_STAGE_ENTRY rows of that garage's jobs in that month by `actor_role` (`mechanic`, `owner`, `receptionist`, `admin`, `system`, `driver`), the automatic pauses (`auto` = true) counted only under `auto` and under no role, so the counts sum to the month's entries; it has no API route and no screen in this story (#26 shows the figure).
+
+_From 122-one-job-status._
+
+### 122-FR-013 — The DTOs of the day (the query, the answer, the row, the counts) and the job read's `inWorkSince` MUST come from the contracts library, validated at the edge, documented in the OpenAPI file, and the generated client MUST be regenerated; the new endpoint MUST be listed in `infra/observability/inventory.json` with its metrics, panel and alert (Constitution, Always).
+
+_From 122-one-job-status._
+
+### 122-FR-014 — Tests MUST be written first (Principle II) and cover, in Vitest on real PostgreSQL and Valkey with a `// @traces` line per spec file: the schema test of FR-001; `in_work_since` and `worked_seconds` across start, pause, automatic pause, resume, finish and finish from `paused` (FR-002, FR-003), with the brief's 10:07 / 11:20 / 4,380 s case; the migration backfill; which booking statuses are in and out, order, carry-over on today and not on other days, a multi-day booking on each of its days, lift on and off, lock holder, counts, no phone (FR-007 to FR-010); 404 for every other caller and `team_mechanics` off, 422 for a malformed and an out-of-range date, 30 days accepted (FR-005, FR-006); every job and booking event kind on `mechanic:{mechanicId}` (FR-011); the share by role and month with automatic pauses apart (FR-012). Playwright, in the end-to-end suite: the owner pauses Costel's job in the garage dashboard and the job's state read by Costel's browser shows Pauză within 2 seconds (the queue screen itself is #16; until it ships the flow asserts on the limited dashboard's Lucrări row).
+
+_From 122-one-job-status._
+
 ## Retired
 
 - `220-FR-007` — superseded by `389-FR-002` (2026-10-21)
@@ -597,3 +642,5 @@ _From 1410-predare-quote-dialog._
 - `424-FR-008` — superseded by `395-FR-004` (2026-10-30)
 - `406-FR-004` — superseded by `395-FR-004` (2026-10-30)
 - `274-FR-001` — superseded by `293-FR-003` (2026-10-31)
+- `276-FR-006` — superseded by `122-FR-003` (2026-11-02)
+- `276-FR-005` — superseded by `122-FR-003` (2026-11-02)

@@ -27,7 +27,7 @@ async function jobIn(garageName: string) {
   return { garageId: garage.id, jobId: job.id };
 }
 
-// @traces 122-one-job-status-FR-012
+// @traces 122-FR-012
 describe('the share of job moves, edge cases', () => {
   it('answers seven zeros for a garage with no moves and for an unknown garage', async () => {
     const { garageId } = await jobIn('Atelier Dinamo');

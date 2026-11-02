@@ -140,11 +140,13 @@ export class MechanicDayService {
           },
         },
         where: {
+          // The booking's mechanic, as for the day's rows: the job's own
+          // column can differ, and the day must not change with the path.
           booking: {
+            mechanicId: card.id,
             segments: { none: onDay },
             status: { in: [...BOOKED] },
           },
-          mechanicId: card.id,
           OR: [
             { status: { in: ['in_work', 'paused'] } },
             { finishedAt: { gte: dayStart, lt: dayEnd }, status: 'done' },

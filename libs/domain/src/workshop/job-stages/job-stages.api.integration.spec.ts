@@ -441,7 +441,7 @@ async function inWorkFor(jobId: string, ms: number) {
     WHERE id = ${jobId}::uuid`;
 }
 
-// @traces 122-one-job-status-FR-003 122-one-job-status-FR-004
+// @traces 122-FR-003 122-FR-004
 describe('the running clock through the stage calls', () => {
   it('pauses the first car with its time in work when the mechanic starts a second', async () => {
     const s = await setting();

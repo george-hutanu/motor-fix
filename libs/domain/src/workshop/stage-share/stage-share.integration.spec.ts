@@ -35,7 +35,7 @@ const entry = (
     },
   });
 
-// @traces 122-one-job-status-FR-012
+// @traces 122-FR-012
 describe('the share of job moves by who made them', () => {
   it('counts the garage’s moves of a Bucharest month by role, the automatic ones apart', async () => {
     const { garageId, jobId } = await jobAt('Atelier Dinamo');
