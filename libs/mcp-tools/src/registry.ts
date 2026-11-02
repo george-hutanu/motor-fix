@@ -20,6 +20,7 @@ import {
   type GarageScheduleService,
   type LoadedAccount,
   type MaintenanceReader,
+  type MovesService,
   type Role,
   type Tx,
 } from '@motor-fix/domain';
@@ -58,6 +59,7 @@ export interface ToolContext {
   >;
   // A garage with no row for the key has the feature on.
   featureOn(garageId: string, key: string): Promise<boolean>;
+  driver: { moves: Pick<MovesService, 'ask' | 'preview'> };
   garage: {
     daySheet: Pick<DaySheetService, 'get'>;
     decline: Pick<DeclineService, 'preview' | 'run'>;
