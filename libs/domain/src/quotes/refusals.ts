@@ -95,3 +95,55 @@ export const cancelRefused = (
     entity === 'booking' ? 'cancelled' : 'closed',
     said(CANCEL_TOO_LATE[entity], actor),
   );
+
+// Why a booking cannot move to the asked start, as the driver reads it.
+const MOVE_REFUSED: Record<MoveRefusal, Words> = {
+  move_cutoff: {
+    en: 'The booking can no longer be moved less than 2 hours before',
+    ro: 'Programarea nu mai poate fi mutată cu mai puțin de 2 ore înainte',
+  },
+  move_limit: {
+    en: 'You have already moved the booking twice',
+    ro: 'Ai mutat deja programarea de 2 ori',
+  },
+  move_pending: {
+    en: 'A move of this booking is already waiting for an answer',
+    ro: 'O mutare a acestei programări așteaptă deja un răspuns',
+  },
+  slot_taken: {
+    en: 'That time is no longer free',
+    ro: 'Ora aleasă nu mai este liberă',
+  },
+};
+
+export type MoveRefusal =
+  | 'move_cutoff'
+  | 'move_limit'
+  | 'move_pending'
+  | 'slot_taken';
+
+export const moveRefused = (
+  actor: Pick<Actor, 'language'>,
+  code: MoveRefusal,
+) =>
+  new HttpException(
+    { code, message: said(MOVE_REFUSED[code], actor) },
+    HttpStatus.CONFLICT,
+  );
+
+export const moveTooLate = (
+  actor: Pick<Actor, 'language'>,
+  currentStatus: string,
+) =>
+  refused(
+    'booking',
+    currentStatus,
+    'confirmed',
+    said(
+      {
+        en: 'The booking can no longer be moved',
+        ro: 'Programarea nu mai poate fi mutată',
+      },
+      actor,
+    ),
+  );

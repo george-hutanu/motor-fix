@@ -264,9 +264,62 @@ model Booking {
   mechanic              Mechanic?            @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
   job                   Job?
   segments              BookingSegment[]
+  moves                 BookingMove[]
 
   @@unique([driverId, idempotencyKey])
   @@index([garageId, createdAt(sort: Desc)])
   @@index([requestId])
   @@map("booking")
+}
+
+enum BookingMoveSide {
+  driver
+  garage
+
+  @@map("booking_move_side")
+}
+
+enum BookingMoveStatus {
+  proposed
+  accepted
+  refused
+  lapsed
+  cancelled
+
+  @@map("booking_move_status")
+}
+
+enum BookingMoveRefuseReason {
+  no_mechanic_free
+  parts_not_available
+  closed_that_day
+  other
+
+  @@map("booking_move_refuse_reason")
+}
+
+// One side's ask to move a confirmed booking to another start. At most one is
+// proposed per booking (a partial unique index in the migration); every past
+// one stays.
+model BookingMove {
+  id             String                   @id @default(uuid()) @db.Uuid
+  bookingId      String                   @map("booking_id") @db.Uuid
+  proposedBySide BookingMoveSide          @map("proposed_by_side")
+  proposedBy     String                   @map("proposed_by") @db.Uuid
+  newStartsAt    DateTime                 @map("new_starts_at") @db.Timestamptz(3)
+  status         BookingMoveStatus        @default(proposed)
+  lapsesAt       DateTime                 @map("lapses_at") @db.Timestamptz(3)
+  decidedAt      DateTime?                @map("decided_at") @db.Timestamptz(3)
+  decidedBy      String?                  @map("decided_by") @db.Uuid
+  refuseReason   BookingMoveRefuseReason? @map("refuse_reason")
+  idempotencyKey String                   @map("idempotency_key") @db.VarChar(200)
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  booking        Booking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  proposer       Account                  @relation("BookingMoveProposedBy", fields: [proposedBy], references: [id], onDelete: Cascade)
+  decider        Account?                 @relation("BookingMoveDecidedBy", fields: [decidedBy], references: [id], onDelete: SetNull)
+
+  @@unique([proposedBy, idempotencyKey])
+  @@index([status, lapsesAt])
+  @@index([bookingId, createdAt(sort: Desc)])
+  @@map("booking_move")
 }

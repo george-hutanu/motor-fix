@@ -22,6 +22,8 @@ export const BOOKING_CONFIRM_REMINDER_HOURS: readonly number[] = [12, 2];
 export { FREE_CANCEL_CUTOFF_HOURS } from '@motor-fix/contracts';
 export const BOOKING_MAX_MOVES = 2;
 export const MOVE_CUTOFF_HOURS = 2;
+// How far ahead a driver may move a booking, as the free slots offer it.
+export const MOVE_REACH_DAYS = 14;
 export const DECLINE_UNDO_MINUTES = 5;
 export const PAGE_SIZE = 20;
 

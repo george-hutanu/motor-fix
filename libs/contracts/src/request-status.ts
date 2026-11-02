@@ -250,6 +250,38 @@ export const BOOKING_CANCEL_REASONS = [
 ] as const;
 export type BookingCancelReasonCode = (typeof BOOKING_CANCEL_REASONS)[number];
 
+export const BOOKING_MOVE_SIDES = ['driver', 'garage'] as const;
+export type BookingMoveSide = (typeof BOOKING_MOVE_SIDES)[number];
+
+export const BOOKING_MOVE_STATUSES = [
+  'proposed',
+  'accepted',
+  'refused',
+  'lapsed',
+  'cancelled',
+] as const;
+export type BookingMoveStatus = (typeof BOOKING_MOVE_STATUSES)[number];
+
+// The garage-side cancel reasons, which a garage also gives for a move it
+// cannot take.
+export const BOOKING_MOVE_REFUSE_REASONS = [
+  'no_mechanic_free',
+  'parts_not_available',
+  'closed_that_day',
+  'other',
+] as const;
+export type BookingMoveRefuseReason =
+  (typeof BOOKING_MOVE_REFUSE_REASONS)[number];
+
+// Why a booking cannot move now, the first that applies in this order.
+export const MOVE_BLOCKED_REASONS = [
+  'status',
+  'cutoff',
+  'limit',
+  'pending',
+] as const;
+export type MoveBlockedReason = (typeof MOVE_BLOCKED_REASONS)[number];
+
 // Plain values the browser reads too, kept out of the DTO file and its
 // server imports.
 // The garages one request goes to, the profile's included.

@@ -10,6 +10,7 @@ export type TransitionEntity =
   | 'request_recipient'
   | 'quote'
   | 'booking'
+  | 'booking_move'
   | 'job';
 
 // Who moved the row; a move the platform makes on its own has no account.

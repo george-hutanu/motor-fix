@@ -89,6 +89,8 @@ model Account {
   confirmedBookings       Booking[]                @relation("BookingConfirmedBy")
   cancelledBookings       Booking[]                @relation("BookingCancelledBy")
   noShowBookings          Booking[]                @relation("BookingNoShowRecordedBy")
+  proposedBookingMoves    BookingMove[]            @relation("BookingMoveProposedBy")
+  decidedBookingMoves     BookingMove[]            @relation("BookingMoveDecidedBy")
   jobs                    Job[]                    @relation("JobDriver")
   jobsPriced              Job[]                    @relation("JobFinalPriceRecordedBy")
   jobLocksHeld            Job[]                    @relation("JobLockHolder")

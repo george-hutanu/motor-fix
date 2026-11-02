@@ -1,6 +1,7 @@
 import {
   ApiProperty,
   ApiPropertyOptional,
+  IntersectionType,
   OmitType,
   PickType,
 } from '@nestjs/swagger';
@@ -18,6 +19,7 @@ import {
   Matches,
   Max,
   Min,
+  ValidateBy,
   ValidateIf,
 } from 'class-validator';
 
@@ -32,8 +34,14 @@ import {
 import {
   BOOKING_CANCEL_NOTE_MAX,
   BOOKING_CANCEL_REASONS,
+  BOOKING_MOVE_REFUSE_REASONS,
+  BOOKING_MOVE_SIDES,
+  BOOKING_MOVE_STATUSES,
   BOOKING_STATUSES,
   type BookingCancelReasonCode,
+  type BookingMoveRefuseReason,
+  type BookingMoveSide,
+  type BookingMoveStatus,
   type BookingStatus,
   CANCELLED_BY_SIDES,
   type CancelledBySide,
@@ -45,6 +53,8 @@ import {
   GARAGE_REQUEST_FILTERS,
   type GarageCloseReason,
   type GarageRequestFilter,
+  MOVE_BLOCKED_REASONS,
+  type MoveBlockedReason,
   QUOTE_OUTCOMES,
   QUOTE_STATUSES,
   type QuoteOutcome,
@@ -64,6 +74,83 @@ import { TimeBlockDto } from './time-blocks.dto';
 const LIFT_MAX = 99;
 
 const NULLABLE_TIME = { format: 'date-time', nullable: true, type: String };
+
+const HALF_HOUR = 30 * 60_000;
+
+// Bucharest is a whole number of hours off UTC, so its half-hour grid is
+// UTC's.
+const onHalfHour = () =>
+  ValidateBy({
+    name: 'onHalfHour',
+    validator: {
+      defaultMessage: (args) => `${args?.property} must fall on a half hour`,
+      validate: (value) =>
+        typeof value === 'string' && Date.parse(value) % HALF_HOUR === 0,
+    },
+  });
+
+// A start the driver asks to move a booking to.
+export class AskBookingMoveDto {
+  @ApiProperty({
+    description: 'A free start on the garage’s 30-minute grid',
+    format: 'date-time',
+  })
+  @IsISO8601({ strict: true })
+  @onHalfHour()
+  startsAt!: string;
+}
+
+export class BookingMoveDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  bookingId!: string;
+
+  @ApiProperty({ enum: BOOKING_MOVE_SIDES })
+  proposedBySide!: BookingMoveSide;
+
+  @ApiProperty({ format: 'date-time' })
+  newStartsAt!: string;
+
+  @ApiProperty({ enum: BOOKING_MOVE_STATUSES })
+  status!: BookingMoveStatus;
+
+  @ApiProperty({
+    description: 'When the ask lapses if the garage has not answered',
+    format: 'date-time',
+  })
+  lapsesAt!: string;
+
+  @ApiProperty({ enum: BOOKING_MOVE_REFUSE_REASONS, nullable: true })
+  refuseReason!: BookingMoveRefuseReason | null;
+
+  @ApiProperty(NULLABLE_TIME)
+  decidedAt!: string | null;
+}
+
+// The latest move of a booking, as the driver's reads carry it.
+export class LatestMoveDto extends OmitType(BookingMoveDto, ['bookingId']) {}
+
+// Whether the driver may ask to move the booking now, and the move asked
+// last, so the views render the states without restating the rules.
+export class MovableBookingDto {
+  @ApiProperty()
+  moveCount!: number;
+
+  @ApiProperty({ description: 'Every rule but the slot’s would let a move' })
+  canMove!: boolean;
+
+  @ApiProperty({
+    description: 'The first rule that blocks a move, when one does',
+    enum: MOVE_BLOCKED_REASONS,
+    nullable: true,
+  })
+  moveBlockedReason!: MoveBlockedReason | null;
+
+  @ApiProperty({ nullable: true, type: LatestMoveDto })
+  move!: LatestMoveDto | null;
+}
 
 export class ListQueryDto {
   @ApiPropertyOptional({
@@ -318,7 +405,10 @@ export class RequestBookingDto {
 // The driver's row also needs what its cancel turns on: the booking to call,
 // the garage the dialog names, who cancelled it, whether late, and whether
 // its job has started.
-export class DriverRowBookingDto extends RequestBookingDto {
+export class DriverRowBookingDto extends IntersectionType(
+  RequestBookingDto,
+  MovableBookingDto,
+) {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
@@ -360,7 +450,10 @@ export class DriverRowBookingDto extends RequestBookingDto {
 }
 
 // The driver's request page also shows the price paid at the handover.
-export class DriverBookingDto extends BookingDto {
+export class DriverBookingDto extends IntersectionType(
+  BookingDto,
+  MovableBookingDto,
+) {
   @ApiProperty({
     description: 'The final price recorded at the handover, in bani',
     nullable: true,
