@@ -185,7 +185,7 @@ describe('the unit and integration suites', () => {
 
   // @traces 1338-FR-001
   // @traces 1338-FR-002
-  // @traces 1332-angular-vitest-FR-001
+  // @traces 1332-FR-001
   it('runs the Nest projects on their Vitest config and the Angular projects on the unit-test builder', () => {
     const nest = [
       'apps/api',
@@ -383,6 +383,7 @@ describe('the Nest projects on Vitest', () => {
   });
 
   // @traces 1338-FR-015
+  // @traces 1332-FR-018
   it("rename the suite variable in the texts that name it, and name Vitest as every project's runner", () => {
     const read = (path: string) => readFileSync(join(root, path), 'utf8');
     for (const path of [
@@ -435,8 +436,23 @@ function jestProjects(): string[] {
 }
 
 describe('the projects left on Jest', () => {
-  // @traces 1332-angular-vitest-FR-001
+  // @traces 1332-FR-001
   it('are none: the Angular projects joined the Nest ones on Vitest', () => {
     expect(jestProjects()).toEqual([]);
+  });
+  // @traces 1332-FR-019
+  it('leave the Nest projects on their Vitest config, and no Jest package only the Angular projects used', () => {
+    for (const project of [
+      'apps/api',
+      'apps/worker',
+      'apps/mcp',
+      'libs/domain',
+    ])
+      expect(existsSync(join(root, project, 'vitest.config.mts'))).toBe(true);
+    const { devDependencies } = JSON.parse(
+      readFileSync(join(root, 'package.json'), 'utf8'),
+    );
+    expect(devDependencies).not.toHaveProperty('jest-preset-angular');
+    expect(devDependencies).not.toHaveProperty('jest-environment-jsdom');
   });
 });

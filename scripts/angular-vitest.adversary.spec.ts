@@ -63,6 +63,7 @@ describe('the five Angular projects on the unit-test builder', () => {
     },
   );
 
+  // @traces 1332-FR-010
   it.each(PROJECTS)('%s keeps its mutation floor', (_n, dir, floor) => {
     expect(json(`${dir}/stryker.config.json`).thresholds.break).toBe(floor);
   });
@@ -95,6 +96,46 @@ describe('the five Angular projects on the unit-test builder', () => {
       );
     expect(leaked).toEqual([]);
   });
+});
+
+describe('the specs of the five projects', () => {
+  const specs = () =>
+    PROJECTS.flatMap(([, dir]) => specsUnder(join(root, dir, 'src')));
+
+  // @traces 1332-FR-002
+  it('skip and leave to do no spec', () => {
+    const skipped = specs().filter((file) =>
+      /\b(?:it|test|describe)\.(?:skip|todo)\(|\bx(?:it|describe)\(/.test(
+        readFileSync(file, 'utf8'),
+      ),
+    );
+    expect(skipped.map((file) => relative(root, file))).toEqual([]);
+  });
+
+  // @traces 1332-FR-003
+  it("call none of Jest's API", () => {
+    const onJest = specs().filter((file) =>
+      /\bjest\.[a-zA-Z]+\(/.test(readFileSync(file, 'utf8')),
+    );
+    expect(onJest.map((file) => relative(root, file))).toEqual([]);
+  });
+});
+
+describe('the four libraries', () => {
+  // @traces 1332-FR-007
+  it.each(PROJECTS.filter(([name]) => name !== 'web'))(
+    '%s builds its specs from its own test-build target, not a production build',
+    (name, dir) => {
+      const targets = json(`${dir}/project.json`).targets;
+      expect(targets.test.options.buildTarget).toBe(
+        `${name}:test-build:development`,
+      );
+      expect(targets['test-build'].executor).toBe('@angular/build:application');
+      expect(Object.keys(targets['test-build'].configurations)).toEqual([
+        'development',
+      ]);
+    },
+  );
 });
 
 describe('angularTest', () => {

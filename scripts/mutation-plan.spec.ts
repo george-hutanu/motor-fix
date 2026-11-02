@@ -388,7 +388,7 @@ describe('the repository shard file', () => {
     expect(Object.keys(projects.web?.shards ?? {}).length).toBeGreaterThan(2);
   });
 
-  // @traces 1332-angular-vitest-FR-009 1332-angular-vitest-FR-010
+  // @traces 1332-FR-009 1332-angular-vitest-FR-010
   it('keeps the Angular projects in the matrix with their shards, timeouts and floors', () => {
     const angular = ['web', 'ui-cockpit', 'overlays', 'i18n', 'media'];
     const jobs = plan(real, {})

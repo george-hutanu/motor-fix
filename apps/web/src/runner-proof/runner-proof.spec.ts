@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 // The ahead-of-time compiler refuses both templates before any test runs, so
 // each is compiled at run time, where the spec setup's own checks are tried.
-// @traces 1332-angular-vitest-FR-006
+// @traces 1332-FR-006
 @Component({ template: '' })
 class UnknownElement {}
 

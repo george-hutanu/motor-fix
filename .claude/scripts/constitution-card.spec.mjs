@@ -159,7 +159,7 @@ describe('the author skills', () => {
   });
 
   // @traces 1175-FR-011
-  // @traces 1332-angular-vitest-FR-017
+  // @traces 1332-FR-017
   it('names Vitest, and no project left on Jest, under principles II and IV, at 5.2 or later, in the constitution and the card', () => {
     const card = readFileSync(CARD, 'utf8');
     const full = readFileSync(join(memory, 'constitution.md'), 'utf8');

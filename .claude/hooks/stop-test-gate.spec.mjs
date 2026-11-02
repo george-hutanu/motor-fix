@@ -48,7 +48,7 @@ afterEach(() => rmSync(repo, { recursive: true, force: true }));
 // Each stop starts npx once or twice, which on a busy machine outlasts 5 s.
 // @traces 1338-FR-014
 describe('the stop gate with Vitest and Jest projects', { timeout: 30_000 }, () => {
-  // @traces 1332-angular-vitest-FR-015
+  // @traces 1332-FR-015
   it('runs the Vitest specs related to a changed file of a Vitest project, and asks Jest only about the rest', () => {
     stub('jest', 0);
     stub('vitest', 0);

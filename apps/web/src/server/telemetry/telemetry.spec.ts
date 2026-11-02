@@ -31,6 +31,7 @@ function run(started: boolean, faro: string | undefined) {
 }
 
 describe('the web server telemetry entry', () => {
+  // @traces 1332-FR-020
   // The unit-test build bundles @motor-fix/observability, so no module mock
   // reaches the call the entry makes on load; its source must make it.
   it('starts telemetry as the web service when loaded', () => {

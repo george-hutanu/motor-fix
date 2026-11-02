@@ -423,7 +423,7 @@ describe('strykerOptions shared limits', () => {
   });
 });
 
-// @traces 1332-angular-vitest-FR-008
+// @traces 1332-FR-008
 describe('strykerOptions for a project tested on Vitest', () => {
   it.each([
     ['web', 'apps/web'],
@@ -484,7 +484,7 @@ describe('strykerOptions for a project tested on Vitest', () => {
   });
 });
 
-// @traces 1332-angular-vitest-FR-009
+// @traces 1332-FR-009
 describe('vitestSpecs', () => {
   beforeEach(() => {
     write(

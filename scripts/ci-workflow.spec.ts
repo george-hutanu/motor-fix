@@ -266,7 +266,7 @@ describe('ci workflow', () => {
 
   // The Angular unit-test builder refuses a flag its schema lacks; every
   // Vitest config already passes a project with no spec of the suite.
-  // @traces 1332-angular-vitest-FR-013
+  // @traces 1332-FR-013
   it('runs the unit tests without a flag only Jest knows', () => {
     expect(setting(step(job('unit'), 'Unit tests'), 'run')).toBe(
       'npx nx $NX_SCOPE -t test',

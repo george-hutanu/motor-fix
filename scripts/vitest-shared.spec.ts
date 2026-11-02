@@ -8,7 +8,7 @@ const transform = (code: string, id: string) =>
     ) => { code: string } | undefined
   )(code, id);
 
-// @traces 1332-angular-vitest-FR-011
+// @traces 1332-FR-011
 describe('eagerImports', () => {
   it('starts a relative import() on the first line and hands the call its promise', () => {
     const code = "const a = 1;\nconst { AddCar } = await import('./add-car');";

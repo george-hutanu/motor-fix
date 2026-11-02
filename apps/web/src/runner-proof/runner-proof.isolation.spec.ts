@@ -1,6 +1,6 @@
 // A twin file makes the same checks: whichever runs second fails if spec
 // files share one environment.
-// @traces 1332-angular-vitest-FR-004
+// @traces 1332-FR-004
 const probe = globalThis as { __runnerProof?: string };
 
 describe('a spec file environment', () => {

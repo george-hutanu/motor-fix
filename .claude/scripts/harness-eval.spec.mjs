@@ -114,7 +114,7 @@ describe('harness-eval — cases and baseline on disk', () => {
     assert.equal(result.pass, true, result.detail);
   });
 
-  // @traces 1332-angular-vitest-FR-016
+  // @traces 1332-FR-016
   it('leaves the uncommitted files of a fixture uncommitted, and makes the listed ones executable', () => {
     const [result] = runCases(REPO, [
       {
