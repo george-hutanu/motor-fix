@@ -222,13 +222,19 @@ jobs:
           TEST_SUITE: unit
         # No --passWithNoTests: the Angular unit-test builder refuses it, and
         # vitest.preset.mts already passes a project with no spec of the suite.
-        # Web's builder run beside domain's Vitest ran the runner out of memory
-        # (runs 41390683959 and 41390810006 cancelled seven minutes in), so web
-        # runs once the rest has finished, and either failure fails the step.
+        # Web's builder bundles every spec without splitting: all of them at
+        # once peak near 14 GB and the runner was cancelled (runs 41390810006,
+        # 41396065790). So web runs after the rest, in the four shards of its
+        # test target's configurations (shard-4 takes what the others leave),
+        # and any failure fails the step.
         run: |
           status=0
           npx nx $NX_SCOPE -t test --exclude=web || status=$?
-          npx nx $NX_SCOPE -t test --exclude='*,!web' || status=$?
+          npx nx $NX_SCOPE -t test-node || status=$?
+          for shard in 1 2 3 4; do
+            npx nx $NX_SCOPE -t test --exclude='*,!web' \
+              --configuration=shard-$shard --excludeTaskDependencies || status=$?
+          done
           exit $status
 
   # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,

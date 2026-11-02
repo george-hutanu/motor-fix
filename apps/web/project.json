@@ -79,6 +79,19 @@
       "executor": "@angular/build:dev-server"
     },
     "test": {
+      "configurations": {
+        "shard-1": { "include": ["**/[a-c]*.spec.ts"] },
+        "shard-2": { "include": ["**/[d-l]*.spec.ts"] },
+        "shard-3": { "include": ["**/[m-r]*.spec.ts"] },
+        "shard-4": {
+          "exclude": [
+            "server/**/*.spec.ts",
+            "app/app.config.spec.ts",
+            "app/app.config.server.adversary.spec.ts",
+            "**/[a-r]*.spec.ts"
+          ]
+        }
+      },
       "dependsOn": ["test-node"],
       "executor": "@angular/build:unit-test",
       "options": {
