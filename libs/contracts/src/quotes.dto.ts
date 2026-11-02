@@ -134,7 +134,7 @@ export class LatestMoveDto extends OmitType(BookingMoveDto, ['bookingId']) {}
 
 // Whether the driver may ask to move the booking now, and the move asked
 // last, so the views render the states without restating the rules.
-export class MovableBookingDto {
+class MovableBookingDto {
   @ApiProperty()
   moveCount!: number;
 

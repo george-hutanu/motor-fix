@@ -47,7 +47,7 @@ const REFUSAL: Record<'cutoff' | 'limit' | 'pending', MoveRefusal> = {
   pending: 'move_pending',
 };
 
-export const moveOf = (move: BookingMove): BookingMoveDto => ({
+const moveOf = (move: BookingMove): BookingMoveDto => ({
   bookingId: move.bookingId,
   decidedAt: move.decidedAt?.toISOString() ?? null,
   id: move.id,
