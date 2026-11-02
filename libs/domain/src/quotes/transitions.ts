@@ -1,6 +1,8 @@
+import { noEvents } from '../events/event.port';
 import type { Prisma } from '../generated/prisma/client';
 import type {
   BookingCancelReason,
+  BookingMoveStatus,
   BookingStatus,
   CancelledBySide,
   DeclineReason,
@@ -62,6 +64,18 @@ export const BOOKING_MOVES: Record<BookingStatus, readonly BookingStatus[]> = {
   no_show: ['confirmed'],
 };
 
+// A move of a booking's time, as either side asks it.
+export const BOOKING_MOVE_MOVES: Record<
+  BookingMoveStatus,
+  readonly BookingMoveStatus[]
+> = {
+  accepted: [],
+  cancelled: [],
+  lapsed: [],
+  proposed: ['accepted', 'refused', 'lapsed', 'cancelled'],
+  refused: [],
+};
+
 type Data = Record<string, unknown>;
 
 const REQUEST: TransitionSpec<QuoteRequestStatus> = {
@@ -104,6 +118,17 @@ const BOOKING: TransitionSpec<BookingStatus> = {
   update: (tx, id, data) =>
     tx.booking.update({
       data: data as Prisma.BookingUncheckedUpdateInput,
+      where: { id },
+    }),
+};
+
+const BOOKING_MOVE: TransitionSpec<BookingMoveStatus> = {
+  entity: 'booking_move',
+  moves: BOOKING_MOVE_MOVES,
+  table: 'booking_move',
+  update: (tx, id, data) =>
+    tx.bookingMove.update({
+      data: data as Prisma.BookingMoveUncheckedUpdateInput,
       where: { id },
     }),
 };
@@ -277,6 +302,8 @@ export async function moveBooking(
   // transaction; a completed one keeps its segments as the record of the work.
   if (RELEASES_PLACE.has(move.to))
     await tx.bookingSegment.deleteMany({ where: { bookingId: move.id } });
+  if (moved.from === 'confirmed')
+    await cancelWaitingMove(tx, ports, rest, moved.row.garage_id);
   // A cancellation also files its reason, which the driver's short history
   // shows next to the status.
   if (move.to === 'cancelled' && cancellation) {
@@ -293,4 +320,43 @@ export async function moveBooking(
     });
   }
   return moved;
+}
+
+export function moveBookingMove(
+  tx: Tx,
+  ports: TransitionPorts,
+  move: Base<Exclude<BookingMoveStatus, 'refused'>> & {
+    scope?: Move<BookingMoveStatus>['scope'];
+  },
+) {
+  return applyTransition(tx, BOOKING_MOVE, ports, {
+    ...move,
+    set: () => ({ decidedAt: new Date(), decidedBy: move.actor.accountId }),
+  });
+}
+
+// A booking that leaves confirmed takes its waiting move with it, without a
+// word to anyone: the booking's own event already tells both sides.
+async function cancelWaitingMove(
+  tx: Tx,
+  ports: TransitionPorts,
+  move: Base<BookingStatus>,
+  garageId: string | undefined,
+) {
+  const waiting = await tx.bookingMove.findFirst({
+    select: { id: true },
+    where: { bookingId: move.id, status: 'proposed' },
+  });
+  if (!waiting) return;
+  await moveBookingMove(
+    tx,
+    { audit: ports.audit, events: noEvents },
+    {
+      actor: move.actor,
+      event: move.event,
+      id: waiting.id,
+      scope: () => ({ garageId }),
+      to: 'cancelled',
+    },
+  );
 }

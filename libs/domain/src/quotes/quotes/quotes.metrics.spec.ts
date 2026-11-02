@@ -9,6 +9,7 @@ import {
   BOOKING_CONFIRM_OUTCOMES,
   recordBookingConfirm,
   recordBookingLapse,
+  recordBookingMove,
   recordCancellation,
   recordDeclineWindow,
   recordQuoteAccept,
@@ -213,5 +214,29 @@ describe('counting cancellations', () => {
         'value',
       ]);
     }
+  });
+});
+
+// @traces 184-FR-016
+describe('counting booking moves', () => {
+  it('adds one per move by outcome and side, with no identifiers', async () => {
+    recordBookingMove('asked', 'driver');
+    recordBookingMove('asked', 'driver');
+    recordBookingMove('lapsed', 'driver');
+    recordBookingMove('lapsed', 'garage');
+
+    const moves = await metric('motorfix_booking_moves_total');
+    expect(
+      (moves?.dataPoints ?? []).map((point) => ({
+        ...point.attributes,
+        value: point.value,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        { outcome: 'asked', side: 'driver', value: 2 },
+        { outcome: 'lapsed', side: 'driver', value: 1 },
+        { outcome: 'lapsed', side: 'garage', value: 1 },
+      ]),
+    );
   });
 });

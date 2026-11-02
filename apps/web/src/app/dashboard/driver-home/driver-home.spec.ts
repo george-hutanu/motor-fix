@@ -732,6 +732,7 @@ describe('Panou’s quotes panel', () => {
   const booked = (status: 'awaiting_confirmation' | 'confirmed') =>
     ({
       cancelledBySide: null,
+      canMove: false,
       confirmBy: '2026-10-18T10:00:00.000Z',
       finalPriceBani: null,
       garage: {
@@ -743,6 +744,9 @@ describe('Panou’s quotes panel', () => {
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
+      move: null,
+      moveBlockedReason: 'status',
+      moveCount: 0,
       noShowAt: null,
       startsAt: '2026-10-20T06:00:00.000Z',
       status,

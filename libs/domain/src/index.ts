@@ -159,6 +159,7 @@ export {
 export { BOOKING_CANCELLED_CONSUMER } from './notifications/booking-cancelled/booking-cancelled.fan-out';
 export { BOOKING_CONFIRMED_CONSUMER } from './notifications/booking-confirmed/booking-confirmed.fan-out';
 export { BOOKING_LAPSED_CONSUMER } from './notifications/booking-lapsed/booking-lapsed.fan-out';
+export { BOOKING_MOVE_CONSUMER } from './notifications/booking-move/booking-move.fan-out';
 export { Brevo } from './notifications/brevo/brevo';
 export { CAR_TRANSFER_ACCEPTED_CONSUMER } from './notifications/car-transfer-accepted/car-transfer-accepted.fan-out';
 export { CATALOGUE_JOB_DECIDED_CONSUMER } from './notifications/catalogue-job-decided/catalogue-job-decided.fan-out';
@@ -210,6 +211,10 @@ export { DECLINE_WINDOW_CONSUMER } from './quotes/decline-window/decline-window'
 export { DeclineWindowModule } from './quotes/decline-window/decline-window.module';
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';
+export {
+  type MovePreview,
+  MovesService,
+} from './quotes/moves/moves.service';
 export { QuotesModule } from './quotes/quotes.module';
 export { REQUEST_TIMERS_CONSUMER } from './quotes/request-timers/request-timers';
 export { RequestTimersModule } from './quotes/request-timers/request-timers.module';

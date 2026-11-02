@@ -21,6 +21,8 @@ const GARAGE_READS = [
 
 const GARAGE_ACTS = ['decline_quote_request'];
 
+const DRIVER_ACTS = ['move_booking'];
+
 // The tool that carries the person's yes to every other act.
 const CONFIRM = 'confirm_action';
 
@@ -40,12 +42,21 @@ describe('catalogue', () => {
   // @traces 374-FR-001
   // @traces 345-FR-017
   // @traces 1253-FR-004
-  it('ships get_my_account, the four garage reads, decline_quote_request and confirm_action', () => {
+  // @traces 184-FR-012
+  it('ships get_my_account, the four garage reads, decline_quote_request, move_booking and confirm_action', () => {
     expect(catalogue.map((t) => t.name).sort()).toEqual(
-      ['get_my_account', ...GARAGE_READS, ...GARAGE_ACTS, CONFIRM].sort(),
+      [
+        'get_my_account',
+        ...GARAGE_READS,
+        ...GARAGE_ACTS,
+        ...DRIVER_ACTS,
+        CONFIRM,
+      ].sort(),
     );
     for (const tool of catalogue) {
-      const acts = [...GARAGE_ACTS, CONFIRM].includes(tool.name);
+      const acts = [...GARAGE_ACTS, ...DRIVER_ACTS, CONFIRM].includes(
+        tool.name,
+      );
       expect(tool.acts).toBe(acts);
       expect(tool.annotations).toMatchObject({
         destructiveHint: acts,
@@ -147,6 +158,22 @@ const VALID: Record<string, unknown> = {
     reason: 'fully_booked',
     requestId: '7a0c1b9e-4f4e-4b8e-9d55-0f1f3c2a9b10',
   },
+  move_booking: {
+    bookingId: '7a0c1b9e-4f4e-4b8e-9d55-0f1f3c2a9b10',
+    startsAt: '2026-11-12T12:00:00.000Z',
+  },
+};
+
+// The driver's move as its first call reads it, never asking it.
+const moves = {
+  ask: async (): Promise<never> => {
+    throw new Error('a first call reached a write');
+  },
+  preview: async () => ({
+    garageName: 'Atelier',
+    newStartsAt: new Date('2026-11-12T12:00:00Z'),
+    startsAt: new Date('2026-11-12T08:00:00Z'),
+  }),
 };
 
 const written = async (): Promise<never> => {
@@ -171,6 +198,7 @@ describe('every acting tool', () => {
       const confirmations = memoryConfirmations();
       const ctx = context({
         confirmations,
+        driver: { moves },
         garage: {
           decline: {
             preview: async () => ({
@@ -204,8 +232,7 @@ describe('every acting tool', () => {
   );
 });
 
-// The production catalogue declares none today; the fixture keeps the rule
-// proven until a booking tool joins it.
+// The fixture keeps the rule proven whatever the catalogue declares.
 const declaring = [...catalogue, bookFixture].filter((t) => t.approval);
 
 // @traces 1254-FR-001
@@ -233,7 +260,7 @@ describe('every tool declaring in-app approval', () => {
       const handler = vi.spyOn(tool, 'handler');
       const confirmations = memoryConfirmations();
       const approvals = memoryApprovals();
-      const ctx = context({ approvals, confirmations });
+      const ctx = context({ approvals, confirmations, driver: { moves } });
       const who = caller({ roles: [...tool.roles] });
       const first = await callTool(
         [tool, confirmAction],

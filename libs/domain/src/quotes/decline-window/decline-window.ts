@@ -18,6 +18,8 @@ import { DECLINE_UNDO_MINUTES } from '../quotes-config';
 export const DECLINE_WINDOW_QUEUE = 'quote-timers';
 export const DECLINE_WINDOW_JOBS = Symbol('DECLINE_WINDOW_JOBS');
 export const DECLINE_WINDOW_URL = Symbol('DECLINE_WINDOW_URL');
+// The other timers on this queue, which its sweep also runs.
+export const DECLINE_WINDOW_KINDS = Symbol('DECLINE_WINDOW_KINDS');
 const KIND = 'decline-window';
 const WINDOW_MS = DECLINE_UNDO_MINUTES * 60_000;
 
@@ -32,7 +34,7 @@ const DECLINE_WINDOW_RUN: JobsOptions = {
 
 export const DECLINE_WINDOW_CONSUMER = {
   jobs: DECLINE_WINDOW_RUN,
-  kinds: ['request.declined'] as readonly EventKind[],
+  kinds: ['request.declined', 'booking.move_proposed'] as readonly EventKind[],
   queue: DECLINE_WINDOW_QUEUE,
 };
 
@@ -58,8 +60,9 @@ export class DeclineWindow implements TimerKind {
     private readonly notifications: NotificationsService,
     @Inject(DECLINE_WINDOW_JOBS) queue: Queue,
     @Inject(DECLINE_WINDOW_URL) private readonly webUrl: string,
+    @Inject(DECLINE_WINDOW_KINDS) kinds: readonly TimerKind[],
   ) {
-    this.timers = new ObjectTimers(queue, [this]);
+    this.timers = new ObjectTimers(queue, [this, ...kinds]);
   }
 
   async onDeclined(job: Pick<Job<DeclinedEvent>, 'data'>): Promise<void> {

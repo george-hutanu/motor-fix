@@ -5715,6 +5715,83 @@
         ]
       }
     },
+    "/api/v1/bookings/{id}/moves": {
+      "post": {
+        "operationId": "MovesController_ask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per move the driver means; a repeat answers the first move",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskBookingMoveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The key asked before: the move as it reads now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingMoveDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Asked now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingMoveDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id or key, or a start that is not a time on the half hour"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the driver’s booking"
+          },
+          "409": {
+            "description": "The first rule broken, with a message in the caller’s language. invalid_transition: the booking is not confirmed, or its car is received or its job started; move_cutoff: less than 2 hours before the start; move_limit: moved twice already; move_pending: a move waits for an answer; slot_taken: the start is not free"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ask the garage to move a confirmed booking to a free start; the booking keeps its time until the garage answers",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/api/v1/bookings/{id}/no-show": {
       "post": {
         "operationId": "NoShowController_record",
@@ -18781,6 +18858,65 @@
           "position"
         ]
       },
+      "LatestMoveDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proposedBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage"
+            ]
+          },
+          "newStartsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "accepted",
+              "refused",
+              "lapsed",
+              "cancelled"
+            ]
+          },
+          "lapsesAt": {
+            "type": "string",
+            "description": "When the ask lapses if the garage has not answered",
+            "format": "date-time"
+          },
+          "refuseReason": {
+            "type": "string",
+            "enum": [
+              "no_mechanic_free",
+              "parts_not_available",
+              "closed_that_day",
+              "other"
+            ],
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "proposedBySide",
+          "newStartsAt",
+          "status",
+          "lapsesAt",
+          "refuseReason",
+          "decidedAt"
+        ]
+      },
       "GarageRefDto": {
         "type": "object",
         "properties": {
@@ -18822,6 +18958,33 @@
           "startsAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "moveCount": {
+            "type": "number"
+          },
+          "canMove": {
+            "type": "boolean",
+            "description": "Every rule but the slot’s would let a move"
+          },
+          "moveBlockedReason": {
+            "type": "string",
+            "description": "The first rule that blocks a move, when one does",
+            "enum": [
+              "status",
+              "cutoff",
+              "limit",
+              "pending"
+            ],
+            "nullable": true
+          },
+          "move": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LatestMoveDto"
+              }
+            ]
           },
           "id": {
             "type": "string",
@@ -18869,6 +19032,10 @@
           "status",
           "confirmBy",
           "startsAt",
+          "moveCount",
+          "canMove",
+          "moveBlockedReason",
+          "move",
           "id",
           "garage",
           "cancelledBySide",
@@ -19240,6 +19407,33 @@
             "type": "string",
             "format": "date-time"
           },
+          "moveCount": {
+            "type": "number"
+          },
+          "canMove": {
+            "type": "boolean",
+            "description": "Every rule but the slot’s would let a move"
+          },
+          "moveBlockedReason": {
+            "type": "string",
+            "description": "The first rule that blocks a move, when one does",
+            "enum": [
+              "status",
+              "cutoff",
+              "limit",
+              "pending"
+            ],
+            "nullable": true
+          },
+          "move": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LatestMoveDto"
+              }
+            ]
+          },
           "finalPriceBani": {
             "type": "number",
             "description": "The final price recorded at the handover, in bani",
@@ -19269,6 +19463,10 @@
           "noShowAt",
           "completedAt",
           "createdAt",
+          "moveCount",
+          "canMove",
+          "moveBlockedReason",
+          "move",
           "finalPriceBani",
           "handedOverAt"
         ]
@@ -20885,6 +21083,83 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "AskBookingMoveDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "description": "A free start on the garage’s 30-minute grid",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "startsAt"
+        ]
+      },
+      "BookingMoveDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proposedBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage"
+            ]
+          },
+          "newStartsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "accepted",
+              "refused",
+              "lapsed",
+              "cancelled"
+            ]
+          },
+          "lapsesAt": {
+            "type": "string",
+            "description": "When the ask lapses if the garage has not answered",
+            "format": "date-time"
+          },
+          "refuseReason": {
+            "type": "string",
+            "enum": [
+              "no_mechanic_free",
+              "parts_not_available",
+              "closed_that_day",
+              "other"
+            ],
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "proposedBySide",
+          "newStartsAt",
+          "status",
+          "lapsesAt",
+          "refuseReason",
+          "decidedAt"
         ]
       },
       "ScheduleCarDto": {

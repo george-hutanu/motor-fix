@@ -9,6 +9,7 @@ import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type {
   Booking,
+  BookingMove,
   Garage,
   GarageResponseStats,
   Job,
@@ -22,6 +23,7 @@ import {
   answersSameDayOf,
   responseRateOf,
 } from '../../insights/response-stats/response-stats';
+import { moveFieldsOf } from '../moves/move-state';
 import {
   assertCursor,
   bookingOf,
@@ -43,8 +45,14 @@ const SUMMARY = {
     include: {
       garage: true,
       job: {
-        select: { finalPriceBani: true, handedOverAt: true, status: true },
+        select: {
+          finalPriceBani: true,
+          handedOverAt: true,
+          receivedAt: true,
+          status: true,
+        },
       },
+      moves: { orderBy: NEWEST_FIRST, take: 1 },
     },
     orderBy: NEWEST_FIRST,
     take: 1,
@@ -56,7 +64,11 @@ type SummaryRow = QuoteRequest & {
   _count: { quotes: number };
   bookings: (Booking & {
     garage: Garage;
-    job: Pick<Job, 'finalPriceBani' | 'handedOverAt' | 'status'> | null;
+    job: Pick<
+      Job,
+      'finalPriceBani' | 'handedOverAt' | 'receivedAt' | 'status'
+    > | null;
+    moves: BookingMove[];
   })[];
   jobs: (RequestJob & { jobType: JobType })[];
 };
@@ -67,6 +79,10 @@ const finalPriceOf = (job: SummaryRow['bookings'][number]['job']) => ({
   handedOverAt: iso(job?.handedOverAt ?? null),
 });
 
+// Whether the driver may ask to move the booking, and the move asked last.
+const movableOf = (booking: SummaryRow['bookings'][number], now: Date) =>
+  moveFieldsOf(booking, booking.job, booking.moves[0] ?? null, now);
+
 const summaryOf = ({
   bookings: [booking],
   ...row
@@ -76,6 +92,7 @@ const summaryOf = ({
         ...rowBookingOf(booking),
         cancelledBySide: booking.cancelledBySide,
         ...finalPriceOf(booking.job),
+        ...movableOf(booking, new Date()),
         garage: garageRef(booking.garage),
         id: booking.id,
         jobStarted: booking.job !== null && booking.job.status !== 'to_do',
@@ -143,7 +160,11 @@ export class RequestsService {
     return {
       ...summaryOf(row),
       booking: booking
-        ? { ...bookingOf(booking), ...finalPriceOf(booking.job) }
+        ? {
+            ...bookingOf(booking),
+            ...finalPriceOf(booking.job),
+            ...movableOf(booking, now),
+          }
         : null,
       quotes: row.quotes.map((quote) => ({
         ...quoteOf(quote),

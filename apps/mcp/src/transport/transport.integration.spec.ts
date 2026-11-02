@@ -191,6 +191,7 @@ describe('the MCP endpoint', () => {
 
     expect(tools.map((t) => t.name)).toEqual([
       'get_my_account',
+      'move_booking',
       'confirm_action',
       'touch_account',
     ]);

@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-31
+updated: 2026-11-02
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -37,6 +37,7 @@ features:
   - 1384-confirm-dialog-lift
   - 1259-no-show
   - 151-lift-timeline
+  - 184-move-booking
 ---
 
 # Capability: Quotes
@@ -948,6 +949,50 @@ _From 1259-no-show._
 ### 151-FR-002 — The panel MUST read today's schedule through the existing schedule read (`GET /api/v1/garages/:garageId/schedule`, today by default), with no new write, event or notification; it emits nothing and writes no audit history.
 
 _From 151-lift-timeline._
+
+### 184-FR-001 — A BOOKING_MOVE MUST store: the booking, `proposed_by_side` ∈ `driver`, `garage`, `proposed_by` (the account), `new_starts_at`, `status` ∈ `proposed`, `accepted`, `refused`, `lapsed`, `cancelled`, `lapses_at`, `decided_at` and `decided_by` (null until decided), `refuse_reason` (one of the garage-side cancel reasons `no_mechanic_free`, `parts_not_available`, `closed_that_day`, `other`; null unless `refused`), `created_at`; the database MUST allow at most one `proposed` move per booking (a partial unique index) and MUST keep every past move. The transition table MUST allow `proposed` → `accepted`, `refused`, `lapsed`, `cancelled` and nothing else, each move writing its audit entry and outbox event through the existing transition service (220-FR-011). Whenever the booking leaves `confirmed` (cancelled by either side, lapsed, no-show, the driver's account closed), its `proposed` move MUST become `cancelled` in the same transaction, with no notification.
+
+_From 184-move-booking._
+
+### 184-FR-002 — The API MUST offer `POST /api/v1/bookings/:id/moves` with body `{ startsAt }` (an ISO instant), answering 201 with the move (id, bookingId, proposedBySide, newStartsAt, status, lapsesAt) for the signed-in driver who owns the booking (role `driver`, capability `driver.requests`); any other actor MUST get 404 with nothing written and a visitor 401 `sign_in_required`. The route MUST take an `Idempotency-Key` like the accept: a repeat with the same key answers the same move.
+
+_From 184-move-booking._
+
+### 184-FR-003 — In one transaction that locks the booking and holds a per-garage transaction lock (`pg_advisory_xact_lock` on the garage id) taken before the slot check, the ask MUST be refused, the first applicable code in this order winning, nothing written, with: 409 `invalid_transition` (the current state named) unless the booking is `confirmed` and its job, when one exists, is `to_do` with `received_at` null; 409 `move_cutoff` when now ≥ `starts_at` − MOVE_CUTOFF_HOURS (2 h); 409 `move_limit` when `move_count` ≥ BOOKING_MAX_MOVES (2); 409 `move_pending` when a `proposed` move exists on the booking, from either side; 409 `slot_taken` when `startsAt` is earlier than now + 2 h, later than 14 days from now, or not a start the free-slot engine returns at that moment (called with `earliest` = `startsAt`, `count` 1, the booking's duration at the garage with the request's jobs, `excludeBookingId` the booking itself; valid only when the first start returned equals `startsAt`); 400 `validation_failed` naming `startsAt` when it is malformed or off the 30-minute Bucharest grid. The limits in force MUST be the two constants of `quotes-config.ts`.
+
+_From 184-move-booking._
+
+### 184-FR-004 — `lapses_at` MUST be the earlier of the ask + 24 hours and `starts_at` − 2 hours.
+
+_From 184-move-booking._
+
+### 184-FR-005 — An accepted ask MUST write, in the same transaction: the BOOKING_MOVE `proposed`; an audit entry on the booking (field `move`, "move asked", old `starts_at` → new, actor the driver, a key change); the outbox event `booking.move_proposed` with payload `{ bookingId, moveId, by: 'driver', newStartsAt }` and audience the driver's `account:{driverId}` and the garage's `garage:{garageId}`; and the booking's `starts_at`, `status` and `move_count` MUST stay unchanged. The event's consumer MUST send BOOKING_MOVE_REQUESTED to the garage's owner and receptionists (the existing staff list; e-mail, push, WhatsApp; mutable per the garage's preferences) with the driver's short name, the car, the current and the asked time, and MUST set the timer `move-lapse:{moveId}` on the `quote-timers` queue for `lapses_at` through the object timers.
+
+_From 184-move-booking._
+
+### 184-FR-007 — At `lapses_at` the worker job MUST, when the move is still `proposed`, move it → `lapsed` in one transaction with `decided_at` now, an audit entry "move lapsed" (actor system, key change) and the event `booking.move_lapsed` `{ bookingId, moveId }` to the same audience as FR-005; the booking MUST be unchanged. When the move is no longer `proposed`, the job MUST do nothing. The 5-minute sweep MUST lapse a `proposed` move whose `lapses_at` passed. The event's consumer MUST send BOOKING_MOVE_LAPSED to the driver exactly once (e-mail, push, WhatsApp; always sent, quiet hours included) with the booking's unchanged time, unless the booking is no longer `confirmed` or the driver's account is closed, in which case nothing is sent.
+
+_From 184-move-booking._
+
+### 184-FR-008 — Every driver read that carries a booking (the Cererile mele rows, the driver home, the request detail) MUST carry `moveCount`, `canMove` (true only when FR-003's checks other than the slot would pass), `moveBlockedReason` ∈ `status`, `cutoff`, `limit`, `pending` when false (the first that applies, in FR-003's order), and `move`: the booking's latest BOOKING_MOVE (id, proposedBySide, newStartsAt, status, lapsesAt, refuseReason, decidedAt) or null, so the web renders the states without restating the rules (Principle V).
+
+_From 184-move-booking._
+
+### 184-FR-012 — The AI assistant's move MUST go through the existing assistant approval: the tool records an approval of a new kind for the booking move with the asked time, nothing else is written, and the move is written as FR-005 only when the driver approves in the app (the approval's own timer expiring it otherwise); the approval's write MUST run FR-003's checks again at that moment.
+
+_From 184-move-booking._
+
+### 184-FR-014 — Dates in every text MUST be shown in Europe/Bucharest in the existing long form ("luni, 12 oct., 09:00" / "Monday, 12 Oct, 09:00"); every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011).
+
+_From 184-move-booking._
+
+### 184-FR-017 — The route MUST be in the generated OpenAPI document and the regenerated `data-access` client; the DTOs MUST live in the contracts library and be validated at the edge (Principle V).
+
+_From 184-move-booking._
+
+### 184-FR-019 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. Unit (Vitest, no database): `lapses_at` for a booking 3 days, 26 hours and 10 hours away; `canMove` and `moveBlockedReason` from each state. Integration (Vitest on real PostgreSQL and Valkey): the ask's writes; every 409 of FR-003 and the 400; 404 for another driver and an admin, 401 for a visitor; the one-waiting-move constraint under two concurrent asks; two concurrent asks for one slot writing exactly one move; the held stretch absent from the free slots and back after the lapse; the lapse job, the sweep and the no-op on a decided move; BOOKING_MOVE_LAPSED sent once and not for a closed account; the assistant path writing nothing until the approval; the audit key changes; the hub audiences. Web (Vitest): the row's link and each line, the dialog's states, the `slot_taken` reload. End to end (Playwright): the driver asks to move to Monday 09:00, the row shows the waiting state; with the clock moved 24 hours and the sweep run, the row shows the original time and the bell shows the lapse.
+
+_From 184-move-booking._
 
 ## Retired
 

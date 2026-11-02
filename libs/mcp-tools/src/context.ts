@@ -12,6 +12,7 @@ import {
   GarageRequestsService,
   GarageScheduleService,
   type MaintenanceReader,
+  MovesService,
 } from '@motor-fix/domain';
 
 import type { ToolContext } from './registry';
@@ -30,6 +31,7 @@ export function toolContext(deps: {
     accounts: deps.accounts,
     approvals: new AssistantApprovals(prisma, audit, deps.outbox),
     confirmations: new AssistantConfirmations(prisma),
+    driver: { moves: new MovesService(prisma, audit, deps.outbox) },
     featureOn: (garageId, key) => featureOn(prisma, garageId, key),
     garage: {
       daySheet: new DaySheetService(prisma),

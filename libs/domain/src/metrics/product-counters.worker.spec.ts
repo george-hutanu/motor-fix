@@ -45,7 +45,10 @@ describe("the worker's product counters at start", () => {
 
     const all = await series();
     const emails = Object.entries(TEMPLATES).filter(
-      ([name, text]) => text.email && !name.startsWith('REVIEW_DECIDED.'),
+      ([name, text]) =>
+        text.email &&
+        !name.startsWith('REVIEW_DECIDED.') &&
+        !name.startsWith('BOOKING_MOVE_'),
     );
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
@@ -54,6 +57,11 @@ describe("the worker's product counters at start", () => {
     expect(
       named(all, 'motorfix_emails_sent_total').filter((one) =>
         String(one.labels['template']).startsWith('REVIEW_DECIDED.'),
+      ),
+    ).toEqual([]);
+    expect(
+      named(all, 'motorfix_emails_sent_total').filter((one) =>
+        String(one.labels['template']).startsWith('BOOKING_MOVE_'),
       ),
     ).toEqual([]);
     // Its own 62, one per e-mailed template, and one per support e-mail kind

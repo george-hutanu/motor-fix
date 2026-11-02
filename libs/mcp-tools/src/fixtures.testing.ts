@@ -207,6 +207,7 @@ export function context(
     features: Record<string, boolean>;
     maintenance: boolean;
     account: LoadedAccount;
+    driver: Partial<ToolContext['driver']>;
     garage: Partial<ToolContext['garage']>;
   }> = {},
 ): ToolContext {
@@ -217,6 +218,10 @@ export function context(
     },
     approvals: overrides.approvals ?? memoryApprovals(),
     confirmations: overrides.confirmations ?? memoryConfirmations(),
+    driver: {
+      moves: { ask: unused, preview: unused },
+      ...overrides.driver,
+    },
     featureOn: async (_garageId, key) => overrides.features?.[key] ?? true,
     garage: {
       daySheet: { get: unused },

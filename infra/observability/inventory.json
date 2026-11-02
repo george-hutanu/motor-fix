@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 277,
+    "count": 278,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -575,9 +575,10 @@
       "source": "libs/domain/src/quotes/decline-window/decline-window.module.ts",
       "dashboard": "motorfix-queues",
       "alerts": [
-        "decline-window-sweep-late"
+        "decline-window-sweep-late",
+        "worker-jobs-failed"
       ],
-      "reason": "carries the relay's request.declined events and each decline's undo-window timer and sweep; counted by motorfix_decline_windows_closed_total (sent, muted, skipped_undone, skipped_closed, already_told, by timer or sweep) with one DeclineWindow log line per window naming the recipient id; BullMQ's queue metrics cover depth and failures; decline-window-sweep-late fires when the sweep closes more than 10 windows in an hour (lost timers)",
+      "reason": "carries the relay's request.declined events and each decline's undo-window timer and sweep; counted by motorfix_decline_windows_closed_total (sent, muted, skipped_undone, skipped_closed, already_told, by timer or sweep) with one DeclineWindow log line per window naming the recipient id; BullMQ's queue metrics cover depth and failures; decline-window-sweep-late fires when the sweep closes more than 10 windows in an hour (lost timers); it also carries the relay's booking.move_proposed events and each asked move's lapse timer (job move-lapse, swept with the rest), one MoveLapse log line per fire naming the booking and move ids, lapses counted by motorfix_booking_moves_total{outcome=\"lapsed\"}; worker-jobs-failed fires when that job fails for good",
       "story": "ST-345"
     },
     {
@@ -2611,6 +2612,19 @@
       "story": "ST-389"
     },
     {
+      "kind": "queue",
+      "name": "booking-move",
+      "source": "libs/domain/src/notifications/booking-move/booking-move.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one BookingMove log line per job naming the move id and how many were told: the garage's owners and receptionists of a move asked, the driver of a move that lapsed; BullMQ's queue metrics cover depth and failures; the moves themselves are counted by motorfix_booking_moves_total",
+      "story": "ST-184"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_booking_confirms_total",
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
@@ -2629,6 +2643,17 @@
       ],
       "reason": "counts each lapsed booking by what became of its request (quoted when another quote is open, closed) and whether the timer or the sweep lapsed it; a rising sweep share means lost timers, which booking-lapse-sweep-late watches",
       "story": "ST-389"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_booking_moves_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "on the product dashboard row \"Mutări de programare\" (ids 243, 244), counts each booking move by outcome (asked, lapsed) and side, with no identifiers; one BookingMove log line per ask and one MoveLapse line per lapse naming the booking and move ids; a move-lapse timer job on quote-timers that fails for good counts in motorfix_jobs_total{job_name=\"move-lapse\", outcome=\"failed\"}, which worker-jobs-failed watches",
+      "story": "ST-184"
     },
     {
       "kind": "queue",
@@ -2755,6 +2780,19 @@
       ],
       "reason": "one Confirm log line per try naming the booking id and the outcome; the count by outcome is the motorfix_booking_confirms_total entry",
       "story": "ST-389"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-moves",
+      "source": "libs/domain/src/quotes/moves/moves.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/moves",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one BookingMove log line per ask naming the booking and move ids, a warn line per refusal with its code; asks counted by motorfix_booking_moves_total",
+      "story": "ST-184"
     },
     {
       "kind": "endpoint",

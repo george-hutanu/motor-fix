@@ -10,6 +10,7 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { BookingDto } from '../models/booking-dto';
+import { BookingMoveDto } from '../models/booking-move-dto';
 import { cancelBookingControllerCancel } from '../fn/bookings/cancel-booking-controller-cancel';
 import { CancelBookingControllerCancel$Params } from '../fn/bookings/cancel-booking-controller-cancel';
 import { confirmControllerConfirm } from '../fn/bookings/confirm-controller-confirm';
@@ -18,6 +19,8 @@ import { confirmControllerOptions } from '../fn/bookings/confirm-controller-opti
 import { ConfirmControllerOptions$Params } from '../fn/bookings/confirm-controller-options';
 import { ConfirmOptionsDto } from '../models/confirm-options-dto';
 import { GarageBookingDto } from '../models/garage-booking-dto';
+import { movesControllerAsk } from '../fn/bookings/moves-controller-ask';
+import { MovesControllerAsk$Params } from '../fn/bookings/moves-controller-ask';
 import { noShowControllerRecord } from '../fn/bookings/no-show-controller-record';
 import { NoShowControllerRecord$Params } from '../fn/bookings/no-show-controller-record';
 import { noShowControllerWithdraw } from '../fn/bookings/no-show-controller-withdraw';
@@ -126,6 +129,39 @@ export class BookingsService extends BaseService {
   cancelBookingControllerCancel(params: CancelBookingControllerCancel$Params, context?: HttpContext): Promise<BookingDto> {
     const resp = this.cancelBookingControllerCancel$Response(params, context);
     return resp.then((r: StrictHttpResponse<BookingDto>): BookingDto => r.body);
+  }
+
+  /** Path part for operation `movesControllerAsk()` */
+  static readonly MovesControllerAskPath = '/api/v1/bookings/{id}/moves';
+
+  /**
+   * Ask the garage to move a confirmed booking to a free start; the booking keeps its time until the garage answers.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `movesControllerAsk()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  movesControllerAsk$Response(params: MovesControllerAsk$Params, context?: HttpContext): Promise<StrictHttpResponse<BookingMoveDto>> {
+    const obs = movesControllerAsk(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Ask the garage to move a confirmed booking to a free start; the booking keeps its time until the garage answers.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `movesControllerAsk$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  movesControllerAsk(params: MovesControllerAsk$Params, context?: HttpContext): Promise<BookingMoveDto> {
+    const resp = this.movesControllerAsk$Response(params, context);
+    return resp.then((r: StrictHttpResponse<BookingMoveDto>): BookingMoveDto => r.body);
   }
 
   /** Path part for operation `noShowControllerRecord()` */
