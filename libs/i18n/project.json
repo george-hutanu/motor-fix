@@ -13,9 +13,6 @@
         "{workspaceRoot}/vitest.shared.ts",
         "{workspaceRoot}/apps/web/src/**/*",
         {
-          "env": "TEST_SUITE"
-        },
-        {
           "externalDependencies": [
             "vitest",
             "@angular/build",
@@ -30,7 +27,6 @@
       ],
       "options": {
         "buildTarget": "i18n:test-build:development",
-        "isolate": true,
         "runner": "vitest",
         "runnerConfig": "libs/i18n/vitest.config.ts",
         "setupFiles": ["libs/i18n/src/test-setup.ts"],

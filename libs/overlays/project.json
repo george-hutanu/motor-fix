@@ -10,7 +10,6 @@
       "executor": "@angular/build:unit-test",
       "options": {
         "buildTarget": "overlays:test-build:development",
-        "isolate": true,
         "runner": "vitest",
         "runnerConfig": "libs/overlays/vitest.config.ts",
         "setupFiles": ["libs/overlays/src/test-setup.ts"],

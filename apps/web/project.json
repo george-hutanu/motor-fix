@@ -88,7 +88,6 @@
           "app/app.config.spec.ts",
           "app/app.config.server.adversary.spec.ts"
         ],
-        "isolate": true,
         "runner": "vitest",
         "runnerConfig": "apps/web/vitest.config.ts",
         "setupFiles": ["apps/web/src/test-setup.ts"],
@@ -105,7 +104,6 @@
           "app/app.config.spec.ts",
           "app/app.config.server.adversary.spec.ts"
         ],
-        "isolate": true,
         "runner": "vitest",
         "runnerConfig": "apps/web/vitest-node.config.ts",
         "setupFiles": ["apps/web/src/test-setup.ts"],

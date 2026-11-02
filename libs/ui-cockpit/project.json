@@ -10,7 +10,6 @@
       "executor": "@angular/build:unit-test",
       "options": {
         "buildTarget": "ui-cockpit:test-build:development",
-        "isolate": true,
         "runner": "vitest",
         "runnerConfig": "libs/ui-cockpit/vitest.config.ts",
         "setupFiles": ["libs/ui-cockpit/src/test-setup.ts"],

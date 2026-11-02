@@ -9,7 +9,6 @@
       "executor": "@angular/build:unit-test",
       "options": {
         "buildTarget": "media:test-build:development",
-        "isolate": true,
         "runner": "vitest",
         "runnerConfig": "libs/media/vitest.config.ts",
         "setupFiles": ["libs/media/src/test-setup.ts"],
