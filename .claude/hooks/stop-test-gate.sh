@@ -5,12 +5,12 @@
 # with only // TODO comments" (spec-kit Discussion #1619).
 #
 # Ported from speckit-demo (`npm test && npm run lint` on every stop). Running
-# the whole Jest suite plus a workspace typecheck at every stop is too slow in
+# every suite plus a workspace typecheck at every stop is too slow in
 # this monorepo, so the gate is scoped to what actually changed:
 #   - `vitest run --changed` per changed project on Vitest, against its own
 #     config (the five Angular projects' vitest.config.ts, web's node specs on
 #     vitest-node.config.ts, any other project's nearest vitest.config.mts),
-#     and `jest --onlyChanged` — the tests related to uncommitted changes
+#     and `jest --onlyChanged` for changed files no Vitest config claims
 #   - `biome check` on the changed TS files
 # Each half is skipped while its tool is not installed yet (before the Nx
 # scaffold lands).
@@ -22,8 +22,8 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-# The Vitest config of a path under one of the Angular projects, or nothing for
-# a project on Jest (the same table as post-edit-check.sh).
+# The Vitest config of a path under one of the Angular projects, or nothing
+# (the same function as post-edit-check.sh, kept equal by stop-test-gate.spec.mjs).
 vitest_config() {
   case "$1" in
     apps/web/src/server/*|apps/web/src/app/app.config.spec.ts|apps/web/src/app/app.config.server.adversary.spec.ts) echo apps/web/vitest-node.config.ts ;;

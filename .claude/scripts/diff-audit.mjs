@@ -27,7 +27,12 @@ const add = (level, rule, where, message) => findings.push({ level, rule, where,
 
 const git = (args) => {
   try {
-    return execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return execFileSync("git", args, {
+      cwd: repo,
+      encoding: "utf8",
+      maxBuffer: 512 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
   } catch {
     return "";
   }
@@ -59,12 +64,32 @@ const sources = changed.filter(isSource);
 
 // Added lines only: a rule that fires on pre-existing code turns the audit into
 // noise the reader learns to skip.
+// The branch's diff and the working tree's, each read once and split by file:
+// one git call per changed file took a minute on a branch of 500 files.
+let addedByFile;
+let filesAtBase;
+const atBase = () => (filesAtBase ??= new Set(git(["ls-tree", "-r", "--name-only", base]).split("\n")));
+const addedOf = (file) => {
+  if (!addedByFile) {
+    addedByFile = new Map();
+    for (const diff of base ? [git(["diff", "--no-color", `${base}..HEAD`]), git(["diff", "--no-color", "HEAD"])] : []) {
+      let lines;
+      for (const l of diff.split("\n")) {
+        if (l.startsWith("diff --git ")) lines = undefined;
+        else if (l.startsWith("+++ ")) {
+          const path = l.startsWith("+++ b/") ? l.slice(6) : null;
+          if (path) {
+            if (!addedByFile.has(path)) addedByFile.set(path, []);
+            lines = addedByFile.get(path);
+          }
+        } else if (lines && l.startsWith("+")) lines.push(l.slice(1));
+      }
+    }
+  }
+  return addedByFile.get(file) ?? [];
+};
 const addedLines = (file) => {
-  const diff = base ? git(["diff", `${base}..HEAD`, "--", file]) + git(["diff", "HEAD", "--", file]) : "";
-  const fromDiff = diff
-    .split("\n")
-    .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
-    .map((l) => l.slice(1));
+  const fromDiff = addedOf(file);
   // Untracked files have no diff; every line is new.
   return fromDiff.length > 0 ? fromDiff : readFileSync(join(repo, file), "utf8").split("\n");
 };
@@ -177,7 +202,7 @@ for (const file of changed.filter((f) => /\.[cm]?tsx?$/.test(f))) {
 //    nothing anywhere refers to it, which is the shape of code written ahead of
 //    a need.
 for (const file of sources) {
-  const isNew = base ? !git(["ls-tree", base, "--", file]).trim() : true;
+  const isNew = base ? !atBase().has(file) : true;
   if (!isNew) continue;
   // Nest plumbing (module/controller/dto) and fixtures are exercised through
   // the app's e2e suite rather than by a direct import, so this rule cannot
@@ -213,7 +238,7 @@ for (const file of sources) {
       add("WARN", "extension-list", file, "hand-rolled file-extension list — the reviewer asks for `istextorbinary` every time; an extension list also misses the OOM case (large binary with a text extension)");
     }
   }
-  const isNew = base ? !git(["ls-tree", base, "--", file]).trim() : true;
+  const isNew = base ? !atBase().has(file) : true;
   if (isNew && basename(file) === "index.ts" && !/^libs\/[^/]+\/src\/index\.ts$/.test(file)) {
     add("WARN", "index-ts", file, "new `index.ts` outside a package barrel — name the file for what it holds; index files \"become messy once we have a lot of them\"");
   }

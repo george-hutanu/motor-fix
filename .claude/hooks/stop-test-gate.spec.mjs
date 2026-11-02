@@ -48,16 +48,23 @@ afterEach(() => rmSync(repo, { recursive: true, force: true }));
 // Each stop starts npx once or twice, which on a busy machine outlasts 5 s.
 // @traces 1338-FR-014
 describe('the stop gate with Vitest and Jest projects', { timeout: 30_000 }, () => {
-  it('runs the Vitest specs related to a changed file of a Vitest project, beside jest --onlyChanged', () => {
+  // @traces 1332-angular-vitest-FR-015
+  it('runs the Vitest specs related to a changed file of a Vitest project, and asks Jest only about the rest', () => {
     stub('jest', 0);
     stub('vitest', 0);
     write('libs/nest/src/a.ts', 'export const a = 2;\n');
 
-    const run = stop();
+    let run = stop();
+
+    assert.equal(run.status, 0, run.stderr);
+    assert.doesNotMatch(calls(), /^jest/m);
+    assert.match(calls(), /^vitest run --changed --config libs\/nest\/vitest\.config\.mts/m);
+
+    write('libs/ng/src/b.ts', 'export const b = 2;\n');
+    run = stop();
 
     assert.equal(run.status, 0, run.stderr);
     assert.match(calls(), /^jest --onlyChanged/m);
-    assert.match(calls(), /^vitest run --changed --config libs\/nest\/vitest\.config\.mts/m);
   });
 
   it('blocks the stop when those Vitest specs fail', () => {
@@ -91,5 +98,16 @@ describe('the stop gate with Vitest and Jest projects', { timeout: 30_000 }, () 
 
     assert.equal(run.status, 0, run.stderr);
     assert.doesNotMatch(calls(), /^vitest/m);
+  });
+});
+
+// The two edit-time hooks map a path to its Vitest config with the same
+// function; each is fingerprinted on its own, so they hold a copy each.
+describe('vitest_config', () => {
+  it('is the same function in post-edit-check.sh and stop-test-gate.sh', () => {
+    const fn = (script) =>
+      readFileSync(new URL(`./${script}`, import.meta.url), 'utf8').match(/^vitest_config\(\) \{[\s\S]*?^\}$/m)?.[0];
+    assert.ok(fn('stop-test-gate.sh'));
+    assert.equal(fn('post-edit-check.sh'), fn('stop-test-gate.sh'));
   });
 });

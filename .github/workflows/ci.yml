@@ -220,7 +220,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           TEST_SUITE: unit
-        # No --passWithNoTests: the Angular unit-test builder refuses it, and
+        # No pass-with-no-tests flag: the Angular unit-test builder refuses it, and
         # both presets pass a project with no spec of the chosen suite.
         run: npx nx $NX_SCOPE -t test
 

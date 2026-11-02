@@ -264,8 +264,8 @@ describe('ci workflow', () => {
     },
   );
 
-  // The Angular unit-test builder refuses a flag its schema lacks; the Jest
-  // preset already passes an empty suite.
+  // The Angular unit-test builder refuses a flag its schema lacks; every
+  // Vitest config already passes a project with no spec of the suite.
   // @traces 1332-angular-vitest-FR-013
   it('runs the unit tests without a flag only Jest knows', () => {
     expect(step(job('unit'), 'Unit tests')).not.toContain('--passWithNoTests');

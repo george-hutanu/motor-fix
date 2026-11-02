@@ -15,7 +15,7 @@
 #      the five Angular projects (apps/web, libs/ui-cockpit, libs/overlays,
 #      libs/i18n, libs/media; web's node specs on vitest-node.config.ts) or,
 #      in another project with a vitest.config.mts, with the nearest one above
-#      the spec; the root jest config for every other project; unless the
+#      the spec; Jest's root config only for a spec no Vitest config claims; unless the
 #      runner took 5 s or more on it in the last 7 days (spec-durations.mjs
 #      keeps the runner's own time per spec); a slow spec is left to the Stop
 #      gate
@@ -33,8 +33,9 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-# The Vitest config of a path under one of the Angular projects, or nothing for
-# a project on Jest.
+# The Vitest config of a path under one of the Angular projects, or nothing.
+# stop-test-gate.sh holds the same function; stop-test-gate.spec.mjs keeps the
+# two equal (a sourced file would sit outside the registry's fingerprints).
 vitest_config() {
   case "$1" in
     apps/web/src/server/*|apps/web/src/app/app.config.spec.ts|apps/web/src/app/app.config.server.adversary.spec.ts) echo apps/web/vitest-node.config.ts ;;

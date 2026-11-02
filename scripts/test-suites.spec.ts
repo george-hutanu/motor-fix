@@ -169,7 +169,9 @@ describe('the unit and integration suites', () => {
     });
   }
 
-  it.each(['libs/contracts', 'libs/i18n'])(
+  // The Angular projects run on the unit-test builder, which reads no
+  // TEST_SUITE, so only a project on its own Vitest config is asked.
+  it.each(['libs/contracts'])(
     '%s refuses a suite it does not know, naming the three it does',
     (project) => {
       const run = listTests(project, 'e2e');
@@ -183,7 +185,8 @@ describe('the unit and integration suites', () => {
 
   // @traces 1338-FR-001
   // @traces 1338-FR-002
-  it('runs the Nest projects on Vitest and the Angular projects on Jest', () => {
+  // @traces 1332-angular-vitest-FR-001
+  it('runs the Nest projects on their Vitest config and the Angular projects on the unit-test builder', () => {
     const nest = [
       'apps/api',
       'apps/worker',
@@ -203,7 +206,16 @@ describe('the unit and integration suites', () => {
       'libs/overlays',
     ];
     expect(nest.map(runnerOf)).toEqual(nest.map(() => 'vitest'));
-    expect(angular.map(runnerOf)).toEqual(angular.map(() => 'jest'));
+    const builder = (project: string) => {
+      const { executor, options } = JSON.parse(
+        readFileSync(join(root, project, 'project.json'), 'utf8'),
+      ).targets.test;
+      return `${executor} ${options.runner}`;
+    };
+    expect(angular.map(builder)).toEqual(
+      angular.map(() => '@angular/build:unit-test vitest'),
+    );
+    expect(angular.map(runnerOf)).toEqual(angular.map(() => undefined));
     expect(runnerOf('libs/data-access')).toBeUndefined();
   });
 
@@ -371,7 +383,7 @@ describe('the Nest projects on Vitest', () => {
   });
 
   // @traces 1338-FR-015
-  it('rename the suite variable in the texts that name it, and leave the Jest rules to ST-1304', () => {
+  it("rename the suite variable in the texts that name it, and name Vitest as every project's runner", () => {
     const read = (path: string) => readFileSync(join(root, path), 'utf8');
     for (const path of [
       '.claude/skills/speckit-auto/lifecycle.md',
@@ -380,8 +392,10 @@ describe('the Nest projects on Vitest', () => {
     ])
       expect(read(path)).not.toContain('JEST_SUITE');
 
-    expect(read('AGENTS.md')).toContain('Tests: Jest from the root config');
-    expect(read('.specify/memory/constitution.md')).toContain(
+    expect(read('AGENTS.md')).toContain(
+      'Tests: Vitest in every project (Angular via its builder)',
+    );
+    expect(read('.specify/memory/constitution.md')).not.toContain(
       'run on Jest from the root config',
     );
   });
@@ -405,9 +419,8 @@ describe('the Nest projects on Vitest', () => {
   });
 });
 
-// A Jest worker that keeps growing across a long project's files (the web
-// suite reached a 4 GB heap on CI and crashed) is replaced after a file once it
-// passes its limit: every Jest project resolves one, well under that heap.
+// No project has a Jest config left: a Jest worker's memory limit (the web
+// suite once reached a 4 GB heap on CI) guards nothing any more.
 function jestProjects(): string[] {
   return ['apps', 'libs'].flatMap((area) =>
     readdirSync(join(root, area), { withFileTypes: true })
@@ -421,51 +434,9 @@ function jestProjects(): string[] {
   );
 }
 
-function resolvedLimit(project: string): unknown {
-  const run = spawnSync(process.execPath, [jestBin, '--showConfig'], {
-    cwd: join(root, project),
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      TS_NODE_COMPILER_OPTIONS: JSON.stringify({
-        customConditions: null,
-        module: 'commonjs',
-        moduleResolution: 'node10',
-      }),
-    },
-  });
-  if (run.status !== 0) return run.stderr;
-  return (
-    JSON.parse(run.stdout) as {
-      globalConfig: { workerIdleMemoryLimit?: unknown };
-    }
-  ).globalConfig.workerIdleMemoryLimit;
-}
-
-describe('the Jest worker memory limit', () => {
+describe('the projects left on Jest', () => {
   // @traces 1332-angular-vitest-FR-001
-  it('finds the API among the Jest projects, and none of the Angular projects', () => {
-    expect(jestProjects()).toContain('apps/api');
-    expect(
-      jestProjects().filter((p) =>
-        [
-          'apps/web',
-          'libs/ui-cockpit',
-          'libs/overlays',
-          'libs/i18n',
-          'libs/media',
-        ].includes(p),
-      ),
-    ).toEqual([]);
+  it('are none: the Angular projects joined the Nest ones on Vitest', () => {
+    expect(jestProjects()).toEqual([]);
   });
-
-  it.each(jestProjects())(
-    '%s replaces a worker before it nears the 4 GB heap the web suite crashed at',
-    (project) => {
-      const limit = resolvedLimit(project);
-      expect(typeof limit).toBe('number');
-      expect(limit as number).toBeGreaterThan(0);
-      expect(limit as number).toBeLessThanOrEqual(2 * 1024 ** 3);
-    },
-  );
 });

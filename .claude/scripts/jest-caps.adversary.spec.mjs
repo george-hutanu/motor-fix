@@ -169,7 +169,7 @@ describe('AGENTS.md names the knobs', () => {
 
   it('keeps the heavy-commands rules it shares a bullet with', () => {
     const text = readFileSync(join(root, 'AGENTS.md'), 'utf8').replace(/\s+/g, ' ');
-    assert.match(text, /Jest over more than a few files/);
+    assert.match(text, /Vitest over more than a few files/);
     assert.match(text, /4 slots machine-wide, 2 in a cloud session/);
     assert.match(text, /a dev server never holds a slot, and mutation tests never run locally/);
   });
