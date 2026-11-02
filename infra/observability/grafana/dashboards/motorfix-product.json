@@ -7056,6 +7056,83 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 242,
+      "type": "row",
+      "title": "Mutări de programare",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 327
+      },
+      "panels": []
+    },
+    {
+      "id": 243,
+      "type": "stat",
+      "title": "Booking moves, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 328
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome, side) (increase(motorfix_booking_moves_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}} {{side}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 244,
+      "type": "stat",
+      "title": "Booking moves, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 328
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome, side) (increase(motorfix_booking_moves_total{deployment_environment=\"$env\"}[24h]))",
+          "legendFormat": "{{outcome}} {{side}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
     }
   ]
 }

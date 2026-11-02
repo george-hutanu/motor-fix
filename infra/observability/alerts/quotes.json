@@ -118,6 +118,62 @@
               }
             }
           ]
+        },
+        {
+          "uid": "move-lapse-failed",
+          "title": "Booking move lapses failing for good",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "worker"
+          },
+          "annotations": {
+            "summary": "A move-lapse job failed its last attempt in the last 15 minutes: a driver's move ask stayed open past its lapse time and the driver was not told ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-queues",
+            "runbook": "Read the worker's MoveLapse log lines for the move id, fix the cause; the quote-timers sweep lapses the move on its next pass."
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 900,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"quote-timers\", job_name=\"move-lapse\", outcome=\"failed\"}[15m]))",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }
