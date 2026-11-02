@@ -111,10 +111,24 @@ describe('hostile text', () => {
     expect((await log({ what: 'ș'.repeat(121) })).status).toBe(400);
   });
 
-  it('answers 400 or 201, never 500, to a lone surrogate', async () => {
+  it.each([
+    ['what', 'ab\ud800cd'],
+    ['what', 'ab\udc00cd'],
+    ['garageName', 'Garaj \ud800'],
+  ])(
+    'refuses %s holding a lone surrogate, never a 500',
+    async (field, value) => {
+      const { car, log } = await scene();
+      const res = await log({ [field]: value });
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body.message)).toContain(field);
+      expect(await prisma.repair.count({ where: { carId: car.id } })).toBe(0);
+    },
+  );
+
+  it('keeps a paired surrogate, an emoji, as text', async () => {
     const { log } = await scene();
-    const res = await log({ what: 'ab\ud800cd' });
-    expect([201, 400]).toContain(res.status);
+    expect((await log({ what: 'Ulei 🔧' })).status).toBe(201);
   });
 
   it('keeps an SQL fragment as plain text', async () => {

@@ -150,10 +150,14 @@ describe('the q parameter', () => {
     expect((await pick('q=ab&q=cd', await driver())).status).toBe(400);
   });
 
-  it('answers 400 or an empty list, never 500, to a NUL byte', async () => {
-    const res = await pick('q=ab%00cd', await driver());
-    expect([200, 400]).toContain(res.status);
-  });
+  // A query string cannot carry a lone surrogate: broken UTF-8 decodes to U+FFFD.
+  it.each(['ab%00cd', 'ab%07cd'])(
+    'refuses q=%s holding a control character, never a 500',
+    async (q) => {
+      const res = await pick(`q=${q}`, await driver());
+      expect(res.status).toBe(400);
+    },
+  );
 
   it('keeps an SQL fragment as text and leaves the garages alone', async () => {
     await garage('Nord Auto');
