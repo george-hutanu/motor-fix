@@ -7,6 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { checkListing } from '@motor-fix/contracts/listing-check';
 import { BrandsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { BrandsStep } from './brands-step';
 import { forStep } from '../field-watch';
@@ -52,7 +53,7 @@ const page = (items: Brand[]) => ({
   total: items.length,
 });
 
-let search: jest.Mock;
+let search: Mock;
 
 async function open(
   language: 'ro' | 'en' = 'ro',
@@ -142,7 +143,7 @@ const results = (step: HTMLElement) => [
 ];
 
 beforeEach(() => {
-  search = jest.fn(async (params?: { q?: string }) => {
+  search = vi.fn(async (params?: { q?: string }) => {
     if (!params?.q) return page(CATALOGUE);
     const q = params.q.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
     return page(
@@ -1148,7 +1149,7 @@ describe('the last fuel of a taken brand', () => {
 describe('the whole catalogue', () => {
   const MORE = ['Lancia', 'Jeep', 'Lada'].map((name, i) => brand(name, 20 + i));
   beforeEach(() => {
-    search = jest.fn(async (params?: { cursor?: string; q?: string }) =>
+    search = vi.fn(async (params?: { cursor?: string; q?: string }) =>
       params?.cursor === 'next'
         ? { items: MORE, nextCursor: null, total: 23 }
         : { items: CATALOGUE, nextCursor: 'next', total: 23 },

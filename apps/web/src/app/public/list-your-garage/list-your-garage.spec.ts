@@ -21,6 +21,7 @@ import { GaragesService } from '@motor-fix/data-access/services/garages.service'
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ListYourGarage } from './list-your-garage';
 import { Consent } from '../../consent/consent';
@@ -39,21 +40,21 @@ let frames = 0;
 let wide = false;
 const actionsHeight = 72;
 const scrolls: ScrollIntoViewOptions[] = [];
-const signIn = { join: jest.fn(), start: jest.fn() };
+const signIn = { join: vi.fn(), start: vi.fn() };
 // The account behind the page: none until the dialog makes one.
 const session = {
   current: signal<object | null>(null),
-  load: jest.fn(),
+  load: vi.fn(),
   roleHint: signal<string | null>(null),
-  switchRole: jest.fn(),
+  switchRole: vi.fn(),
 };
-const consent = { granted: () => false, track: jest.fn() };
+const consent = { granted: () => false, track: vi.fn() };
 // The status view's read and its live stream, which these cases never drive.
-const garages = { verificationStatusControllerRead: jest.fn() };
+const garages = { verificationStatusControllerRead: vi.fn() };
 const live = {
-  close: jest.fn(),
+  close: vi.fn(),
   on: () => new Subject(),
-  open: jest.fn(),
+  open: vi.fn(),
   resync: new Subject<void>(),
 };
 // The catalogue behind step 2's chips, read through its own client.
@@ -64,7 +65,7 @@ const DACIA = {
   slug: 'dacia',
 };
 const catalogue = {
-  brandsControllerSearch: jest.fn(async () => ({
+  brandsControllerSearch: vi.fn(async () => ({
     items: [DACIA],
     nextCursor: null,
     total: 1,
@@ -79,20 +80,20 @@ const JOBS = [
   { id: jobId(3), key: 'front-brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
 ];
 const jobs = {
-  jobTypesControllerSearch: jest.fn(async () => ({ items: JOBS })),
+  jobTypesControllerSearch: vi.fn(async () => ({ items: JOBS })),
 };
 // The legal holidays step 5 lists, read through their own client.
-const holidays = { publicHolidaysControllerList: jest.fn(async () => []) };
+const holidays = { publicHolidaysControllerList: vi.fn(async () => []) };
 // The address look-up and the map of step 5, both stood in for.
 const places = {
-  placesControllerSearch: jest.fn(async (_asked?: unknown) => ({
+  placesControllerSearch: vi.fn(async (_asked?: unknown) => ({
     items: [{ label: 'Strada Exemplu 1, București', lat: 44.43, lng: 26.1 }],
   })),
 };
 let mapEvents: PlaceMapEvents | undefined;
-const placeMap = jest.fn(async (_host: HTMLElement, events: PlaceMapEvents) => {
+const placeMap = vi.fn(async (_host: HTMLElement, events: PlaceMapEvents) => {
   mapEvents = events;
-  return { destroy: jest.fn(), show: jest.fn() };
+  return { destroy: vi.fn(), show: vi.fn() };
 });
 
 beforeEach(() => {
@@ -109,9 +110,8 @@ beforeEach(() => {
     .mockReturnValue(new Promise(() => undefined));
   tops = [1000, 2000, 3000, 4000, 5000, 6000];
   scrolls.length = 0;
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockImplementation(function (this: HTMLElement) {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+    function (this: HTMLElement) {
       const sections = [...document.querySelectorAll('section h2')];
       if (this.classList.contains('actions'))
         return {
@@ -121,14 +121,15 @@ beforeEach(() => {
         } as DOMRect;
       const top = tops[sections.indexOf(this)] ?? 0;
       return { bottom: top + 40, height: 40, top } as DOMRect;
-    });
+    },
+  );
   // A frame runs once the task that asked for it is over.
-  jest.spyOn(window, 'requestAnimationFrame').mockImplementation((run) => {
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((run) => {
     void Promise.resolve().then(() => run(0));
     return ++frames;
   });
   wide = false;
-  jest.spyOn(window, 'matchMedia').mockImplementation(
+  vi.spyOn(window, 'matchMedia').mockImplementation(
     (query: string) =>
       ({
         addEventListener() {},
@@ -147,7 +148,7 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 async function open(path: string, reduced = false) {
   TestBed.configureTestingModule({
@@ -406,36 +407,36 @@ describe('the current step', () => {
     delete (window as { onscrollend?: unknown }).onscrollend;
     try {
       const { harness, page } = await open('/ro/list-your-garage');
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+      vi.useFakeTimers({ toNotFake: ['setImmediate'] });
 
       entries(page)[3].click();
-      await jest.advanceTimersByTimeAsync(200);
+      await vi.advanceTimersByTimeAsync(200);
       tops = [990, 1990, 2990, 3990, 4990, 5990];
       window.dispatchEvent(new Event('scroll'));
       await settle(harness);
       expect(current(page)).toEqual(['4 Mecanici · opțional']);
 
-      await jest.advanceTimersByTimeAsync(140);
+      await vi.advanceTimersByTimeAsync(140);
       tops = [-10, 990, 1990, 2990, 3990, 4990];
       window.dispatchEvent(new Event('scroll'));
       await settle(harness);
       expect(current(page)).toEqual(['4 Mecanici · opțional']);
 
-      await jest.advanceTimersByTimeAsync(140);
+      await vi.advanceTimersByTimeAsync(140);
       tops = [-2010, -1010, -10, 990, 1990, 2990];
       window.dispatchEvent(new Event('scroll'));
       await settle(harness);
       expect(current(page)).toEqual(['4 Mecanici · opțional']);
 
-      await jest.advanceTimersByTimeAsync(160);
+      await vi.advanceTimersByTimeAsync(160);
       tops = [-2000, -1000, -10, 990, 1990, 2990];
       window.dispatchEvent(new Event('scroll'));
       // Under a fake clock a frame is a timer of its own.
-      await jest.advanceTimersByTimeAsync(16);
+      await vi.advanceTimersByTimeAsync(16);
       await settle(harness);
       expect(current(page)).toEqual(['3 Prețuri']);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
       if (onscrollend)
         Object.defineProperty(window, 'onscrollend', onscrollend);
     }
@@ -477,8 +478,8 @@ describe('the current step', () => {
   it('reads the layout by the tablet query and once per frame, however many scrolls the frame holds', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     expect(window.matchMedia).toHaveBeenCalledWith('(min-width: 768px)');
-    const styles = jest.spyOn(window, 'getComputedStyle');
-    const reads = HTMLElement.prototype.getBoundingClientRect as jest.Mock;
+    const styles = vi.spyOn(window, 'getComputedStyle');
+    const reads = HTMLElement.prototype.getBoundingClientRect as Mock;
     const headings = [...page.querySelectorAll('section h2')];
     reads.mockClear();
 
@@ -815,16 +816,16 @@ describe('the e-mail field and the save button', () => {
 
   it('keeps what was typed in the browser a second after the typing stops', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       type(harness, page, 'ion@');
-      await jest.advanceTimersByTimeAsync(900);
+      await vi.advanceTimersByTimeAsync(900);
       expect(stored()).toBeNull();
 
-      await jest.advanceTimersByTimeAsync(200);
+      await vi.advanceTimersByTimeAsync(200);
       expect(stored()).toMatchObject({ email: 'ion@', step: 1 });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -858,7 +859,7 @@ describe('the e-mail field and the save button', () => {
     const { harness, page } = await open('/ro/list-your-garage');
     // The jump back to the kept step starts late, as on a page still busy opening.
     await new Promise((resolve) => setTimeout(resolve, 250));
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       for (const flight of [
         [990, 1990, 2990, 3990, 4990, 5990],
@@ -874,20 +875,20 @@ describe('the e-mail field and the save button', () => {
       ended();
       window.dispatchEvent(new Event('scroll'));
       await settle(harness);
-      await jest.advanceTimersByTimeAsync(1100);
+      await vi.advanceTimersByTimeAsync(1100);
 
       expect(current(page)).toEqual(['3 Prețuri']);
       expect(stored()).toMatchObject({ step: 3 });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('goes on in memory when the browser keeps nothing, and says so', async () => {
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError');
     });
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('SecurityError');
     });
 
@@ -1023,20 +1024,20 @@ describe('the server copy', () => {
   it('is saved at most every five seconds while the owner types', async () => {
     const { harness, page } = await withServerCopy();
     const http = TestBed.inject(HttpTestingController);
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       type(harness, page, 'ion@service.t');
-      await jest.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(3_000);
       type(harness, page, 'ion@service.te');
-      await jest.advanceTimersByTimeAsync(1_900);
+      await vi.advanceTimersByTimeAsync(1_900);
       expect(http.match(() => true)).toEqual([]);
 
-      await jest.advanceTimersByTimeAsync(200);
+      await vi.advanceTimersByTimeAsync(200);
       const saves = http.match(() => true);
       expect(saves).toHaveLength(1);
       expect(saves[0].request.method).toBe('PATCH');
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -1438,38 +1439,38 @@ describe('the verification step', () => {
 
   it('keeps both values in the browser copy, stripped and in capitals, and drops an emptied one', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       fillIn(harness, cuiInput(page), 'RO 18547290');
       fillIn(harness, rarInput(page), ' ab123 ');
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
       expect(stored()?.data).toEqual({
         steps: { '6': { cui: '18547290', rarNumber: 'AB123' } },
       });
 
       fillIn(harness, rarInput(page), '');
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
       expect(stored()?.data).toEqual({ steps: { '6': { cui: '18547290' } } });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('sends both values to the server copy with the rest of the draft', async () => {
     const { harness, page } = await withServerCopy();
     const http = TestBed.inject(HttpTestingController);
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       fillIn(harness, cuiInput(page), '18547290');
       fillIn(harness, rarInput(page), 'ab123');
-      await jest.advanceTimersByTimeAsync(5_100);
+      await vi.advanceTimersByTimeAsync(5_100);
       const saves = http.match(() => true);
       expect(saves).toHaveLength(1);
       expect(saves[0].request.body).toMatchObject({
         data: { steps: { '6': { cui: '18547290', rarNumber: 'AB123' } } },
       });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -1618,11 +1619,11 @@ describe('the counter of five', () => {
   // @traces 206-FR-006
   it('keeps the tick and the name in the browser copy', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       tickBox(page).click();
       fillIn(harness, nameInput(page), ' Ion Popescu ');
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
       expect(stored()?.data).toEqual({
         declaredAt: expect.any(String),
         declaredByName: 'Ion Popescu',
@@ -1630,10 +1631,10 @@ describe('the counter of five', () => {
 
       tickBox(page).click();
       harness.detectChanges();
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
       expect(stored()?.data).toEqual({ declaredByName: 'Ion Popescu' });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
@@ -1646,11 +1647,11 @@ describe('the brands step in the draft', () => {
 
   it("keeps the marked brands and the texts as the draft's step 2 in the browser copy", async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       daciaChip(page).click();
       harness.detectChanges();
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
 
       expect(stored()?.data).toEqual({
         steps: {
@@ -1666,7 +1667,7 @@ describe('the brands step in the draft', () => {
         },
       });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -1748,16 +1749,16 @@ describe('the details, prices and mechanics in the draft', () => {
 
   it("keeps what step 1 holds as the draft's steps['1'] in the browser copy", async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       fillIn(harness, detailsField(page, 'name'), 'Service Popescu');
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
 
       expect(stored()?.data).toEqual({
         steps: { '1': { name: 'Service Popescu' } },
       });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -1960,11 +1961,11 @@ describe('the details, prices and mechanics in the draft', () => {
       data: { steps: { '5': { facilities: ['waiting_area'], place: STEFAN } } },
     });
     const { harness } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       mapEvents?.dragged({ lat: 44.452, lng: 26.121 });
       harness.detectChanges();
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
 
       expect(stored()?.data).toMatchObject({
         steps: {
@@ -1975,7 +1976,7 @@ describe('the details, prices and mechanics in the draft', () => {
         },
       });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -2028,21 +2029,21 @@ describe('the details, prices and mechanics in the draft', () => {
     });
     const { harness, page } = await open('/ro/list-your-garage');
     expect(page.querySelectorAll('mf-prices-step li.brand')).toHaveLength(1);
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       const lada = [
         ...page.querySelectorAll<HTMLButtonElement>('.chips button'),
       ].find((c) => text(c).startsWith('Lada')) as HTMLButtonElement;
       lada.click();
       harness.detectChanges();
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
 
       expect(stored()?.data).toMatchObject({
         steps: { '3': { jobs: [{ jobTypeId: jobId(3) }] } },
       });
       expect(page.querySelectorAll('mf-prices-step li.brand')).toHaveLength(0);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -2082,7 +2083,7 @@ describe('the details, prices and mechanics in the draft', () => {
 
   it("keeps the mechanics as the draft's steps['4']", async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       page
         .querySelector<HTMLButtonElement>('mf-mechanics-step button.add')
@@ -2095,14 +2096,14 @@ describe('the details, prices and mechanics in the draft', () => {
         ) as HTMLInputElement,
         'Ion Marin',
       );
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
 
       expect(stored()?.data).toEqual({
         steps: { '4': { mechanics: [{ name: 'Ion Marin' }] } },
       });
       expect(ticked(page)).toEqual([4]);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });

@@ -35,8 +35,9 @@ async function render(setup: (h: Host) => void, language: 'ro' | 'en' = 'ro') {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date('2026-10-08T09:00:00+03:00'),
+    toNotFake: [
       'setTimeout',
       'clearTimeout',
       'setInterval',
@@ -49,12 +50,11 @@ beforeEach(() => {
       'cancelAnimationFrame',
       'performance',
     ],
-    now: new Date('2026-10-08T09:00:00+03:00'),
   });
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 

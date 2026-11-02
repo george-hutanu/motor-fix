@@ -10,6 +10,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { AdminSuspended } from './admin-suspended';
 import { AdminRestoreGarage } from '../admin-restore-garage/admin-restore-garage';
@@ -40,7 +41,7 @@ const listOf = (count: number, total = count): AdminGaragesDto => ({
 });
 
 let events: Subject<LiveMessage>;
-let overlays: { open: jest.Mock };
+let overlays: { open: Mock };
 let resync: Subject<void>;
 let asked: { status: string; offset?: number; limit?: number }[];
 let answer: (read: {
@@ -59,7 +60,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   events = new Subject();
   resync = new Subject();
   asked = [];
-  overlays = { open: jest.fn(async () => 'cancelled') };
+  overlays = { open: vi.fn(async () => 'cancelled') };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -514,8 +515,10 @@ describe('putting a suspended garage back on the map from its row', () => {
 
   it('reads today at the press, so a list open past midnight opens the dialog on the new day', async () => {
     // Only the clock is faked: settle() still waits on real timers.
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      // 23:30 in Bucharest on 14 October.
+      now: new Date('2026-10-14T20:30:00.000Z'),
+      toNotFake: [
         'setTimeout',
         'clearTimeout',
         'setInterval',
@@ -531,14 +534,12 @@ describe('putting a suspended garage back on the map from its row', () => {
         'performance',
         'hrtime',
       ],
-      // 23:30 in Bucharest on 14 October.
-      now: new Date('2026-10-14T20:30:00.000Z'),
     });
     try {
       answer = one({});
       const el = await open();
       // 00:30 in Bucharest on 15 October.
-      jest.setSystemTime(new Date('2026-10-14T21:30:00.000Z'));
+      vi.setSystemTime(new Date('2026-10-14T21:30:00.000Z'));
 
       restoreOf(el)?.click();
       await settle();
@@ -550,7 +551,7 @@ describe('putting a suspended garage back on the map from its row', () => {
         }),
       );
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 

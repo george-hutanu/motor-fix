@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import type { MeDto } from '@motor-fix/data-access';
+import type { Mock } from 'vitest';
 
 import { setup } from './signed-in.testing';
 
@@ -33,19 +34,19 @@ const GARAGE = {
 function switchingSetup() {
   const { auth, me, session } = setup({
     auth: {
-      authControllerSignIn: jest.fn(() =>
+      authControllerSignIn: vi.fn(() =>
         Promise.resolve({ accessToken: 'signed-in' }),
       ),
-      authControllerSwitchRole: jest.fn(() =>
+      authControllerSwitchRole: vi.fn(() =>
         Promise.resolve({ accessToken: 'as-garage' }),
       ),
     },
-    me: { meControllerMe: jest.fn(() => Promise.resolve(DRIVER)) },
+    me: { meControllerMe: vi.fn(() => Promise.resolve(DRIVER)) },
   });
   return { auth, meControllerMe: me.meControllerMe, session };
 }
 
-function held(meControllerMe: jest.Mock) {
+function held(meControllerMe: Mock) {
   const pending: {
     resolve: (me: MeDto) => void;
     reject: (error: Error) => void;

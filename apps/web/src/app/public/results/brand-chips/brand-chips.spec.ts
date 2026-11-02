@@ -10,6 +10,7 @@ import {
   CarsService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { BrandChips } from './brand-chips';
 import { Session } from '../../../dashboard/session';
@@ -38,10 +39,10 @@ const ALFA = brand('Alfa', null);
 const car = (name: string): CarDto =>
   ({ brandId: `id-${name}`, brandName: name, id: `car-${name}` }) as CarDto;
 
-let popular: jest.Mock;
-let cars: jest.Mock;
-let load: jest.Mock;
-let gate: jest.Mock;
+let popular: Mock;
+let cars: Mock;
+let load: Mock;
+let gate: Mock;
 let current: ReturnType<typeof signal<{ role: Role } | null>>;
 let roleHint: ReturnType<typeof signal<Role | null>>;
 let fixture: ComponentFixture<BrandChips>;
@@ -66,10 +67,10 @@ async function chips(
 ) {
   current = signal(options.role ? { role: options.role } : null);
   roleHint = signal(options.hint ?? options.role ?? null);
-  load = jest.fn(async () => current());
-  gate = jest.fn(async () => false);
-  popular = jest.fn(options.popular ?? (async () => POPULAR));
-  cars = jest.fn(options.cars ?? (async () => ({ items: [] })));
+  load = vi.fn(async () => current());
+  gate = vi.fn(async () => false);
+  popular = vi.fn(options.popular ?? (async () => POPULAR));
+  cars = vi.fn(options.cars ?? (async () => ({ items: [] })));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -379,7 +380,7 @@ describe('BrandChips', () => {
     };
 
     it('scrolls the row to bring the marked chip into view, without scrollIntoView', async () => {
-      const into = jest.fn();
+      const into = vi.fn();
       Element.prototype.scrollIntoView = into;
       await chips({ answered: brand('Tesla'), bar: 'tesla' });
       await settle();

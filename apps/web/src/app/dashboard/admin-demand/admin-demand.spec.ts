@@ -328,15 +328,15 @@ describe('AdminDemand, the view', () => {
   });
 
   it('reads once on opening and never again by itself', async () => {
-    jest.useFakeTimers({ doNotFake: ['setTimeout', 'queueMicrotask'] });
+    vi.useFakeTimers({ toNotFake: ['setTimeout', 'queueMicrotask'] });
     try {
       await open();
-      jest.advanceTimersByTime(60 * 60 * 1000);
+      vi.advanceTimersByTime(60 * 60 * 1000);
       await settle();
 
       expect(reads).toBe(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 

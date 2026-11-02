@@ -9,7 +9,7 @@ import {
   text,
 } from '../lift-schedule/lift-schedule.testing';
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 const view = (options: Parameters<typeof renderPanel>[0] = {}) =>
   renderPanel({ ...options, host: ScheduleView });

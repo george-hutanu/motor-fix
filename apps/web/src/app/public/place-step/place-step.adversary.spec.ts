@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import type { BusinessKind, PlaceSection } from '@motor-fix/contracts';
 import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import {
   type OpenPlaceMap,
@@ -28,18 +29,17 @@ const suggestions = (n: number): Suggestion[] =>
     lng: 26.1,
   }));
 
-let search: jest.Mock;
+let search: Mock;
 let events: PlaceMapEvents;
 let failMap: boolean;
 const map = {
-  destroy: jest.fn(),
-  show: jest.fn<void, [Shown]>(),
+  destroy: vi.fn(),
+  show: vi.fn<(...args: [Shown]) => void>(),
 };
 const shown = () => map.show.mock.lastCall?.[0];
-const openMap: jest.Mock<
-  ReturnType<OpenPlaceMap>,
-  Parameters<OpenPlaceMap>
-> = jest.fn(async (_host, handlers) => {
+const openMap: Mock<
+  (...args: Parameters<OpenPlaceMap>) => ReturnType<OpenPlaceMap>
+> = vi.fn(async (_host, handlers) => {
   events = handlers;
   if (failMap) throw new Error('the style did not load');
   if (mapGate) await mapGate;
@@ -136,7 +136,7 @@ beforeEach(() => {
   openMap.mockClear();
   map.destroy.mockClear();
   map.show.mockClear();
-  search = jest.fn(async ({ q }: { q: string }) =>
+  search = vi.fn(async ({ q }: { q: string }) =>
     q.toLowerCase().includes('nicăieri') ? { items: [] } : { items: [STEFAN] },
   );
 });

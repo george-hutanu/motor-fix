@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { AdminBrands } from './admin-brands';
 
@@ -32,9 +33,9 @@ const SEED = [
 const conflict = (body: Record<string, unknown>) =>
   new HttpErrorResponse({ error: { status: 409, ...body }, status: 409 });
 
-let list: jest.Mock;
-let update: jest.Mock;
-let openDialog: jest.Mock;
+let list: Mock;
+let update: Mock;
+let openDialog: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -86,8 +87,8 @@ function type(input: HTMLInputElement, value: string) {
 }
 
 beforeEach(() => {
-  list = jest.fn(async () => ({ items: SEED.map((b) => ({ ...b })) }));
-  update = jest.fn(
+  list = vi.fn(async () => ({ items: SEED.map((b) => ({ ...b })) }));
+  update = vi.fn(
     async ({ id, body }: { id: string; body: Record<string, unknown> }) => {
       const before = SEED.find((b) => b.id === id) as AdminBrandDto;
       return {
@@ -100,7 +101,7 @@ beforeEach(() => {
       };
     },
   );
-  openDialog = jest.fn(async () => 'cancelled');
+  openDialog = vi.fn(async () => 'cancelled');
 });
 
 afterEach(() => TestBed.resetTestingModule());
@@ -184,14 +185,14 @@ describe('the brand list', () => {
   });
 
   it('says no brand matches when the list is empty', async () => {
-    list = jest.fn(async () => ({ items: [] }));
+    list = vi.fn(async () => ({ items: [] }));
     const el = await open();
 
     expect(el.textContent).toContain('Nicio marcă nu se potrivește');
   });
 
   it('shows three skeleton rows and no row action while the list is read', async () => {
-    list = jest.fn(() => new Promise(() => {}));
+    list = vi.fn(() => new Promise(() => {}));
     const el = await open();
 
     const busy = el.querySelector('[aria-busy="true"]');
@@ -202,7 +203,7 @@ describe('the brand list', () => {
   });
 
   it('says the list could not be read and reads it again on retry', async () => {
-    list = jest.fn(async () => {
+    list = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 500 });
     });
     const el = await open();

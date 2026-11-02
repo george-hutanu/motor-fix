@@ -15,8 +15,8 @@ function setup(opts: {
   signedInButNoSession?: boolean;
 }) {
   const current = signal<MeDto | null>(null);
-  const takeReturnTo = jest.fn(() => opts.kept);
-  const open = jest.fn(async () => {
+  const takeReturnTo = vi.fn(() => opts.kept);
+  const open = vi.fn(async () => {
     if (opts.answer === 'signed-in' && !opts.signedInButNoSession) {
       current.set({ landing: opts.landing ?? '/app/driver' } as MeDto);
     }
@@ -29,7 +29,7 @@ function setup(opts: {
         provide: Session,
         useValue: {
           current,
-          load: jest.fn(async () =>
+          load: vi.fn(async () =>
             opts.already ? { landing: '/app/garage' } : null,
           ),
           takeReturnTo,
@@ -39,7 +39,7 @@ function setup(opts: {
     ],
   });
   const router = TestBed.inject(Router);
-  const navigateByUrl = jest
+  const navigateByUrl = vi
     .spyOn(router, 'navigateByUrl')
     .mockResolvedValue(true);
   return {

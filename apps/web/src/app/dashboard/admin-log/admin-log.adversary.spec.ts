@@ -88,7 +88,7 @@ const lines = (element: HTMLElement) => [
 afterEach(() => {
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 const BROKEN = /undefined|null|NaN|\[object|\{|\}|Infinity/;
@@ -384,42 +384,42 @@ describe('AdminLog under odd answers', () => {
 
   // @traces 298-FR-010
   it('reads nothing after the panel is destroyed when midnight passes', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['setImmediate'],
+    vi.useFakeTimers({
       now: new Date('2026-10-17T20:59:00Z'),
+      toNotFake: ['setImmediate'],
     });
     answer = async () => ({ items: [], nextCursor: null });
     const opening = open();
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
     const { fixture } = await opening;
     fixture.destroy();
 
-    await jest.advanceTimersByTimeAsync(3 * 3_600_000);
+    await vi.advanceTimersByTimeAsync(3 * 3_600_000);
 
     expect(asked).toHaveLength(1);
   });
 
   // @traces 298-FR-010
   it('re-reads once at the end of the 25-hour day the clocks go back, not an hour early', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['setImmediate'],
+    vi.useFakeTimers({
       now: new Date('2026-10-24T20:59:00Z'),
+      toNotFake: ['setImmediate'],
     });
     answer = async () => ({ items: [], nextCursor: null });
     const opening = open();
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
     await opening;
 
-    await jest.advanceTimersByTimeAsync(62_000);
+    await vi.advanceTimersByTimeAsync(62_000);
     expect(asked.map((a) => a.from)).toEqual([
       '2026-10-23T21:00:00.000Z',
       '2026-10-24T21:00:00.000Z',
     ]);
 
-    await jest.advanceTimersByTimeAsync(24 * 3_600_000);
+    await vi.advanceTimersByTimeAsync(24 * 3_600_000);
     expect(asked).toHaveLength(2);
 
-    await jest.advanceTimersByTimeAsync(3_600_000);
+    await vi.advanceTimersByTimeAsync(3_600_000);
     expect(asked.at(-1)?.from).toBe('2026-10-25T22:00:00.000Z');
     expect(asked).toHaveLength(3);
   });

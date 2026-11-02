@@ -4,15 +4,15 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { VerificationRegisterForm } from './verification-register-form';
 
 // @traces 203-FR-007 203-FR-008
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const ANSWER = {
   check: { id: 'c', kind: 'company', result: 'ok' },
@@ -39,11 +39,11 @@ class Host {
   readonly certificate = signal(true);
   readonly mobile = signal(false);
   readonly address = signal<string | null>('Strada Fabricii 12');
-  readonly recorded = jest.fn();
-  readonly decided = jest.fn();
+  readonly recorded = vi.fn();
+  readonly decided = vi.fn();
 }
 
-let record: jest.Mock;
+let record: Mock;
 let host: Host;
 let el: HTMLElement;
 
@@ -58,8 +58,8 @@ async function mount(
   set: (host: Host) => void = () => {},
   impl: () => Promise<unknown> = async () => ANSWER,
 ) {
-  record = jest.fn(impl);
-  jest.mocked(toast).mockClear();
+  record = vi.fn(impl);
+  vi.mocked(toast).mockClear();
   document.body.innerHTML = '';
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({

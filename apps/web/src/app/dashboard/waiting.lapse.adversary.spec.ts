@@ -9,22 +9,22 @@ import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { Live, type LiveState } from './live';
 import { Session } from './session';
 import { Waiting } from './waiting';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
-const toasts = toast as unknown as jest.Mock;
+const toasts = toast as unknown as Mock;
 
 let account: WritableSignal<{ id: string } | null>;
 let signedOut: Subject<string>;
 let live: {
-  catchUp: jest.Mock;
+  catchUp: Mock;
   offline: WritableSignal<boolean>;
   state: WritableSignal<LiveState>;
 };
@@ -36,11 +36,11 @@ Object.defineProperty(window.navigator, 'onLine', {
 
 const settle = async () => {
   TestBed.tick();
-  await jest.advanceTimersByTimeAsync(5);
+  await vi.advanceTimersByTimeAsync(5);
   TestBed.tick();
 };
 const elapse = async (ms: number) => {
-  await jest.advanceTimersByTimeAsync(ms);
+  await vi.advanceTimersByTimeAsync(ms);
   TestBed.tick();
 };
 
@@ -80,12 +80,12 @@ const _eta = {
 };
 
 beforeEach(() => {
-  jest.useFakeTimers({ doNotFake: ['setImmediate'] });
-  jest.setSystemTime(new Date('2026-10-05T10:00:00.000Z'));
+  vi.useFakeTimers({ toNotFake: ['setImmediate'] });
+  vi.setSystemTime(new Date('2026-10-05T10:00:00.000Z'));
   account = signal({ id: 'account-1' });
   signedOut = new Subject<string>();
   live = {
-    catchUp: jest.fn(),
+    catchUp: vi.fn(),
     offline: signal(false),
     state: signal<LiveState>('open'),
   };
@@ -95,7 +95,7 @@ beforeEach(() => {
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 const urls = (reqs: TestRequest[]) => reqs.map((r) => r.request.url);

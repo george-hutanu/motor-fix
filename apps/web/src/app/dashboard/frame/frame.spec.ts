@@ -21,6 +21,7 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { Frame } from './frame';
 import { spoken } from '../../spoken.testing';
@@ -28,14 +29,13 @@ import { Live } from '../live';
 import { Session } from '../session';
 import { DASHBOARDS, dashboardRoutes } from '../views';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
-let signOut: jest.Mock;
-let reload: jest.Mock;
-let overview: jest.Mock;
+let signOut: Mock;
+let reload: Mock;
+let overview: Mock;
 let waiting = async (): Promise<{
   garagesWaiting: number;
   reportsPending?: number;
@@ -47,13 +47,13 @@ let requests = async (): Promise<GarageRequestListDto> => ({
   nextCursor: null,
   total: 0,
 });
-let requestReads: jest.Mock;
+let requestReads: Mock;
 let live: {
-  close: jest.Mock;
+  close: Mock;
   events: Subject<LiveMessage>;
   on: (kinds: readonly EventKind[]) => ReturnType<Subject<LiveMessage>['pipe']>;
   offline: ReturnType<typeof signal<boolean>>;
-  open: jest.Mock;
+  open: Mock;
   resync: Subject<void>;
   state: ReturnType<typeof signal<string>>;
 };
@@ -85,22 +85,22 @@ async function render(
   url = landing,
   extra: Partial<MeDto> = {},
 ) {
-  Element.prototype.scrollIntoView = jest.fn();
-  signOut = jest.fn(async () => current.set(null));
-  reload = jest.fn(async () => undefined);
+  Element.prototype.scrollIntoView = vi.fn();
+  signOut = vi.fn(async () => current.set(null));
+  reload = vi.fn(async () => undefined);
   const events = new Subject<LiveMessage>();
   live = {
-    close: jest.fn(),
+    close: vi.fn(),
     events,
     offline: signal(false),
     on: (kinds) =>
       events.pipe(filter((m) => (kinds as readonly string[]).includes(m.kind))),
-    open: jest.fn(),
+    open: vi.fn(),
     resync: new Subject(),
     state: signal('open'),
   };
-  overview = jest.fn(() => waiting());
-  requestReads = jest.fn(() => requests());
+  overview = vi.fn(() => waiting());
+  requestReads = vi.fn(() => requests());
   const current = signal<MeDto | null>(me(role, landing, capabilities, extra));
   // The account Session keeps on screen behind the gate dialog.
   const kept = signal<MeDto | null>(null);
@@ -147,6 +147,8 @@ async function render(
       {
         provide: GaragesService,
         useValue: {
+          // The garage home's weekly panel reads too; neither answers here.
+          garageWeeklyFigures: () => new Promise(() => undefined),
           verificationStatusControllerRead: () => new Promise(() => undefined),
         },
       },
@@ -493,7 +495,7 @@ describe('Frame', () => {
 
   it('signs out on the server, then opens Home', async () => {
     const { current, element } = await render('driver', '/app/driver', []);
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigateByUrl')
       .mockResolvedValue(true);
 
@@ -620,7 +622,7 @@ describe('Frame', () => {
 
   it('closes the live connection at sign-out', async () => {
     const { element } = await render('driver', '/app/driver', []);
-    jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
     [...element.querySelectorAll('button')]
       .find((b) => b.textContent?.trim() === 'Ieși din cont')
@@ -642,7 +644,7 @@ describe('Frame', () => {
   ])(
     'changes the status line in place on a live test update, with no toast, for a %s',
     async (role, landing) => {
-      (toast as unknown as jest.Mock).mockClear();
+      (toast as unknown as Mock).mockClear();
       const { element, harness } = await render(role, landing, []);
 
       live.events.next({

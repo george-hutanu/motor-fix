@@ -41,8 +41,8 @@ function setup({
 } = {}) {
   const live = fakeLive();
   const api = {
-    dashboardLayoutsControllerRead: jest.fn(read),
-    dashboardLayoutsControllerSave: jest.fn(save),
+    dashboardLayoutsControllerRead: vi.fn(read),
+    dashboardLayoutsControllerSave: vi.fn(save),
   };
   const me = signal({ role: 'garage', roles: ['garage'] } as unknown as MeDto);
   TestBed.configureTestingModule({

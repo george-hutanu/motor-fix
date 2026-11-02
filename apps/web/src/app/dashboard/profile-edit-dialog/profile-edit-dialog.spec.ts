@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type ProfileEditData,
@@ -67,8 +68,8 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let update: jest.Mock;
-let read: jest.Mock;
+let update: Mock;
+let read: Mock;
 let result: Promise<OverlayResult<GarageProfileDto>>;
 
 async function settle() {
@@ -83,8 +84,8 @@ async function open(
   start: GarageProfileDto = profile(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  update = jest.fn(async () => profile({ version: '4' }));
-  read = jest.fn(async () => profile({ version: '5' }));
+  update = vi.fn(async () => profile({ version: '4' }));
+  read = vi.fn(async () => profile({ version: '5' }));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -97,7 +98,7 @@ async function open(
       {
         provide: PublicHolidaysService,
         useValue: {
-          publicHolidaysControllerList: jest.fn(async ({ year }) =>
+          publicHolidaysControllerList: vi.fn(async ({ year }) =>
             year === 2026
               ? [
                   {
@@ -173,8 +174,9 @@ async function typeInto(selector: string, value: string) {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date('2026-10-30T09:00:00Z'),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -190,12 +192,11 @@ beforeEach(() => {
       'hrtime',
       'performance',
     ],
-    now: new Date('2026-10-30T09:00:00Z'),
   });
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });

@@ -7,6 +7,7 @@ import { GarageJobsService, type JobSummaryDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { JobsView } from './jobs-view';
 import { JobSteps } from '../job-steps/job-steps';
@@ -62,8 +63,8 @@ const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
 });
 
 let events: Subject<LiveMessage>;
-let list: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let open: Mock;
 
 async function render(
   answer: () => Promise<{ items: JobSummaryDto[] }> = async () => ({
@@ -72,12 +73,12 @@ async function render(
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
-  list = jest.fn(async () => ({
+  list = vi.fn(async () => ({
     nextCursor: null,
     total: 0,
     ...(await answer()),
   }));
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       {
@@ -122,8 +123,9 @@ afterEach(() => TestBed.resetTestingModule());
 // @traces 424-FR-012
 describe('Lucrări', () => {
   beforeEach(() =>
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: new Date('2026-10-09T07:00:00Z'),
+      toNotFake: [
         'nextTick',
         'setImmediate',
         'clearImmediate',
@@ -139,10 +141,9 @@ describe('Lucrări', () => {
         'hrtime',
         'performance',
       ],
-      now: new Date('2026-10-09T07:00:00Z'),
     }),
   );
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('shows a row per job: time, car, plate, jobs, mechanic, stage and steps done', async () => {
     const { element, settle } = await render();
@@ -248,7 +249,7 @@ describe('Lucrări', () => {
     'job.mechanic_changed',
   ] as const)('reads the list again on %s', async (kind) => {
     // debounceTime reads Date.now(), which the frozen clock would stall.
-    jest.useRealTimers();
+    vi.useRealTimers();
     const { settle } = await render();
     await settle();
 

@@ -10,7 +10,7 @@ import { type Filters } from '../filters';
 const OFF: Filters = { card: false, open_now: false, open_saturday: false };
 
 const filters = signal<Filters>(OFF);
-const change = jest.fn<void, [Partial<Filters>]>();
+const change = vi.fn<(...args: [Partial<Filters>]) => void>();
 
 async function render(language: 'ro' | 'en' = 'ro') {
   TestBed.configureTestingModule({
@@ -18,10 +18,10 @@ async function render(language: 'ro' | 'en' = 'ro') {
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { change, filters },
-          focusStart: jest.fn(),
-          markUnchanged: jest.fn(),
+          focusStart: vi.fn(),
+          markUnchanged: vi.fn(),
         },
       },
     ],

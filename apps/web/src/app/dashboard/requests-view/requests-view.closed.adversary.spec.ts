@@ -10,6 +10,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { RequestsView } from './requests-view';
 import { Live } from '../live';
@@ -67,7 +68,7 @@ const row = (
 });
 
 let events: Subject<LiveMessage>;
-let list: jest.Mock;
+let list: Mock;
 
 async function render(
   answers: RequestSummaryDto[][],
@@ -75,7 +76,7 @@ async function render(
 ) {
   events = new Subject();
   let call = 0;
-  list = jest.fn(async () => {
+  list = vi.fn(async () => {
     const items = answers[Math.min(call++, answers.length - 1)];
     return { items, nextCursor: null, total: items.length };
   });
@@ -85,16 +86,16 @@ async function render(
       provideRouter([]),
       {
         provide: QuoteRequestsService,
-        useValue: { compareControllerGet: jest.fn(pending) },
+        useValue: { compareControllerGet: vi.fn(pending) },
       },
       {
         provide: QuotesService,
-        useValue: { acceptControllerAccept: jest.fn() },
+        useValue: { acceptControllerAccept: vi.fn() },
       },
       {
         provide: RequestsService,
         useValue: {
-          activeRequestControllerGet: jest.fn(async () => ({
+          activeRequestControllerGet: vi.fn(async () => ({
             openCount: 0,
             request: null,
           })),

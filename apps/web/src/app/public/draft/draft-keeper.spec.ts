@@ -6,6 +6,7 @@ import {
   ListingDraftsService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import type { BrowserDraft } from './draft';
 import { DraftKeeper } from './draft-keeper';
@@ -30,23 +31,23 @@ describe('DraftKeeper before the check', () => {
   };
   const missing = [{ code: 'required', field: 'steps.1.phone' }];
   const told = [{ code: 'document_missing', field: 'documents.x' }];
-  let api: Record<string, jest.Mock>;
-  let track: jest.Mock;
+  let api: Record<string, Mock>;
+  let track: Mock;
 
   function keeper(draft: Partial<BrowserDraft> = {}, granted = false) {
-    track = jest.fn();
+    track = vi.fn();
     api = {
-      listingDraftsControllerCheck: jest.fn().mockResolvedValue({
+      listingDraftsControllerCheck: vi.fn().mockResolvedValue({
         warnings: told,
       }),
-      listingDraftsControllerCreate: jest.fn().mockResolvedValue({
+      listingDraftsControllerCreate: vi.fn().mockResolvedValue({
         email: 'ana@service.ro',
         id: 'd1',
         token: 't1',
       }),
-      listingDraftsControllerSave: jest.fn().mockResolvedValue({ id: 'd1' }),
-      listingDraftsControllerSendLink: jest.fn().mockResolvedValue({}),
-      listingSubmitControllerSubmit: jest.fn().mockResolvedValue(SENT),
+      listingDraftsControllerSave: vi.fn().mockResolvedValue({ id: 'd1' }),
+      listingDraftsControllerSendLink: vi.fn().mockResolvedValue({}),
+      listingSubmitControllerSubmit: vi.fn().mockResolvedValue(SENT),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -54,7 +55,7 @@ describe('DraftKeeper before the check', () => {
         { provide: Consent, useValue: { granted: () => granted, track } },
         { provide: ListingDraftsService, useValue: api },
         { provide: I18n, useValue: { language: () => 'ro' } },
-        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     });
     const kept = TestBed.inject(DraftKeeper);
@@ -391,21 +392,21 @@ describe('DraftKeeper over a completion copy', () => {
     token: 'ct',
     updatedAt: '2026-10-21T10:00:00.000Z',
   };
-  let api: Record<string, jest.Mock>;
+  let api: Record<string, Mock>;
 
   function keeper() {
     api = {
-      completionControllerOpen: jest.fn().mockResolvedValue(COPY),
-      listingDraftsControllerSave: jest.fn().mockResolvedValue({ id: 'c1' }),
-      listingSubmitControllerSubmit: jest.fn(),
+      completionControllerOpen: vi.fn().mockResolvedValue(COPY),
+      listingDraftsControllerSave: vi.fn().mockResolvedValue({ id: 'c1' }),
+      listingSubmitControllerSubmit: vi.fn(),
     };
     TestBed.configureTestingModule({
       providers: [
         DraftKeeper,
-        { provide: Consent, useValue: { track: jest.fn() } },
+        { provide: Consent, useValue: { track: vi.fn() } },
         { provide: ListingDraftsService, useValue: api },
         { provide: I18n, useValue: { language: () => 'ro' } },
-        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     });
     return TestBed.inject(DraftKeeper);

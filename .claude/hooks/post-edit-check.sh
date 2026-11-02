@@ -11,11 +11,14 @@
 #   2. the AFFECTED colocated test, not the suite:
 #        foo.spec.ts  -> itself
 #        foo.ts       -> foo.spec.ts when it exists, else nothing
-#      run through the root jest config, which spans every Nx project, or,
-#      in a project with a vitest.config.mts, through Vitest with that config,
-#      unless the runner took 5 s or more on it in the last 7 days
-#      (spec-durations.mjs keeps the runner's own time per spec); a slow spec
-#      is left to the Stop gate
+#      run on its project's runner: Vitest with the project's own config for
+#      the five Angular projects (apps/web, libs/ui-cockpit, libs/overlays,
+#      libs/i18n, libs/media; web's node specs on vitest-node.config.ts) or,
+#      in another project with a vitest.config.mts, with the nearest one above
+#      the spec; Jest's root config only for a spec no Vitest config claims; unless the
+#      runner took 5 s or more on it in the last 7 days (spec-durations.mjs
+#      keeps the runner's own time per spec); a slow spec is left to the Stop
+#      gate
 #
 # A tool that is not installed yet (before the Nx scaffold lands) is skipped,
 # not failed: the gate exists to catch broken edits, not a missing toolchain.
@@ -29,6 +32,20 @@
 # outside apps/libs/e2e source (docs, specs, hooks) passes through silently.
 # ---------------------------------------------------------------------------
 set -uo pipefail
+
+# The Vitest config of a path under one of the Angular projects, or nothing.
+# stop-test-gate.sh holds the same function; stop-test-gate.spec.mjs keeps the
+# two equal (a sourced file would sit outside the registry's fingerprints).
+vitest_config() {
+  case "$1" in
+    apps/web/src/server/*|apps/web/src/app/app.config.spec.ts|apps/web/src/app/app.config.server.adversary.spec.ts) echo apps/web/vitest-node.config.ts ;;
+    apps/web/*) echo apps/web/vitest.config.ts ;;
+    libs/ui-cockpit/*|libs/overlays/*|libs/i18n/*|libs/media/*)
+      lib="${1#libs/}"
+      echo "libs/${lib%%/*}/vitest.config.ts"
+      ;;
+  esac
+}
 
 payload="$(cat)"
 file_path="$(node -e '
@@ -85,13 +102,15 @@ if [ "$should" -eq 1 ]; then
   echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run after this edit: its runner took 5 s or more on it in the last 7 days. The Stop gate runs it before the turn ends.\"}}"
   exit 0
 fi
-# A project on Vitest names it in the nearest vitest.config.mts above the
+config="$(vitest_config "$test_file")"
+# Another project on Vitest names it in the nearest vitest.config.mts above the
 # spec; the rest are Jest's.
-project="$(dirname "$test_file")"
-while [ "$project" != "." ] && [ "$project" != "/" ] && [ ! -f "$project/vitest.config.mts" ]; do project="$(dirname "$project")"; done
-vitest_config=""
-[ "$project" != "." ] && [ "$project" != "/" ] && vitest_config="$project/vitest.config.mts"
-if [ -n "$vitest_config" ]; then
+if [ -z "$config" ]; then
+  project="$(dirname "$test_file")"
+  while [ "$project" != "." ] && [ "$project" != "/" ] && [ ! -f "$project/vitest.config.mts" ]; do project="$(dirname "$project")"; done
+  [ "$project" != "." ] && [ "$project" != "/" ] && config="$project/vitest.config.mts"
+fi
+if [ -n "$config" ]; then
   [ -x node_modules/.bin/vitest ] || exit 0
 else
   [ -x node_modules/.bin/jest ] || exit 0
@@ -102,14 +121,14 @@ fi
 heavy=""
 [ -f scripts/heavy.sh ] && heavy="sh scripts/heavy.sh"
 report="$(mktemp)"
-if [ -n "$vitest_config" ]; then
-  HEAVY_WAIT="${HEAVY_WAIT:-60}" $heavy npx --no-install vitest run --config "$vitest_config" "$test_file" --maxWorkers=2 --reporter=default --reporter=json --outputFile.json="$report" >&2 2>&1
+if [ -n "$config" ]; then
+  HEAVY_WAIT="${HEAVY_WAIT:-60}" $heavy npx --no-install vitest run --config "$config" "$test_file" --maxWorkers=2 --reporter=default --reporter=json --outputFile.json="$report" >&2 2>&1
 else
   HEAVY_WAIT="${HEAVY_WAIT:-60}" $heavy npx --no-install jest "$test_file" --maxWorkers=2 --json --outputFile="$report" >&2 2>&1
 fi
 code=$?
-# The runner's own time for the file, never the wait for the slot; Vitest's
-# JSON report has Jest's shape.
+# The runner's own time for the file, never the wait for the slot (both
+# runners' JSON reports carry testResults[].startTime and endTime).
 ms="$(node -e 'try{const r=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).testResults?.[0];if(r)process.stdout.write(String(r.endTime-r.startTime))}catch{}' "$report")"
 [ -n "$ms" ] && [ -f "$durations" ] && node "$durations" record "$test_file" "$ms"
 rm -f "$report"

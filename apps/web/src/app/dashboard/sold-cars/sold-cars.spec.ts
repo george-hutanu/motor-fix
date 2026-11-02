@@ -58,7 +58,7 @@ describe('the sold cars section', () => {
 
   it('passes on that a sold car is gone', async () => {
     const { element, fixture } = await render([sold('sold-1', 'Golf')]);
-    const gone = jest.fn();
+    const gone = vi.fn();
     fixture.componentInstance.gone.subscribe(gone);
 
     const card = element.querySelector('mf-sold-car');

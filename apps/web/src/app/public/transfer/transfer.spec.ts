@@ -11,6 +11,7 @@ import {
   type MeDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { TransferPage } from './transfer';
 import { Consent } from '../../consent/consent';
@@ -38,18 +39,18 @@ const offer = (over: Partial<CarTransferLinkDto> = {}): CarTransferLinkDto => ({
   ...over,
 });
 
-let read: jest.Mock;
-let accept: jest.Mock;
-let gate: jest.Mock;
-let reaccept: jest.Mock;
-let track: jest.Mock;
+let read: Mock;
+let accept: Mock;
+let gate: Mock;
+let reaccept: Mock;
+let track: Mock;
 let current: ReturnType<typeof signal<MeDto | null>>;
 let session: {
   current: typeof current;
   roleHint: ReturnType<typeof signal<MeDto['role'] | null>>;
-  load: jest.Mock;
-  reload: jest.Mock;
-  switchRole: jest.Mock;
+  load: Mock;
+  reload: Mock;
+  switchRole: Mock;
 };
 let response: { status?: number };
 let harness: RouterTestingHarness;
@@ -88,21 +89,21 @@ async function open(
     },
   }: Options = {},
 ) {
-  read = jest.fn((_params, context) => answer(!context?.get(PUBLIC_READ)));
-  accept = jest.fn(accepted);
-  gate = jest.fn(signIn);
-  reaccept = jest.fn(async () => true);
-  track = jest.fn();
+  read = vi.fn((_params, context) => answer(!context?.get(PUBLIC_READ)));
+  accept = vi.fn(accepted);
+  gate = vi.fn(signIn);
+  reaccept = vi.fn(async () => true);
+  track = vi.fn();
   current = signal<MeDto | null>(me);
   session = {
     current,
-    load: jest.fn(async () => {
+    load: vi.fn(async () => {
       if (cookie && !current()) current.set(cookie);
       return current();
     }),
-    reload: jest.fn(async () => undefined),
+    reload: vi.fn(async () => undefined),
     roleHint: signal<MeDto['role'] | null>(hint),
-    switchRole: jest.fn(async (role: MeDto['role']) => {
+    switchRole: vi.fn(async (role: MeDto['role']) => {
       current.set({ ...(current() as MeDto), role });
       return current();
     }),

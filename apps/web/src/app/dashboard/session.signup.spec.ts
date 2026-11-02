@@ -19,12 +19,12 @@ const DRIVER = {
 function signUpSetup() {
   const { auth, me, session } = setup({
     auth: {
-      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-      authControllerSignUp: jest.fn(() =>
+      authControllerRefresh: vi.fn(() => Promise.reject(new Error('401'))),
+      authControllerSignUp: vi.fn(() =>
         Promise.resolve({ accessToken: 'signed-up' }),
       ),
     },
-    me: { meControllerMe: jest.fn(() => Promise.resolve(DRIVER)) },
+    me: { meControllerMe: vi.fn(() => Promise.resolve(DRIVER)) },
   });
   return { api: auth, meControllerMe: me.meControllerMe, session };
 }

@@ -8,12 +8,13 @@ import {
   chmodSync,
   existsSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, matchesGlob } from 'node:path';
 
 // The PR workflow's jobs, read as indented text like release-workflow.spec.ts:
 // fewer jobs means fewer runners held under the free plan's 20-job cap.
@@ -253,7 +254,7 @@ describe('ci workflow', () => {
       'Compose stack',
       'docker compose up -d --wait postgres redis storage',
     ],
-    ['unit', 'Unit tests', 'npx nx $NX_SCOPE -t test --passWithNoTests'],
+    ['unit', 'Unit tests', 'npx nx $NX_SCOPE -t test'],
   ])(
     '%s runs the %s step even after an earlier one failed',
     (id, name, command) => {
@@ -263,6 +264,72 @@ describe('ci workflow', () => {
       expect(block).toContain(command);
     },
   );
+
+  // The Angular unit-test builder refuses a flag its schema lacks; every
+  // Vitest config already passes a project with no spec of the suite.
+  // @traces 1332-FR-013
+  it('runs the unit tests without a flag only Jest knows', () => {
+    const commands = step(job('unit'), 'Unit tests')
+      .split('\n')
+      .filter((line) => line.includes('npx nx'));
+
+    expect(commands).toHaveLength(3);
+    for (const line of commands)
+      expect(line).not.toContain('--passWithNoTests');
+  });
+
+  // Web's builder bundles every spec without splitting, which at once ran the
+  // runner out of memory, so web runs after the other projects, by shard.
+  it('runs the web unit tests after the other projects, shard by shard, failing on any', () => {
+    const block = step(job('unit'), 'Unit tests');
+    const rest = block.indexOf('npx nx $NX_SCOPE -t test --exclude=web ||');
+    const node = block.indexOf('npx nx $NX_SCOPE -t test-node ||');
+    const web = block.indexOf("npx nx $NX_SCOPE -t test --exclude='*,!web'");
+
+    expect(rest).toBeGreaterThan(-1);
+    expect(node).toBeGreaterThan(rest);
+    expect(web).toBeGreaterThan(node);
+    expect(block).toContain('for shard in 1 2 3 4; do');
+    expect(block).toContain(
+      '--configuration=shard-$shard --excludeTaskDependencies || status=$?',
+    );
+    expect(block).toContain('exit $status');
+  });
+
+  // Every web spec the test target runs lands in exactly one shard.
+  it("splits web's builder specs into four shards that cover each spec once", () => {
+    const web = join(root, 'apps', 'web');
+    const target = JSON.parse(readFileSync(join(web, 'project.json'), 'utf8'))
+      .targets.test;
+    const runs = (
+      glob: string[] | undefined,
+      fallback: string[],
+      file: string,
+    ) => (glob ?? fallback).some((g) => matchesGlob(file, g));
+    const specs = (
+      readdirSync(join(web, 'src'), { recursive: true }) as string[]
+    ).filter((file) => file.endsWith('.spec.ts'));
+    const all = specs.filter(
+      (file) =>
+        !runs(undefined, target.options.exclude, file) &&
+        runs(target.options.include, ['**/*.spec.ts'], file),
+    );
+
+    expect(all.length).toBeGreaterThan(600);
+    for (const file of all) {
+      const shards = [1, 2, 3, 4].filter((n) => {
+        const options = {
+          ...target.options,
+          ...target.configurations[`shard-${n}`],
+        };
+        return (
+          runs(options.include, ['**/*.spec.ts'], file) &&
+          !runs(options.exclude, [], file)
+        );
+      });
+      expect([file, shards]).toEqual([file, [expect.any(Number)]]);
+    }
+  });
 
   // On a pull request the baseline may not list a file the base branch's
   // baseline lacks; a push to main has no base to compare against.
@@ -547,7 +614,7 @@ describe('ci workflow', () => {
       ],
       [
         'other projects',
-        'nx run-many -t test --exclude=domain --passWithNoTests --output-style=static',
+        'nx run-many -t test --exclude=domain,web,ui-cockpit,overlays,i18n,media --passWithNoTests --output-style=static',
       ],
     ])('runs its slice of the suite in the %s shard', (SHARD, call) => {
       expect(run('integration', 'Integration tests', { SHARD })).toEqual([

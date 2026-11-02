@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { OVERLAY_TASK } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   api,
@@ -250,8 +251,7 @@ describe('writing the steps', () => {
   // is saved or the field cancelled, nothing is left to lose.
   it('closes without asking once a typed step is saved or cancelled, and asks while one is still being typed', async () => {
     const { element, settle } = await render();
-    const markUnchanged = TestBed.inject(OVERLAY_TASK)
-      .markUnchanged as jest.Mock;
+    const markUnchanged = TestBed.inject(OVERLAY_TASK).markUnchanged as Mock;
 
     button(element, 'Adaugă un pas')?.click();
     await settle();

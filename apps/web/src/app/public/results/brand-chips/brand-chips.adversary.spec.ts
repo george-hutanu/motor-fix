@@ -7,6 +7,7 @@ import {
   CarsService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { BrandChips } from './brand-chips';
 import { Session } from '../../../dashboard/session';
@@ -31,9 +32,9 @@ const POPULAR = [
 const car = (name: string): CarDto =>
   ({ brandId: `id-${name}`, brandName: name, id: `car-${name}` }) as CarDto;
 
-let popular: jest.Mock;
-let cars: jest.Mock;
-let gate: jest.Mock;
+let popular: Mock;
+let cars: Mock;
+let gate: Mock;
 let fixture: ComponentFixture<BrandChips>;
 let picks: { key: string; name: string }[];
 
@@ -53,9 +54,9 @@ async function chips(
 ) {
   const current = signal(options.role ? { role: options.role } : null);
   const roleHint = signal(options.role ?? null);
-  gate = jest.fn(async () => false);
-  popular = jest.fn(options.popular ?? (async () => POPULAR));
-  cars = jest.fn(options.cars ?? (async () => ({ items: [] })));
+  gate = vi.fn(async () => false);
+  popular = vi.fn(options.popular ?? (async () => POPULAR));
+  cars = vi.fn(options.cars ?? (async () => ({ items: [] })));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -65,7 +66,7 @@ async function chips(
       { provide: CarsService, useValue: { carsControllerList: cars } },
       {
         provide: Session,
-        useValue: { current, load: jest.fn(async () => current()), roleHint },
+        useValue: { current, load: vi.fn(async () => current()), roleHint },
       },
       { provide: SignInDialog, useValue: { gate } },
       { provide: PLATFORM_ID, useValue: 'browser' },

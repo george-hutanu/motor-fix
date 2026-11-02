@@ -26,7 +26,7 @@ async function setUp() {
     resolve: (a: Answer) => void;
     reject: (e: Error) => void;
   }[] = [];
-  const status = jest.fn(
+  const status = vi.fn(
     () =>
       new Promise<Answer>((resolve, reject) => {
         pending.push({ reject, resolve });
@@ -34,7 +34,7 @@ async function setUp() {
   );
   const current = signal<MeDto | null>(null);
   const live = { ...stream(), state: signal('closed') };
-  const publicLive = { ...stream(), register: jest.fn(() => jest.fn()) };
+  const publicLive = { ...stream(), register: vi.fn(() => vi.fn()) };
   TestBed.configureTestingModule({
     providers: [
       { provide: PLATFORM_ID, useValue: 'browser' },

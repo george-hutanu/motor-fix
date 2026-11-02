@@ -51,10 +51,10 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { current: shown, shown } },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       {
         provide: GarageRequestsFeed,
-        useValue: { reload: jest.fn(), sent: jest.fn() },
+        useValue: { reload: vi.fn(), sent: vi.fn() },
       },
     ],
   });

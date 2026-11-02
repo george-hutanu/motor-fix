@@ -1,10 +1,12 @@
 // @traces 1191-FR-004
+import type { Mock } from 'vitest';
+
 import { downscale } from './downscale';
 
 interface Fakes {
   blobBytes: number;
-  close: jest.Mock;
-  convertToBlob: jest.Mock;
+  close: Mock;
+  convertToBlob: Mock;
   drawn: [number, number][];
   sizes: [number, number][];
 }
@@ -12,15 +14,15 @@ interface Fakes {
 function install(width: number, height: number, blobBytes: number): Fakes {
   const fakes: Fakes = {
     blobBytes,
-    close: jest.fn(),
-    convertToBlob: jest.fn(
+    close: vi.fn(),
+    convertToBlob: vi.fn(
       async () => new Blob([new Uint8Array(fakes.blobBytes)]),
     ),
     drawn: [],
     sizes: [],
   };
   Object.assign(globalThis, {
-    createImageBitmap: jest.fn(async () => ({
+    createImageBitmap: vi.fn(async () => ({
       close: fakes.close,
       height,
       width,
@@ -151,7 +153,7 @@ describe('downscale at the edge of 2048 px', () => {
 
   it('sends the original when the decoder rejects the bytes', async () => {
     install(4000, 3000, 10);
-    (createImageBitmap as jest.Mock).mockRejectedValue(
+    (createImageBitmap as Mock).mockRejectedValue(
       new DOMException('bad image', 'InvalidStateError'),
     );
     const file = original('lie.jpg', 'image/jpeg');

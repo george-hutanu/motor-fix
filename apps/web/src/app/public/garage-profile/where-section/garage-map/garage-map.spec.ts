@@ -11,12 +11,12 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { GARAGE_MAP, GarageMap } from './garage-map';
 import { circleBounds, ring } from '../../../map-libre/map-libre';
 import type { MapFake } from '../../../place-step/place-step.testing';
+// The fake itself, not the mocked module: the bundle cannot hand a hoisted mock its exports.
+import * as maplibre from '../../../place-step/place-step.testing';
 import { boundsOf, fitView, paddingOf } from '../../../static-map/fit-view';
 import { StaticMap } from '../../../static-map/static-map';
 
-jest.mock('maplibre-gl', () =>
-  jest.requireActual('../../../place-step/place-step.testing'),
-);
+vi.mock('maplibre-gl', () => import('../../../place-step/place-step.testing'));
 
 const POINT = { lat: 44.4352671, lng: 26.0123456 };
 const CENTRE = { lat: 46.9, lng: 23.68 };
@@ -27,8 +27,8 @@ let box = BOX;
 
 let opened: (value: { destroy(): void }) => void;
 let refused: (error: unknown) => void;
-const destroy = jest.fn();
-const open = jest.fn(
+const destroy = vi.fn();
+const open = vi.fn(
   (
     _host: HTMLElement,
     _pin: HTMLElement,
@@ -41,7 +41,7 @@ const open = jest.fn(
       refused = reject;
     }),
 );
-const gone = jest.fn();
+const gone = vi.fn();
 
 let fixture: ComponentFixture<GarageMap>;
 const element = () => fixture.nativeElement as HTMLElement;
@@ -89,15 +89,15 @@ beforeEach(() => {
   destroy.mockClear();
   gone.mockClear();
   box = BOX;
-  jest
-    .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-    .mockImplementation(() => box.w);
-  jest
-    .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-    .mockImplementation(() => box.h);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(
+    () => box.w,
+  );
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(
+    () => box.h,
+  );
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1366-FR-001
 // @traces 1366-FR-002
@@ -213,16 +213,16 @@ describe('GarageMap, the area of a mobile mechanic', () => {
     async (w, covers) => {
       box = { h: 200, w };
       const real = Element.prototype.getBoundingClientRect;
-      jest
-        .spyOn(Element.prototype, 'getBoundingClientRect')
-        .mockImplementation(function (this: Element) {
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+        function (this: Element) {
           const at = this.matches('mf-static-map .attribution')
             ? covers.attribution
             : this.matches('mf-static-map button')
               ? covers.button
               : undefined;
           return at ? new DOMRect(at.x, at.y, at.w, at.h) : real.call(this);
-        });
+        },
+      );
       await render({ km: 20, point: CENTRE });
       const { r, x, y } = circle();
 
@@ -247,16 +247,16 @@ describe('GarageMap, the area of a mobile mechanic', () => {
       button: { h: 44, w: 164, x: 222, y: 93 },
     };
     const real = Element.prototype.getBoundingClientRect;
-    jest
-      .spyOn(Element.prototype, 'getBoundingClientRect')
-      .mockImplementation(function (this: Element) {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
         const at = this.matches('mf-static-map .attribution')
           ? covers.attribution
           : this.matches('mf-static-map button')
             ? covers.button
             : undefined;
         return at ? new DOMRect(at.x, at.y, at.w, at.h) : real.call(this);
-      });
+      },
+    );
     await render({ km: 20, point: CENTRE });
     const { r, x, y } = circle();
 
@@ -503,7 +503,7 @@ describe('GarageMap, when it cannot show', () => {
 // @traces 1366-FR-004
 // @traces 1366-FR-005
 describe('GARAGE_MAP, the opener', () => {
-  const { fake } = jest.requireMock<MapFake>('maplibre-gl');
+  const { fake } = maplibre as unknown as MapFake;
 
   // The view's snapped centre, a little off the garage.
   const START = { center: [26.0119, 44.4349] as [number, number], zoom: 15 };
@@ -516,10 +516,10 @@ describe('GARAGE_MAP, the opener', () => {
     const host = document.createElement('div');
     const pin = document.createElement('div');
     document.body.append(host);
-    const { Marker } = jest.requireMock<{
+    const { Marker } = maplibre as unknown as {
       Marker: { prototype: { setLngLat(at: unknown): unknown } };
-    }>('maplibre-gl');
-    const at = jest.spyOn(Marker.prototype, 'setLngLat');
+    };
+    const at = vi.spyOn(Marker.prototype, 'setLngLat');
 
     const map = await TestBed.inject(GARAGE_MAP)(host, pin, POINT, START);
 
@@ -543,7 +543,7 @@ describe('GARAGE_MAP, the opener', () => {
     const host = document.createElement('div');
     host.style.setProperty('--mf-text', 'rgb(20, 20, 20)');
     document.body.append(host);
-    const { Map: Built, Marker } = jest.requireMock<{
+    const { Map: Built, Marker } = maplibre as unknown as {
       Map: {
         prototype: {
           addLayer(layer: unknown): void;
@@ -551,10 +551,10 @@ describe('GARAGE_MAP, the opener', () => {
         };
       };
       Marker: { prototype: { addTo(): unknown } };
-    }>('maplibre-gl');
-    const source = jest.spyOn(Built.prototype, 'addSource');
-    const layer = jest.spyOn(Built.prototype, 'addLayer');
-    const marker = jest.spyOn(Marker.prototype, 'addTo');
+    };
+    const source = vi.spyOn(Built.prototype, 'addSource');
+    const layer = vi.spyOn(Built.prototype, 'addLayer');
+    const marker = vi.spyOn(Marker.prototype, 'addTo');
 
     const map = await TestBed.inject(GARAGE_MAP)(
       host,
@@ -592,10 +592,10 @@ describe('GARAGE_MAP, the opener', () => {
   });
 
   it('leaves no map and no watcher behind when the marker cannot be added', async () => {
-    const { Marker } = jest.requireMock<{
+    const { Marker } = maplibre as unknown as {
       Marker: { prototype: { addTo(): unknown } };
-    }>('maplibre-gl');
-    jest.spyOn(Marker.prototype, 'addTo').mockImplementationOnce(() => {
+    };
+    vi.spyOn(Marker.prototype, 'addTo').mockImplementationOnce(() => {
       throw new Error('marker');
     });
     const host = document.createElement('div');

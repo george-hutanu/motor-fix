@@ -18,6 +18,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { DriverHome } from './driver-home';
 import { SavedGarages } from '../../public/saved-garages/saved-garages';
@@ -95,12 +96,12 @@ interface Setup {
   language?: 'ro' | 'en';
 }
 
-let carsList: jest.Mock;
-let requestsList: jest.Mock;
-let activeRead: jest.Mock;
-let savedList: jest.Mock;
-let open: jest.Mock;
-let compare: jest.Mock;
+let carsList: Mock;
+let requestsList: Mock;
+let activeRead: Mock;
+let savedList: Mock;
+let open: Mock;
+let compare: Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let offline: ReturnType<typeof signal<boolean>>;
@@ -163,14 +164,14 @@ async function render({
   capabilities = DRIVER,
   language = 'ro',
 }: Setup = {}) {
-  carsList = jest.fn(() => answer(cars));
-  requestsList = jest.fn(() => answer(requests));
-  activeRead = jest.fn(() => activeAnswer(active ?? activeOf(requests)));
-  savedList = jest.fn(() =>
+  carsList = vi.fn(() => answer(cars));
+  requestsList = vi.fn(() => answer(requests));
+  activeRead = vi.fn(() => activeAnswer(active ?? activeOf(requests)));
+  savedList = vi.fn(() =>
     saved instanceof Error ? Promise.reject(saved) : Promise.resolve(saved),
   );
-  open = jest.fn(async () => 'cancelled');
-  compare = jest.fn(() => new Promise<never>(() => undefined));
+  open = vi.fn(async () => 'cancelled');
+  compare = vi.fn(() => new Promise<never>(() => undefined));
   events = new Subject();
   resync = new Subject();
   offline = signal(false);
@@ -197,7 +198,7 @@ async function render({
       },
       {
         provide: QuotesService,
-        useValue: { acceptControllerAccept: jest.fn() },
+        useValue: { acceptControllerAccept: vi.fn() },
       },
       {
         provide: SavedGaragesService,
@@ -903,8 +904,9 @@ describe('Panou once a quote is accepted', () => {
 
 // Only Date is faked: Angular's stability checks still need real timers.
 function clockAt(at: string) {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date(at),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -920,7 +922,6 @@ function clockAt(at: string) {
       'hrtime',
       'performance',
     ],
-    now: new Date(at),
   });
 }
 
@@ -947,7 +948,7 @@ const lines = (card: HTMLElement) =>
 
 describe('Mașinile mele filled with the driver’s cars', () => {
   beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   // @traces 029-FR-001 029-FR-002 029-FR-003
   it('shows the car’s name, year and kilometres and its two most urgent lines, without the plate', async () => {
@@ -1153,7 +1154,7 @@ describe('Mașinile mele when the cars cannot be read', () => {
 // @traces 029-FR-009
 describe('a car saved from Mașinile mele', () => {
   beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('shows in the panel at once, with its lines, without reading again', async () => {
     const { element, settle } = await render();
@@ -1218,14 +1219,14 @@ describe('the add-car and find-garage buttons on a 320 px phone', () => {
 });
 
 describe('Mașinile mele on a page left open', () => {
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   // @traces 029-FR-002
   it('ranks the lines by the new day once it comes, with no new read', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
-      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    vi.useFakeTimers({
       now: new Date('2026-10-08T09:00:00Z'),
+      shouldAdvanceTime: true,
+      toNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
     });
     // ITP in 8 days (amber) and the oil about 6 days away (red); two days
     // later the ITP is 6 days away too and, as urgent, comes first.
@@ -1244,8 +1245,8 @@ describe('Mașinile mele on a page left open', () => {
 
     expect(kinds()).toEqual(['mf-oil-line', 'mf-due-date-line']);
 
-    jest.setSystemTime(new Date('2026-10-10T09:00:00Z'));
-    jest.advanceTimersByTime(60_000);
+    vi.setSystemTime(new Date('2026-10-10T09:00:00Z'));
+    vi.advanceTimersByTime(60_000);
     await settle();
 
     expect(kinds()).toEqual(['mf-due-date-line', 'mf-oil-line']);
@@ -1442,7 +1443,7 @@ describe('Panou opened again', () => {
 
   it('reads the requests again past 30 seconds and the cars past 5 minutes', async () => {
     const start = Date.now();
-    const clock = jest.spyOn(Date, 'now').mockReturnValue(start);
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(start);
     try {
       const first = await render({ cars: [car()], requests: [request()] });
       first.fixture.destroy();

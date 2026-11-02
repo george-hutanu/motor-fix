@@ -10,6 +10,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { GarageReviewsPanel } from './garage-reviews-panel';
 import { Live } from '../../live';
@@ -34,7 +35,7 @@ class Host {
 }
 
 let events: Subject<LiveMessage>;
-let read: jest.Mock;
+let read: Mock;
 
 const rows = (count: number, from = 1) =>
   Array.from({ length: count }, (_, i) => staffReview({ id: `r-${from + i}` }));
@@ -51,7 +52,7 @@ async function render({
 } = {}) {
   events = new Subject();
   const resync = new Subject<void>();
-  read = jest.fn(answer);
+  read = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

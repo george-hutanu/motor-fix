@@ -12,15 +12,15 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { DriverNotifications } from './driver-notifications';
 import { Live } from '../live';
 import { PushDevice, type PushState } from '../push-device';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const KEYS = ['offers', 'bookings', 'due_dates', 'news', 'reviews_history'];
 const TITLES = [
@@ -55,29 +55,29 @@ const answer = (
     staff: [],
   }) as unknown as NotificationPreferencesDto;
 
-let read: jest.Mock;
-let save: jest.Mock;
-let open: jest.Mock;
+let read: Mock;
+let save: Mock;
+let open: Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let push: {
   state: ReturnType<typeof signal<PushState>>;
-  refresh: jest.Mock;
-  enable: jest.Mock;
+  refresh: Mock;
+  enable: Mock;
 };
 
 async function render(
   first: Promise<NotificationPreferencesDto> = Promise.resolve(answer()),
   language: 'ro' | 'en' = 'ro',
 ) {
-  read = jest.fn(() => first);
-  save = jest.fn(async () => answer());
-  open = jest.fn(async () => true);
+  read = vi.fn(() => first);
+  save = vi.fn(async () => answer());
+  open = vi.fn(async () => true);
   events = new Subject();
   resync = new Subject();
   push = {
-    enable: jest.fn(async () => undefined),
-    refresh: jest.fn(async () => undefined),
+    enable: vi.fn(async () => undefined),
+    refresh: vi.fn(async () => undefined),
     state: signal<PushState>('off'),
   };
   TestBed.configureTestingModule({
@@ -119,7 +119,7 @@ const isOn = (s: HTMLButtonElement) =>
   s.getAttribute('aria-checked') === 'true';
 const states = (element: HTMLElement) => switches(element).map(isOn);
 
-afterEach(() => jest.clearAllMocks());
+afterEach(() => vi.clearAllMocks());
 
 describe('the driver notification switches', () => {
   it('shows the five groups in order, each named by its title and described by its helper line', async () => {

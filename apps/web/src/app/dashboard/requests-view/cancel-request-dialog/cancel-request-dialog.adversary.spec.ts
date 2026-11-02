@@ -5,6 +5,7 @@ import { QuoteRequestsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   type CancelRequestData,
@@ -12,10 +13,9 @@ import {
   type CancelRequestResult,
 } from './cancel-request-dialog';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({ template: '' })
 class Host {
@@ -28,7 +28,7 @@ const DATA: CancelRequestData = {
   what: 'Schimb ulei',
 };
 
-let cancel: jest.Mock;
+let cancel: Mock;
 let result: Promise<CancelRequestResult | 'cancelled'>;
 
 async function settle() {
@@ -45,7 +45,7 @@ async function open({
   data?: CancelRequestData;
   language?: 'ro' | 'en';
 } = {}) {
-  cancel = jest.fn(async () => ({ id: 'req-1', status: 'closed' }));
+  cancel = vi.fn(async () => ({ id: 'req-1', status: 'closed' }));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -92,8 +92,8 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
-  jest.restoreAllMocks();
+  (toast as unknown as Mock).mockClear();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -194,8 +194,6 @@ describe('the cancel request dialog under hostile use', () => {
 
     await expect(result).resolves.toBe('refused');
     expect(toast).toHaveBeenCalledTimes(1);
-    expect(typeof (toast as unknown as jest.Mock).mock.calls[0][0]).toBe(
-      'string',
-    );
+    expect(typeof (toast as unknown as Mock).mock.calls[0][0]).toBe('string');
   });
 });

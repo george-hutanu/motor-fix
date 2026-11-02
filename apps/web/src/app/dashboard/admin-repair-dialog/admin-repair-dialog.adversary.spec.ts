@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { type AdminRepairDto, AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type AdminRepairData,
@@ -32,9 +33,9 @@ const repair = (extra: Partial<AdminRepairDto> = {}): AdminRepairDto => ({
   ...extra,
 });
 
-let correct: jest.Mock;
-let reread: jest.Mock;
-let saved: jest.Mock;
+let correct: Mock;
+let reread: Mock;
+let saved: Mock;
 let result: Promise<OverlayResult<AdminRepairResult>>;
 
 async function settle() {
@@ -48,7 +49,7 @@ async function open(
   loaded: AdminRepairDto = repair(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  correct ??= jest.fn(
+  correct ??= vi.fn(
     async ({ body }: { body: Partial<AdminRepairDto> }) =>
       ({
         ...loaded,
@@ -57,8 +58,8 @@ async function open(
         version: '2026-10-30T11:00:00.000Z',
       }) as AdminRepairDto,
   );
-  reread ??= jest.fn(async () => loaded);
-  saved = jest.fn();
+  reread ??= vi.fn(async () => loaded);
+  saved = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       {
@@ -133,8 +134,8 @@ const conflict = () =>
   });
 
 beforeEach(() => {
-  correct = undefined as unknown as jest.Mock;
-  reread = undefined as unknown as jest.Mock;
+  correct = undefined as unknown as Mock;
+  reread = undefined as unknown as Mock;
 });
 
 afterEach(() => {
@@ -153,7 +154,7 @@ const described = (input: HTMLInputElement) =>
 describe('the repair dialog under hostile input', () => {
   it('sends one request when Salvează is tapped twice', async () => {
     let answer: (value: AdminRepairDto) => void = () => undefined;
-    correct = jest.fn(
+    correct = vi.fn(
       () =>
         new Promise<AdminRepairDto>((resolve) => {
           answer = resolve;
@@ -325,7 +326,7 @@ describe('the repair dialog under hostile input', () => {
 
 describe('the repair dialog when a save does not go through', () => {
   it('keeps the form and the values after a server error, tells no opener, and sends the same version again', async () => {
-    correct = jest
+    correct = vi
       .fn()
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }))
       .mockResolvedValueOnce(repair({ costBani: 48000 }));
@@ -345,7 +346,7 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('keeps the form after the network fails', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 0 });
     });
     await open();
@@ -359,7 +360,7 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('does not tell the opener about a 409 or a 404', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
     await open();
@@ -371,7 +372,7 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('re-reads once only when Salvează is tapped twice into a 409', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
     await open();
@@ -387,10 +388,10 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('shows the re-read values on Renunță after a 409', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
-    reread = jest.fn(async () =>
+    reread = vi.fn(async () =>
       repair({ costBani: 47000, version: '2026-10-30T10:30:00.000Z' }),
     );
     await open();
@@ -404,7 +405,7 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('discards the edits of every field on a 409', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
     await open();
@@ -423,7 +424,7 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('closes gone without telling the opener of a save when the save answers 404', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 404 });
     });
     await open();
@@ -437,7 +438,7 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('shows a 400 on what was done at that field and keeps the other values', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw new HttpErrorResponse({
         error: {
           code: 'validation_failed',
@@ -458,7 +459,7 @@ describe('the repair dialog when a save does not go through', () => {
   });
 
   it('shows the form unchanged after a failed save then Renunță', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 500 });
     });
     await open();
@@ -473,7 +474,7 @@ describe('the repair dialog when a save does not go through', () => {
 
   it('tells the section a correction that answers after Escape closed the dialog', async () => {
     let answer: (value: AdminRepairDto) => void = () => undefined;
-    correct = jest.fn(
+    correct = vi.fn(
       () =>
         new Promise<AdminRepairDto>((resolve) => {
           answer = resolve;

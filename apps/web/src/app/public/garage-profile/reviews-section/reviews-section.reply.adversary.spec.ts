@@ -73,7 +73,7 @@ type Read = {
 };
 let reads: Read[];
 const api = {
-  reviewsControllerForGarage: jest.fn(
+  reviewsControllerForGarage: vi.fn(
     (params: { garageId: string; page?: number }, context?: HttpContext) =>
       new Promise<GarageReviewsPageDto>((resolve, reject) => {
         reads.push({
@@ -97,7 +97,7 @@ const resync = new Subject<void>();
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn(() => () => undefined),
+  register: vi.fn(() => () => undefined),
   resync,
 };
 const send = (kind: string) =>
@@ -153,7 +153,7 @@ async function english() {
 
 async function liveMessage(kind: string) {
   send(kind);
-  jest.advanceTimersByTime(300);
+  vi.advanceTimersByTime(300);
   await settle();
 }
 
@@ -170,7 +170,7 @@ const button = (label: string) =>
 
 afterEach(() => {
   fixture?.destroy();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 const REPLY = {
@@ -422,7 +422,7 @@ describe('the profile’s reply under hostile answers', () => {
 describe('the profile’s reply kept live', () => {
   beforeEach(() => {
     configure();
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   it('drops the reply and keeps the review when the re-read no longer carries it', async () => {
@@ -472,7 +472,7 @@ describe('the profile’s reply kept live', () => {
 
     send('review.replied');
     send('review.reply_edited');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(2);

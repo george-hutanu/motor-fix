@@ -160,7 +160,7 @@ describe('CockpitGaugesSample', () => {
 
   it('says whether motion is full or reduced, following the device', async () => {
     let change: (event: MediaQueryListEvent) => void = () => undefined;
-    jest.spyOn(window, 'matchMedia').mockImplementation(
+    vi.spyOn(window, 'matchMedia').mockImplementation(
       (query) =>
         ({
           addEventListener: (_: string, l: typeof change) => {
@@ -180,7 +180,7 @@ describe('CockpitGaugesSample', () => {
     fixture.detectChanges();
     expect(motion()).toBe(text('motionReduced'));
     expect(text('motionReduced')).not.toBe(text('motionFull'));
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('sits on the sample page', async () => {

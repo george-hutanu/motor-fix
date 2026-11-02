@@ -59,14 +59,14 @@ For each public entry point:
 - **One skip rule.** Skip a case only when a colocated spec already asserts
   the same concrete input and the same concrete outcome, and name that spec
   on a `Covered already` line. No other reason skips a case.
-- **House conventions**: Jest; plain titles describing the behavior; no FR
+- **House conventions**: Vitest; plain titles describing the behavior; no FR
   ids, ticket keys, task ids or other internal identifiers anywhere in the
   file except a whole-line `// @traces <feature>-FR-<n>` comment; no comment that restates its own test; temp dirs via `mkdtemp`, cleaned
   in `afterEach`.
 - **Real assertions.** Every test asserts a concrete expected outcome from the
   spec or contract — a thrown error, a status code, an exact shape. Never
   `toBeTruthy()`, never "does not throw" alone.
-- **Run what you wrote**: `npx jest <your files>`. A failing test is not
+- **Run what you wrote**: `npx vitest run --config <the project's vitest config> <your files>`. A failing test is not
   a mistake — it is your deliverable. Do not fix the implementation and do not
   delete the test.
 

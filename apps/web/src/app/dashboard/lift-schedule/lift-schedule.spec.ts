@@ -11,7 +11,7 @@ import {
 
 const vlad = { id: 'm-1', name: 'Vlad Stan' };
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 const rowNames = (element: HTMLElement) =>
   [...element.querySelectorAll('[data-row]')].map((row) =>
@@ -152,7 +152,7 @@ describe('the lift schedule panel', () => {
   it('ticks the corner and the line on each minute boundary', async () => {
     const { element, settle } = await renderPanel();
 
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     await settle();
 
     expect(text(element.querySelector('[data-now]'))).toBe('acum, 13:01');
@@ -204,24 +204,20 @@ describe('the lift schedule panel', () => {
 
 // @traces 151-FR-012
 describe('the first drawing', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('scrolls the timeline once so the now line stands mid-view', async () => {
     // 8:00 to 18:00 at 48 px an hour beside the 104 px names: 584 px wide.
-    jest
-      .spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
-      .mockReturnValue(584);
-    jest
-      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-      .mockReturnValue(300);
-    const scrolled = jest.spyOn(Element.prototype, 'scrollLeft', 'set');
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(584);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300);
+    const scrolled = vi.spyOn(Element.prototype, 'scrollLeft', 'set');
 
     const { live, settle } = await renderPanel();
 
     // 13:00 is half the axis: 104 + 240 px, less half the view.
     expect(scrolled.mock.calls).toEqual([[194]]);
     live.emit('booking.moved', 'b-1');
-    await jest.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(300);
     await settle();
     expect(scrolled).toHaveBeenCalledTimes(1);
   });

@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { AdminReviews } from './admin-reviews';
 import { Live } from '../live';
@@ -67,7 +68,7 @@ const queue =
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let asked: number[];
-let announce: jest.Mock;
+let announce: Mock;
 let answer: (page?: number) => Promise<ReportQueueDto>;
 
 async function settle() {
@@ -90,7 +91,7 @@ async function open(
   events = new Subject();
   resync = new Subject();
   asked = [];
-  announce = jest.fn(async () => undefined);
+  announce = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -439,7 +440,7 @@ describe('live', () => {
 
 describe('the time on screen', () => {
   it('leaves a mark days away to the minute tick, setting no timer for it', async () => {
-    const timeout = jest.spyOn(globalThis, 'setTimeout');
+    const timeout = vi.spyOn(globalThis, 'setTimeout');
     try {
       answer = async () => ({
         ...(await queue(1)()),
@@ -455,10 +456,10 @@ describe('the time on screen', () => {
   });
 
   it('marks an item past 48 hours when it crosses the mark while shown, with no new read', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
-      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    vi.useFakeTimers({
       now: new Date('2026-10-30T10:00:00Z'),
+      shouldAdvanceTime: true,
+      toNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
     });
     try {
       answer = async () => ({
@@ -468,14 +469,14 @@ describe('the time on screen', () => {
       const el = await open();
       expect(el.querySelector('.overdue')).toBeNull();
 
-      jest.setSystemTime(new Date('2026-10-30T10:00:31Z'));
-      jest.advanceTimersByTime(31_000);
+      vi.setSystemTime(new Date('2026-10-30T10:00:31Z'));
+      vi.advanceTimersByTime(31_000);
       await settle();
 
       expect(text(el.querySelector('.overdue'))).toBe('Peste 48 de ore');
       expect(asked).toHaveLength(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });

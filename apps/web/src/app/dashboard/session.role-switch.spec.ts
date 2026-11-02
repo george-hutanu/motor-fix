@@ -17,13 +17,13 @@ function switchSetup(switches: () => Promise<{ accessToken: string }>) {
   return setup({
     auth: {
       // Through the refresh cookie, so a signed-out session cannot switch.
-      authControllerSwitchRole: jest.fn(async () => {
+      authControllerSwitchRole: vi.fn(async () => {
         const answer = await switches();
         role = 'driver';
         return answer;
       }),
     },
-    me: { meControllerMe: jest.fn(() => Promise.resolve(roleAccount(role))) },
+    me: { meControllerMe: vi.fn(() => Promise.resolve(roleAccount(role))) },
   });
 }
 

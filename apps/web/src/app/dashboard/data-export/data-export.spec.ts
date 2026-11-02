@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { type DataExportDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { DataExport } from './data-export';
 import en from '../../../../../../libs/i18n/src/shell/en.json';
@@ -30,9 +31,9 @@ const refusal = (status: number, code: string) =>
     url: '/api/v1/me/data-export',
   });
 
-let latest: jest.Mock;
-let request: jest.Mock;
-let download: jest.Mock;
+let latest: Mock;
+let request: Mock;
+let download: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -45,14 +46,14 @@ async function render(
   answers: Array<DataExportDto | null | HttpErrorResponse>,
   language: 'ro' | 'en' = 'ro',
 ) {
-  latest = jest.fn();
+  latest = vi.fn();
   for (const answer of answers) {
     if (answer instanceof HttpErrorResponse)
       latest.mockRejectedValueOnce(answer);
     else latest.mockResolvedValueOnce(answer);
   }
-  request = jest.fn();
-  download = jest.fn();
+  request = vi.fn();
+  download = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       {
@@ -143,15 +144,15 @@ describe('"Descarcă datele mele" in the account panel', () => {
       }),
     });
     const saved: { href: string; download: string }[] = [];
-    const click = jest
+    const click = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(function (this: HTMLAnchorElement) {
         saved.push({ download: this.download, href: this.href });
       });
-    const created = jest.fn(() => 'blob:zip');
+    const created = vi.fn(() => 'blob:zip');
     Object.assign(URL, {
       createObjectURL: created,
-      revokeObjectURL: jest.fn(),
+      revokeObjectURL: vi.fn(),
     });
 
     link(element)?.click();

@@ -57,8 +57,8 @@ let fixture: ComponentFixture<Host>;
 beforeEach(async () => {
   TestBed.configureTestingModule({
     providers: [
-      { provide: Consent, useValue: { track: jest.fn() } },
-      { provide: GARAGE_MAP, useValue: jest.fn() },
+      { provide: Consent, useValue: { track: vi.fn() } },
+      { provide: GARAGE_MAP, useValue: vi.fn() },
     ],
   });
   await TestBed.inject(I18n).enter('public');

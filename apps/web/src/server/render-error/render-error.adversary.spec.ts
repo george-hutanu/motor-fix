@@ -1,12 +1,10 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { startTelemetry } from '@motor-fix/observability';
 import { inMemory, patchForJest } from '@motor-fix/observability/testing';
 import express from 'express';
+import { type MockInstance, vi } from 'vitest';
 
 import { renderError } from './render-error';
 
@@ -21,7 +19,7 @@ patchForJest();
 let web: Server;
 let base: string;
 let lines: string[];
-let errorLog: jest.SpyInstance;
+let errorLog: MockInstance;
 
 beforeAll(async () => {
   const app = express();
@@ -59,7 +57,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   lines = [];
-  errorLog = jest
+  errorLog = vi
     .spyOn(console, 'error')
     .mockImplementation((line: unknown) => lines.push(String(line)));
   await started?.flush();

@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { AuthService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { NewPassword } from './new-password';
 import { Session } from '../../dashboard/session';
@@ -26,8 +27,8 @@ const problem = (
     status,
   });
 
-let check: jest.Mock;
-let resetPassword: jest.Mock;
+let check: Mock;
+let resetPassword: Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 
 async function settle() {
@@ -41,8 +42,8 @@ async function open(
   language: 'ro' | 'en' = 'ro',
   checked: () => Promise<unknown> = async () => undefined,
 ) {
-  check = jest.fn(checked);
-  resetPassword = jest.fn(async () => ({ landing: '/app/driver' }));
+  check = vi.fn(checked);
+  resetPassword = vi.fn(async () => ({ landing: '/app/driver' }));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -95,7 +96,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 127-FR-011 127-FR-012

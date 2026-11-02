@@ -8,15 +8,15 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { DriverNotifications } from './driver-notifications';
 import { Live } from '../live';
 import { PushDevice, type PushState } from '../push-device';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 type Channel = 'email' | 'push' | 'sms' | 'whatsapp';
 const EPSW: Channel[] = ['email', 'push', 'sms', 'whatsapp'];
@@ -109,27 +109,27 @@ const deferred = <T>() => {
   return { promise, reject, resolve };
 };
 
-let read: jest.Mock;
-let save: jest.Mock;
+let read: Mock;
+let save: Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let push: {
   state: ReturnType<typeof signal<PushState>>;
-  refresh: jest.Mock;
-  enable: jest.Mock;
+  refresh: Mock;
+  enable: Mock;
 };
 
 async function render(
   first: NotificationPreferencesDto,
   language: 'ro' | 'en' = 'en',
 ) {
-  read = jest.fn(async () => first);
-  save = jest.fn(async () => first);
+  read = vi.fn(async () => first);
+  save = vi.fn(async () => first);
   events = new Subject();
   resync = new Subject();
   push = {
-    enable: jest.fn(async () => undefined),
-    refresh: jest.fn(async () => undefined),
+    enable: vi.fn(async () => undefined),
+    refresh: vi.fn(async () => undefined),
     state: signal<PushState>('off'),
   };
   TestBed.configureTestingModule({
@@ -142,7 +142,7 @@ async function render(
         },
       },
       { provide: Live, useValue: { events, resync } },
-      { provide: Overlays, useValue: { open: jest.fn(async () => true) } },
+      { provide: Overlays, useValue: { open: vi.fn(async () => true) } },
       { provide: PushDevice, useValue: push },
     ],
   });
@@ -200,7 +200,7 @@ const lateRead = async (settle: () => Promise<void>) => {
   await settle();
 };
 
-afterEach(() => jest.clearAllMocks());
+afterEach(() => vi.clearAllMocks());
 
 // @traces 1415-FR-002
 describe('the fallback hint with values the panel does not know', () => {

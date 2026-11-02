@@ -9,8 +9,15 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { openAddCar } from './open-add-car';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./add-car');
+});
 
 @Component({ template: '' })
 class Host {
@@ -44,9 +51,9 @@ const stored: CarDto = {
   year: 2019,
 };
 
-let update: jest.Mock;
-let listCars: jest.Mock;
-let gone: jest.Mock;
+let update: Mock;
+let listCars: Mock;
+let gone: Mock;
 let edited: Promise<OverlayResult<CarDto>>;
 
 async function settle() {
@@ -61,18 +68,18 @@ async function openEdit(
   withGone = true,
   language: 'ro' | 'en' = 'ro',
 ) {
-  update = jest.fn(async () => ({
+  update = vi.fn(async () => ({
     ...car,
     updatedAt: '2026-10-08T08:00:00.000Z',
   }));
-  listCars = jest.fn(async () => ({ items: [car] }));
-  gone = jest.fn();
+  listCars = vi.fn(async () => ({ items: [car] }));
+  gone = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       {
         provide: BrandsService,
         useValue: {
-          brandsControllerSearch: jest.fn(async () => ({
+          brandsControllerSearch: vi.fn(async () => ({
             items: [brand('bmw', 'BMW')],
             nextCursor: null,
             total: 1,
@@ -142,7 +149,7 @@ afterEach(() => {
     n.innerHTML = '';
   });
   document.body.innerHTML = '';
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 092-FR-010
@@ -379,13 +386,13 @@ describe('the edit dialog opened for a date', () => {
   ] as const)(
     'puts the focus on the %s field of a car that has none of the dates',
     async (focus, label) => {
-      update = jest.fn();
+      update = vi.fn();
       TestBed.configureTestingModule({
         providers: [
           {
             provide: BrandsService,
             useValue: {
-              brandsControllerSearch: jest.fn(async () => ({
+              brandsControllerSearch: vi.fn(async () => ({
                 items: [brand('bmw', 'BMW')],
                 nextCursor: null,
                 total: 1,

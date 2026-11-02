@@ -92,7 +92,7 @@ complete phase, not a failure. Then `node .claude/scripts/level.mjs check`.
 Phase agent: `model: fable`. The `before_plan` design check and the plan commit run inside it.
 
 Invoke `speckit-plan`. Technical Context values come from `package.json`, the
-lockfile, `tsconfig*.json`, `nx.json`, `jest.config.ts`, and the touched
+lockfile, `tsconfig*.json`, `nx.json`, `vitest.preset.mts`, `vitest.shared.ts`, and the touched
 workspace's own config — read them and cite them; never a version from memory.
 Parse the setup script's JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `FEATURE_DIR`,
 `BRANCH` (spec-kit ≥1.0.5 renamed `SPECS_DIR` to `FEATURE_DIR`).

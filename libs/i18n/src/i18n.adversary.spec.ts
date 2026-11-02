@@ -14,10 +14,10 @@ describe('I18n adversarial', () => {
     i18n = TestBed.inject(I18n);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('loads an area once when it is entered twice', async () => {
-    const ro = jest
+    const ro = vi
       .spyOn(loaders('garage'), 'ro')
       .mockResolvedValue({ list: { title: 'Ateliere' } });
 
@@ -29,9 +29,7 @@ describe('I18n adversarial', () => {
   });
 
   it('loads an area once when it is entered concurrently', async () => {
-    const ro = jest
-      .spyOn(loaders('garage'), 'ro')
-      .mockResolvedValue({ a: 'A' });
+    const ro = vi.spyOn(loaders('garage'), 'ro').mockResolvedValue({ a: 'A' });
 
     await Promise.all([i18n.enter('garage'), i18n.enter('garage')]);
 
@@ -55,13 +53,13 @@ describe('I18n adversarial', () => {
 
   it('lets the last of two overlapping use calls win', async () => {
     let release: (v: unknown) => void = () => undefined;
-    jest.spyOn(loaders('driver'), 'en').mockImplementation(
+    vi.spyOn(loaders('driver'), 'en').mockImplementation(
       () =>
         new Promise((r) => {
           release = r;
         }),
     );
-    jest.spyOn(loaders('driver'), 'ro').mockResolvedValue({ x: 'ro-x' });
+    vi.spyOn(loaders('driver'), 'ro').mockResolvedValue({ x: 'ro-x' });
     await i18n.enter('driver');
 
     const slow = i18n.use('en');
@@ -75,8 +73,8 @@ describe('I18n adversarial', () => {
   });
 
   it('keeps other areas working when one area loader rejects', async () => {
-    jest.spyOn(loaders('garage'), 'ro').mockRejectedValue(new Error('network'));
-    jest.spyOn(loaders('driver'), 'ro').mockResolvedValue({ home: 'Acasa' });
+    vi.spyOn(loaders('garage'), 'ro').mockRejectedValue(new Error('network'));
+    vi.spyOn(loaders('driver'), 'ro').mockResolvedValue({ home: 'Acasa' });
 
     await i18n.enter('garage').catch(() => undefined);
     await i18n.enter('driver');
@@ -86,7 +84,7 @@ describe('I18n adversarial', () => {
   });
 
   it('retries a failed area load on the next enter', async () => {
-    const ro = jest
+    const ro = vi
       .spyOn(loaders('garage'), 'ro')
       .mockRejectedValueOnce(new Error('network'))
       .mockResolvedValue({ list: { title: 'Ateliere' } });
@@ -99,9 +97,9 @@ describe('I18n adversarial', () => {
   });
 
   it('inserts parameter values literally even with replacement patterns', async () => {
-    jest
-      .spyOn(loaders('garage'), 'ro')
-      .mockResolvedValue({ hi: 'Salut {name}, {name}!' });
+    vi.spyOn(loaders('garage'), 'ro').mockResolvedValue({
+      hi: 'Salut {name}, {name}!',
+    });
     await i18n.enter('garage');
 
     expect(i18n.t('garage.hi', { name: '$&' })).toBe('Salut $&, $&!');
@@ -126,7 +124,7 @@ describe('I18n adversarial', () => {
   });
 
   it('does not select a plural category when count is a string', async () => {
-    jest.spyOn(loaders('garage'), 'ro').mockResolvedValue({
+    vi.spyOn(loaders('garage'), 'ro').mockResolvedValue({
       n: {
         few: '{count} ateliere',
         one: '{count} atelier',
@@ -149,8 +147,8 @@ describe('I18n adversarial', () => {
   });
 
   it('falls back to Romanian when the English text is an empty string', async () => {
-    jest.spyOn(loaders('garage'), 'ro').mockResolvedValue({ a: 'Salut' });
-    jest.spyOn(loaders('garage'), 'en').mockResolvedValue({ a: '' });
+    vi.spyOn(loaders('garage'), 'ro').mockResolvedValue({ a: 'Salut' });
+    vi.spyOn(loaders('garage'), 'en').mockResolvedValue({ a: '' });
     await i18n.enter('garage');
     await i18n.use('en');
 

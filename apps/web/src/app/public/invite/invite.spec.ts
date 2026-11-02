@@ -47,20 +47,20 @@ function setup({
   platform = 'browser',
 }: Options = {}) {
   const current = signal<MeDto | null>(signedIn);
-  const check = jest.fn(async () => {
+  const check = vi.fn(async () => {
     if (answer instanceof HttpErrorResponse) throw answer;
     return answer;
   });
-  const acceptInvite = jest.fn(async (_: unknown): Promise<void> => undefined);
-  const switchRole = jest.fn(async () => {
+  const acceptInvite = vi.fn(async (_: unknown): Promise<void> => undefined);
+  const switchRole = vi.fn(async () => {
     current.set(MECHANIC);
     return MECHANIC;
   });
-  const join = jest.fn(async () => {
+  const join = vi.fn(async () => {
     if (joined) current.set(DRIVER);
     return joined;
   });
-  const load = jest.fn(async () => current());
+  const load = vi.fn(async () => current());
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -85,7 +85,7 @@ function setup({
       { provide: SignInDialog, useValue: { join } },
     ],
   });
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const fixture = TestBed.createComponent(InvitePage);
@@ -111,7 +111,7 @@ const accept = (fixture: { nativeElement: unknown }) =>
 
 const INVALID = 'Invitația nu mai este valabilă. Cere service‑ului una nouă.';
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the invite link page', () => {
   // @traces 131-FR-012

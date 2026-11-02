@@ -1,12 +1,11 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 // @traces 430-FR-007 430-FR-010
+
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { metrics } from '@opentelemetry/api';
 import express from 'express';
+import { vi } from 'vitest';
 
 import { mountOriginGuard } from './origin-guard';
 
@@ -24,7 +23,7 @@ async function serve(secrets: string[]) {
 }
 
 afterEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   await new Promise((done) => server?.close(done));
   server = undefined;
 });
@@ -89,13 +88,11 @@ describe('the origin guard', () => {
   });
 
   it('counts a refusal and logs its path, never the value sent', async () => {
-    const add = jest.fn();
-    jest.spyOn(metrics, 'getMeter').mockReturnValue({
+    const add = vi.fn();
+    vi.spyOn(metrics, 'getMeter').mockReturnValue({
       createCounter: () => ({ add }),
     } as unknown as ReturnType<typeof metrics.getMeter>);
-    const warn = jest
-      .spyOn(console, 'warn')
-      .mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const base = await serve(['s3cret']);
 
     await fetch(`${base}/ro/garages/x`, {

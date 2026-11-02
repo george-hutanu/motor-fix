@@ -4,15 +4,15 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { VerificationRegisterForm } from './verification-register-form';
 
 // @traces 203-FR-007 203-FR-009
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const ANSWER = {
   check: {
@@ -98,12 +98,12 @@ class Host {
     buttons: [{ label: '1', n: 1, named: 'Pagina 1' }],
     line: 'Autorizația tehnică RAR · încărcată, 1 pagină',
   });
-  readonly recorded = jest.fn();
-  readonly decided = jest.fn();
-  readonly page = jest.fn();
+  readonly recorded = vi.fn();
+  readonly decided = vi.fn();
+  readonly page = vi.fn();
 }
 
-let record: jest.Mock;
+let record: Mock;
 let host: Host;
 let el: HTMLElement;
 
@@ -118,8 +118,8 @@ async function mount(
   set: (host: Host) => void = () => {},
   language: 'ro' | 'en' = 'ro',
 ) {
-  record = jest.fn(async () => ANSWER);
-  jest.mocked(toast).mockClear();
+  record = vi.fn(async () => ANSWER);
+  vi.mocked(toast).mockClear();
   document.body.innerHTML = '';
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({

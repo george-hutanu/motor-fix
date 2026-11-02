@@ -4,18 +4,20 @@ import { TestBed } from '@angular/core/testing';
 import { type MeDto, SavedGaragesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { SavedGarages } from './saved-garages';
 import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: Object.assign(
-    jest.fn(() => 'bar'),
-    { dismiss: jest.fn() },
-  ),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), {
+    toast: Object.assign(
+      vi.fn(() => 'bar'),
+      { dismiss: vi.fn() },
+    ),
+  }),
+);
 
 type Role = MeDto['role'];
 
@@ -27,14 +29,14 @@ const row = (garageId: string, savedAt = '2026-10-01T08:00:00.000Z') => ({
 });
 
 let api: {
-  savedGaragesControllerIds: jest.Mock;
-  savedGaragesControllerRemove: jest.Mock;
-  savedGaragesControllerSave: jest.Mock;
+  savedGaragesControllerIds: Mock;
+  savedGaragesControllerRemove: Mock;
+  savedGaragesControllerSave: Mock;
 };
 let current: ReturnType<typeof signal<{ role: Role } | null>>;
 let roleHint: ReturnType<typeof signal<Role | null>>;
-let load: jest.Mock;
-let gate: jest.Mock;
+let load: Mock;
+let gate: Mock;
 
 async function store(
   options: {
@@ -47,20 +49,18 @@ async function store(
 ) {
   current = signal(options.role ? { role: options.role } : null);
   roleHint = signal(options.hint ?? options.role ?? null);
-  load = jest.fn(async () => current());
-  gate = jest.fn(async () => {
+  load = vi.fn(async () => current());
+  gate = vi.fn(async () => {
     if (!options.signsIn) return false;
     current.set({ role: options.signsIn });
     return true;
   });
   api = {
-    savedGaragesControllerIds: jest.fn(async () => ({
+    savedGaragesControllerIds: vi.fn(async () => ({
       ids: options.saved ?? [],
     })),
-    savedGaragesControllerRemove: jest.fn(async ({ garageId }) =>
-      row(garageId),
-    ),
-    savedGaragesControllerSave: jest.fn(async ({ garageId, body }) =>
+    savedGaragesControllerRemove: vi.fn(async ({ garageId }) => row(garageId)),
+    savedGaragesControllerSave: vi.fn(async ({ garageId, body }) =>
       row(garageId, body?.savedAt ?? '2026-10-17T09:00:00.000Z'),
     ),
   };
@@ -79,7 +79,7 @@ const settle = async () => {
   for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r));
 };
 const undoOf = () => {
-  const call = jest
+  const call = vi
     .mocked(toast)
     .mock.calls.find(([text]) => text === 'Scos din salvate');
   const onClick = call?.[1]?.action?.onClick;
@@ -88,8 +88,8 @@ const undoOf = () => {
 };
 
 beforeEach(() => {
-  jest.mocked(toast).mockClear();
-  jest.mocked(toast.dismiss).mockClear();
+  vi.mocked(toast).mockClear();
+  vi.mocked(toast.dismiss).mockClear();
   sessionStorage.clear();
 });
 afterEach(() => TestBed.resetTestingModule());

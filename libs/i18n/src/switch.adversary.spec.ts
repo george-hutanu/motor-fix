@@ -7,11 +7,10 @@ import {
   LanguageSwitch,
   provideRememberedLanguage,
 } from './switch';
+import { watchSwitches } from './watch-switches.testing';
 
 @Component({ imports: [LanguageSwitch], template: '<mf-language-switch />' })
 class Host {}
-
-const settle = () => new Promise((resolve) => setTimeout(resolve));
 
 async function start() {
   TestBed.configureTestingModule({ providers: [provideRememberedLanguage()] });
@@ -39,13 +38,15 @@ function storageEvent(newValue: string | null, key = 'mf.lang') {
 }
 
 function unreachableStorage() {
-  jest.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+  vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
     throw new DOMException('denied', 'SecurityError');
   });
 }
 
+const settle = watchSwitches();
+
 beforeEach(() => localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('LanguageSwitch under hostile conditions', () => {
   it('renders exactly two buttons, RO then EN', async () => {
@@ -58,7 +59,7 @@ describe('LanguageSwitch under hostile conditions', () => {
   });
 
   it('switches for the visit when storage reads fine but writes throw', async () => {
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('quota', 'QuotaExceededError');
     });
     const { fixture, i18n } = await start();
@@ -120,7 +121,7 @@ describe('LanguageSwitch under hostile conditions', () => {
 
   it('does not write back a value received from another tab', async () => {
     const { i18n } = await start();
-    const write = jest.spyOn(Storage.prototype, 'setItem');
+    const write = vi.spyOn(Storage.prototype, 'setItem');
 
     storageEvent('en');
     await settle();
@@ -186,8 +187,8 @@ describe('LanguageSwitch under hostile conditions', () => {
   });
 
   it('keeps a first visit Romanian whatever the browser language', async () => {
-    jest.spyOn(navigator, 'language', 'get').mockReturnValue('en-GB');
-    jest.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-GB', 'en']);
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-GB');
+    vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-GB', 'en']);
 
     const { i18n } = await start();
 

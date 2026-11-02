@@ -34,7 +34,7 @@ produces artifacts, not intentions.
 - **Real assertions, no placeholders.** Every test asserts the concrete expected
   behavior from the spec (return shapes, thrown errors, counters, ordering). No
   `it.todo`, no empty bodies, no assertions on placeholder values.
-- **House test conventions** (constitution II): Jest, colocated `foo.spec.ts`
+- **House test conventions** (constitution II): Vitest, colocated `foo.spec.ts`
   next to the source it covers; app-level integration tests in the app's `test/`;
   cross-app in `e2e/`. Temp dirs via `mkdtemp`, cleaned in `afterEach`. Suite
   stays fast and deterministic. End-to-end flows are Playwright, in the app's

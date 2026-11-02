@@ -12,14 +12,14 @@ const DRIVER = {
 } as unknown as MeDto;
 
 function providerSetup() {
-  const leave = jest.fn();
+  const leave = vi.fn();
   const { auth, session } = setup({
     auth: {
-      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-      oauthControllerComplete: jest.fn(() =>
+      authControllerRefresh: vi.fn(() => Promise.reject(new Error('401'))),
+      oauthControllerComplete: vi.fn(() =>
         Promise.resolve({ accessToken: 'from-google' }),
       ),
-      oauthControllerPending: jest.fn(() =>
+      oauthControllerPending: vi.fn(() =>
         Promise.resolve({
           email: 'elena@example.test',
           name: 'Elena Pop',
@@ -27,7 +27,7 @@ function providerSetup() {
         }),
       ),
     },
-    me: { meControllerMe: jest.fn(async () => DRIVER) },
+    me: { meControllerMe: vi.fn(async () => DRIVER) },
     providers: [{ provide: LEAVE, useValue: leave }],
   });
   return { api: auth, leave, session };
@@ -121,7 +121,7 @@ describe('leaving for a provider', () => {
 
   it('keeps nothing, and throws nothing, without session storage', () => {
     const { session } = providerSetup();
-    const write = jest
+    const write = vi
       .spyOn(Storage.prototype, 'setItem')
       .mockImplementation(() => {
         throw new Error('blocked');

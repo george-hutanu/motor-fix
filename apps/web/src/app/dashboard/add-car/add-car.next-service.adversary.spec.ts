@@ -9,8 +9,15 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { openAddCar } from './open-add-car';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./add-car');
+});
 
 @Component({ template: '' })
 class Host {
@@ -44,7 +51,7 @@ const stored: CarDto = {
   year: 2019,
 };
 
-let update: jest.Mock;
+let update: Mock;
 let edited: Promise<OverlayResult<CarDto>>;
 
 async function settle() {
@@ -60,7 +67,7 @@ async function openEdit(
   focus?: 'nextServiceKm',
   updateImpl?: () => Promise<CarDto>,
 ) {
-  update = jest.fn(
+  update = vi.fn(
     updateImpl ??
       (async () => ({ ...car, updatedAt: '2026-10-08T08:00:00.000Z' })),
   );
@@ -69,7 +76,7 @@ async function openEdit(
       {
         provide: BrandsService,
         useValue: {
-          brandsControllerSearch: jest.fn(async () => ({
+          brandsControllerSearch: vi.fn(async () => ({
             items: [brand],
             nextCursor: null,
             total: 1,
@@ -79,7 +86,7 @@ async function openEdit(
       {
         provide: CarsService,
         useValue: {
-          carsControllerList: jest.fn(async () => ({ items: [car] })),
+          carsControllerList: vi.fn(async () => ({ items: [car] })),
           carsControllerUpdate: update,
         },
       },
@@ -90,7 +97,7 @@ async function openEdit(
   const host = TestBed.createComponent(Host);
   edited = openAddCar(host.componentInstance.overlays, [], {
     car,
-    gone: jest.fn(),
+    gone: vi.fn(),
     ...(focus && { focus }),
   } as never);
   await settle();
@@ -133,7 +140,7 @@ afterEach(() => {
     n.innerHTML = '';
   });
   document.body.innerHTML = '';
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 1386-FR-001

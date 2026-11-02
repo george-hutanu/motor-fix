@@ -5,6 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { CarsView } from './cars-view';
 import { heldForDriver } from '../resources/resources.testing';
@@ -29,13 +30,13 @@ const car = (id: string): CarDto => ({
   year: 2019,
 });
 
-let scrolled: jest.Mock;
-let list: jest.Mock;
+let scrolled: Mock;
+let list: Mock;
 
 async function open(url: string, answer: () => Promise<unknown>) {
-  scrolled = jest.fn();
+  scrolled = vi.fn();
   Element.prototype.scrollIntoView = scrolled;
-  list = jest.fn(answer);
+  list = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -45,7 +46,7 @@ async function open(url: string, answer: () => Promise<unknown>) {
           carsControllerList: list,
         },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       ...heldForDriver(),
       provideRouter([
         { children: [{ component: CarsView, path: '**' }], path: 'cars' },
@@ -170,7 +171,7 @@ describe('Mașinile mele opened at a car whose list is already held', () => {
   // @traces 032-FR-004
   it('scrolls to the card after the router has taken the new screen to the top', async () => {
     const moves: string[] = [];
-    Element.prototype.scrollIntoView = jest.fn(function (this: Element) {
+    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
       moves.push(`card ${this.getAttribute('data-car')}`);
     });
     TestBed.configureTestingModule({
@@ -182,7 +183,7 @@ describe('Mașinile mele opened at a car whose list is already held', () => {
             carsControllerList: async () => ({ items: [car('c1'), car('c2')] }),
           },
         },
-        { provide: Overlays, useValue: { open: jest.fn() } },
+        { provide: Overlays, useValue: { open: vi.fn() } },
         ...heldForDriver(),
         provideRouter([
           { component: Elsewhere, path: 'home' },

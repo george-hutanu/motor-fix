@@ -2,9 +2,16 @@ import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { type MeDto, SupportService } from '@motor-fix/data-access';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { openContact } from './open-contact';
 import { Session } from '../session';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./contact-task');
+});
 
 // @traces 280-FR-004 280-FR-006
 
@@ -15,7 +22,7 @@ class Host {
 
 const MESSAGE = 'Nu văd cererea pe care am trimis‑o ieri.';
 
-let send: jest.Mock;
+let send: Mock;
 let result: Promise<OverlayResult<true>>;
 
 async function settle() {
@@ -26,7 +33,7 @@ async function settle() {
 }
 
 async function open(email: string | null = 'ana@example.test') {
-  send = jest.fn(async () => ({ reference: 'MF-2026-000042' }));
+  send = vi.fn(async () => ({ reference: 'MF-2026-000042' }));
   const account = signal({
     email,
     name: 'Ana Pop',

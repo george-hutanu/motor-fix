@@ -3,9 +3,16 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { openCookieSettings } from './open-cookie-settings';
 import { Consent } from '../consent';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./cookie-settings');
+});
 
 @Component({ template: '' })
 class Host {
@@ -15,9 +22,9 @@ class Host {
 // The first dialog loads its component and the consent texts lazily, which on
 // a loaded machine (the pre-commit hook beside other suites) takes longer than
 // Jest's five seconds.
-jest.setTimeout(20_000);
+vi.setConfig({ testTimeout: 20_000 });
 
-let consent: { granted: ReturnType<typeof signal<boolean>>; save: jest.Mock };
+let consent: { granted: ReturnType<typeof signal<boolean>>; save: Mock };
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -27,7 +34,7 @@ async function settle() {
 }
 
 async function open(granted: boolean, language: 'ro' | 'en' = 'ro') {
-  consent = { granted: signal(granted), save: jest.fn(async () => undefined) };
+  consent = { granted: signal(granted), save: vi.fn(async () => undefined) };
   TestBed.configureTestingModule({
     providers: [provideRouter([]), { provide: Consent, useValue: consent }],
   });

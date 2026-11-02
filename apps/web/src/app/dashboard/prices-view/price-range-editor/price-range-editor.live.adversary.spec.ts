@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { GaragesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type EditableRow,
@@ -30,7 +31,7 @@ const BRAKES: EditableRow = {
   updatedAt: '2026-10-18T08:00:00.000Z',
 };
 
-let setRange: jest.Mock;
+let setRange: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -44,7 +45,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
   stored?: Partial<EditableRow>,
 ) {
-  setRange = jest.fn(async () => {
+  setRange = vi.fn(async () => {
     throw new HttpErrorResponse({ error: { code: 'stale' }, status: 409 });
   });
   TestBed.configureTestingModule({
@@ -52,7 +53,7 @@ async function open(
       {
         provide: GaragesService,
         useValue: {
-          priceListControllerRead: jest.fn(async () => ({
+          priceListControllerRead: vi.fn(async () => ({
             items: [{ ...BRAKES, ...stored }],
           })),
           priceListControllerSetRange: setRange,

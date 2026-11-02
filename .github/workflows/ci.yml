@@ -220,7 +220,22 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           TEST_SUITE: unit
-        run: npx nx $NX_SCOPE -t test --passWithNoTests
+        # No --passWithNoTests: the Angular unit-test builder refuses it, and
+        # vitest.preset.mts already passes a project with no spec of the suite.
+        # Web's builder bundles every spec without splitting: all of them at
+        # once peak near 14 GB and the runner was cancelled (runs 41390810006,
+        # 41396065790). So web runs after the rest, in the four shards of its
+        # test target's configurations (shard-4 takes what the others leave),
+        # and any failure fails the step.
+        run: |
+          status=0
+          npx nx $NX_SCOPE -t test --exclude=web || status=$?
+          npx nx $NX_SCOPE -t test-node || status=$?
+          for shard in 1 2 3 4; do
+            npx nx $NX_SCOPE -t test --exclude='*,!web' \
+              --configuration=shard-$shard --excludeTaskDependencies || status=$?
+          done
+          exit $status
 
   # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,
   # like E2E: a PR never runs it. A workflow_call carries its caller's event
@@ -304,7 +319,7 @@ jobs:
         run: |
           case "$SHARD" in
             'domain '*/*) npx nx $NX_SCOPE -t test --projects=domain --passWithNoTests --output-style=static --shard=${SHARD#domain }; exit ;;
-            'other projects') npx nx $NX_SCOPE -t test --exclude=domain --passWithNoTests --output-style=static; exit ;;
+            'other projects') npx nx $NX_SCOPE -t test --exclude=domain,web,ui-cockpit,overlays,i18n,media --passWithNoTests --output-style=static; exit ;;
             'named specs') ;;
             *) echo "::error::unknown shard '$SHARD'"; exit 1 ;;
           esac

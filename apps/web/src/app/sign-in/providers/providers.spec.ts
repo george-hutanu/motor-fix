@@ -21,11 +21,11 @@ async function setup(
   enabled: { apple: boolean; google: boolean } | Error,
   language: 'ro' | 'en' = 'ro',
 ) {
-  const oauthControllerProviders = jest.fn(async () => {
+  const oauthControllerProviders = vi.fn(async () => {
     if (enabled instanceof Error) throw enabled;
     return enabled;
   });
-  const leaveFor = jest.fn(() => new Promise<void>(() => undefined));
+  const leaveFor = vi.fn(() => new Promise<void>(() => undefined));
   TestBed.configureTestingModule({
     providers: [
       { provide: AuthService, useValue: { oauthControllerProviders } },

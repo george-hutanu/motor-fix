@@ -182,7 +182,7 @@ function withSettings(mark: string, answers: (Settings | Error)[]) {
     s.pinned ?? s.enabled[0];
   TestBed.resetTestingModule();
   const pending: ((answer: Settings | Error) => void)[] = [];
-  const settings = jest.fn(
+  const settings = vi.fn(
     () =>
       new Promise<Settings>((resolve, reject) => {
         const settle = (answer: Settings | Error) =>
@@ -206,7 +206,7 @@ function withSettings(mark: string, answers: (Settings | Error)[]) {
 // @traces 010-FR-011
 describe('the settings read while the visit runs', () => {
   it('moves every text to the voice the page head picks when the visit voice is off', () => {
-    const hand = jest.fn(() => 2);
+    const hand = vi.fn(() => 2);
     (window as { mfCopyVoice?: unknown }).mfCopyVoice = hand;
     const voice = voiceOf('4');
     const headline = computed(() => voice.copy.headline);
@@ -265,7 +265,7 @@ describe('the settings read while the visit runs', () => {
 describe('the settings read at boot', () => {
   const boot = (platform: string) => {
     TestBed.resetTestingModule();
-    const settings = jest.fn(async () => ({ enabled: [1], pinned: null }));
+    const settings = vi.fn(async () => ({ enabled: [1], pinned: null }));
     TestBed.configureTestingModule({
       providers: [
         provideVoiceRead(),
@@ -329,7 +329,7 @@ describe('how the page was loaded', () => {
   });
 
   it('reads the marks through getAttribute, once, on a document without dataset', () => {
-    const getAttribute = jest.fn((name: string) =>
+    const getAttribute = vi.fn((name: string) =>
       name === 'data-voice' ? '2' : '',
     );
     TestBed.resetTestingModule();

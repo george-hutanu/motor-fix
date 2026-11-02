@@ -114,6 +114,25 @@ describe('harness-eval — cases and baseline on disk', () => {
     assert.equal(result.pass, true, result.detail);
   });
 
+  // @traces 1332-FR-016
+  it('leaves the uncommitted files of a fixture uncommitted, and makes the listed ones executable', () => {
+    const [result] = runCases(REPO, [
+      {
+        id: 'fixture-uncommitted',
+        hook: 'stop:test-gate',
+        why: 'a stop-gate case needs an uncommitted change and a runnable stub runner',
+        fixture: {
+          commits: [{ files: { 'libs/demo/src/demo.spec.ts': "it('a', () => {});\n", 'node_modules/.bin/jest': '#!/bin/sh\necho stub jest ran >&2\nexit 1\n' } }],
+          uncommitted: { 'libs/demo/src/demo.spec.ts': "it('b', () => {});\n" },
+          executable: ['node_modules/.bin/jest'],
+        },
+        payload: { stop_hook_active: false },
+        expect: { exit: 2, stderr: 'stub jest ran' },
+      },
+    ]);
+    assert.equal(result.pass, true, result.detail);
+  });
+
   it('leaves no fixture repo behind', () => {
     const before = new Set(readdirSync(tmpdir()).filter((n) => n.startsWith('harness-eval-')));
     runCases(REPO, [

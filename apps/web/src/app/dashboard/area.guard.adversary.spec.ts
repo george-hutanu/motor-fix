@@ -12,7 +12,7 @@ class Page {}
 const who = (landing: string) => ({ landing }) as unknown as MeDto;
 
 async function visit(address: string, me: MeDto | null, area = 'driver') {
-  const keepReturnTo = jest.fn();
+  const keepReturnTo = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([

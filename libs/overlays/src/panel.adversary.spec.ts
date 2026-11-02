@@ -100,14 +100,14 @@ beforeEach(() => {
     value: undefined,
   });
   Element.prototype.setPointerCapture = () => {};
-  Element.prototype.scrollIntoView = jest.fn();
-  jest
-    .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-    .mockImplementation(() => sheetHeight);
+  Element.prototype.scrollIntoView = vi.fn();
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+    () => sheetHeight,
+  );
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   document.querySelector('.cdk-overlay-container')?.remove();
 });
 
@@ -408,7 +408,7 @@ describe('the visual viewport', () => {
 
   it('ignores viewport events after the sheet closed', async () => {
     const viewport = fakeViewport(844);
-    const remove = jest.spyOn(viewport, 'removeEventListener');
+    const remove = vi.spyOn(viewport, 'removeEventListener');
     const { result } = await openTask();
     const closed = top();
     closed.querySelector<HTMLButtonElement>('#done')?.click();
@@ -427,8 +427,8 @@ describe('the visual viewport', () => {
 
   it('removes the exact listeners it added, once each, when a sheet closes by Escape', async () => {
     const viewport = fakeViewport(844);
-    const add = jest.spyOn(viewport, 'addEventListener');
-    const remove = jest.spyOn(viewport, 'removeEventListener');
+    const add = vi.spyOn(viewport, 'addEventListener');
+    const remove = vi.spyOn(viewport, 'removeEventListener');
     await openTask();
 
     pressEscape();
@@ -460,7 +460,7 @@ describe('the visual viewport', () => {
     await settle();
     await result;
 
-    const add = jest.spyOn(viewport, 'addEventListener');
+    const add = vi.spyOn(viewport, 'addEventListener');
     wide = true;
     await openTask();
     viewport.height = 400;

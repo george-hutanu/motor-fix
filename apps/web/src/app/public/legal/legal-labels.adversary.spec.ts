@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import * as legalTexts from '../legal-texts';
 import { LEGAL_TEXTS } from '../legal-texts';
 
 const load = (language: 'ro' | 'en') =>
@@ -47,8 +48,6 @@ describe.each(['ro', 'en'] as const)('the %s legal page keys', (language) => {
 describe('legal labels', () => {
   // @traces 1204-FR-010
   it('are not exported from the legal texts module any more', () => {
-    expect(Object.keys(jest.requireActual('../legal-texts'))).not.toContain(
-      'LEGAL_LABELS',
-    );
+    expect(Object.keys(legalTexts)).not.toContain('LEGAL_LABELS');
   });
 });

@@ -7,6 +7,7 @@ import { provideRouter, Router } from '@angular/router';
 import type { GarageRequestSummaryDto, MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { GarageRequestRow } from './garage-request-row';
 import { Session } from '../../session';
@@ -45,9 +46,9 @@ const me = (role: Role, canAnswerQuotes = false) =>
     garageId: 'garage-1',
   }) as unknown as MeDto;
 
-let open: jest.Mock;
-let reload: jest.Mock;
-let sent: jest.Mock;
+let open: Mock;
+let reload: Mock;
+let sent: Mock;
 // The request whose row the feed asks to take the focus back.
 let refocus: string | null = null;
 
@@ -59,9 +60,9 @@ async function render(
   },
 ) {
   const shown = signal(account);
-  open = jest.fn(async () => 'cancelled');
-  reload = jest.fn();
-  sent = jest.fn();
+  open = vi.fn(async () => 'cancelled');
+  reload = vi.fn();
+  sent = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -89,7 +90,7 @@ async function render(
   await fixture.whenStable();
   fixture.detectChanges();
   const element = fixture.nativeElement as HTMLElement;
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigate')
     .mockResolvedValue(true);
   const settle = async () => {

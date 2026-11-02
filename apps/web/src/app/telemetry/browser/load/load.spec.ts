@@ -1,21 +1,48 @@
-import { Injector } from '@angular/core';
+import { Injector, signal } from '@angular/core';
 import {
   type Event,
   NavigationEnd,
   NavigationStart,
   Router,
 } from '@angular/router';
+import { initializeFaro } from '@grafana/faro-web-sdk';
 import { Subject } from 'rxjs';
 
 import { loadTelemetry } from './load';
-import { startFaro } from '../faro';
+import { Consent } from '../../../consent/consent';
 
-jest.mock('../faro', () => ({ startFaro: jest.fn() }));
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../faro');
+});
+
+// The builder bundles '../faro' into the spec, so the SDK it starts is mocked
+// instead: initializeFaro stands for startFaro reaching the collector.
+vi.mock('@grafana/faro-web-sdk', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), {
+    faro: {
+      api: {
+        pushEvent: vi.fn(),
+        pushMeasurement: vi.fn(),
+        setSession: vi.fn(),
+      },
+    },
+    initializeFaro: vi.fn(),
+  }),
+);
+vi.mock('@grafana/faro-web-tracing', () => ({
+  TracingInstrumentation: vi.fn(),
+}));
+
+const consent = { provide: Consent, useValue: { granted: signal(false) } };
 
 // A page whose first navigation has finished.
 const router = { navigated: true } as Router;
 const injectorOf = (value: Router) =>
-  Injector.create({ providers: [{ provide: Router, useValue: value }] });
+  Injector.create({
+    providers: [{ provide: Router, useValue: value }, consent],
+  });
 const injector = injectorOf(router);
 
 function pageWith(meta?: string): Document {
@@ -24,13 +51,15 @@ function pageWith(meta?: string): Document {
   return doc;
 }
 
-beforeEach(() => jest.mocked(startFaro).mockReset());
+beforeEach(() => {
+  vi.mocked(initializeFaro).mockReset();
+});
 
 describe('loadTelemetry', () => {
   it('loads nothing when the page carries no telemetry tag', async () => {
     await loadTelemetry(injector, pageWith());
 
-    expect(startFaro).not.toHaveBeenCalled();
+    expect(initializeFaro).not.toHaveBeenCalled();
   });
 
   // @traces 947-FR-012
@@ -42,13 +71,13 @@ describe('loadTelemetry', () => {
       ),
     );
 
-    expect(startFaro).toHaveBeenCalledTimes(1);
-    expect(startFaro).toHaveBeenCalledWith({
-      environment: 'staging',
-      injector,
-      url: 'https://faro.example/collect/key',
-      version: 'abc1234',
-    });
+    expect(initializeFaro).toHaveBeenCalledTimes(1);
+    expect(initializeFaro).toHaveBeenCalledWith(
+      expect.objectContaining({
+        app: { environment: 'staging', name: 'web', version: 'abc1234' },
+        url: 'https://faro.example/collect/key',
+      }),
+    );
   });
 
   // @traces 879-FR-002
@@ -60,13 +89,15 @@ describe('loadTelemetry', () => {
       ),
     );
 
-    expect(startFaro).toHaveBeenCalledWith(
-      expect.objectContaining({ environment: 'development' }),
+    expect(initializeFaro).toHaveBeenCalledWith(
+      expect.objectContaining({
+        app: expect.objectContaining({ environment: 'development' }),
+      }),
     );
   });
 
   it('waits until the page is idle before loading', async () => {
-    const idle = jest.fn();
+    const idle = vi.fn();
     Object.assign(window, { requestIdleCallback: idle });
     try {
       void loadTelemetry(
@@ -78,7 +109,7 @@ describe('loadTelemetry', () => {
       await Promise.resolve();
 
       expect(idle).toHaveBeenCalledTimes(1);
-      expect(startFaro).not.toHaveBeenCalled();
+      expect(initializeFaro).not.toHaveBeenCalled();
     } finally {
       Reflect.deleteProperty(window, 'requestIdleCallback');
     }
@@ -96,18 +127,20 @@ describe('loadTelemetry', () => {
     );
     events.next(new NavigationStart(1, '/ro'));
     await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(startFaro).not.toHaveBeenCalled();
+    expect(initializeFaro).not.toHaveBeenCalled();
 
     events.next(new NavigationEnd(1, '/ro', '/ro'));
     await done;
-    expect(startFaro).toHaveBeenCalledTimes(1);
+    expect(initializeFaro).toHaveBeenCalledTimes(1);
   });
 
   it('swallows a failure to start, leaving the page alone', async () => {
-    jest.mocked(startFaro).mockImplementation(() => {
+    vi.mocked(initializeFaro).mockImplementation(() => {
       throw new Error('blocked by an extension');
     });
-    const errors = jest.spyOn(console, 'error').mockImplementation();
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
 
     await expect(
       loadTelemetry(

@@ -6,14 +6,14 @@ import {
 } from '@motor-fix/data-access';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { NotificationSettings } from './notification-settings';
 import { Live } from '../live';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const GARAGE = 'a3b5c7d9-0000-4000-8000-000000000001';
 
@@ -50,12 +50,12 @@ const answer = (staff: StaffNotificationsDto[]) =>
 const EMAIL = 'Cerere de ofertă nouă, E‑mail';
 const PUSH = 'Cerere de ofertă nouă, Push';
 
-let read: jest.Mock;
-let save: jest.Mock;
+let read: Mock;
+let save: Mock;
 
 async function render(first = owner()) {
-  read = jest.fn(async () => answer([first]));
-  save = jest.fn(async () => answer([first]));
+  read = vi.fn(async () => answer([first]));
+  save = vi.fn(async () => answer([first]));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -98,7 +98,9 @@ function deferred<T>() {
   return { promise, reject, resolve };
 }
 
-beforeEach(() => jest.mocked(toast).mockClear());
+beforeEach(() => {
+  vi.mocked(toast).mockClear();
+});
 afterEach(() => TestBed.resetTestingModule());
 
 // @traces 1315-FR-001

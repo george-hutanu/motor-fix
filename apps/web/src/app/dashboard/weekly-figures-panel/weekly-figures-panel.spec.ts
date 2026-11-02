@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { BarChart, type ChartPoint } from '@motor-fix/ui-cockpit/chart';
+import type { Mock } from 'vitest';
 
 import { WeeklyFiguresPanel } from './weekly-figures-panel';
 import { Session } from '../session';
@@ -60,7 +61,7 @@ const EIGHT: WeeklyFigureDto[] = [
   week(40, 472, 29, 6.1),
 ];
 
-let read: jest.Mock;
+let read: Mock;
 
 async function render({
   answer = async (): Promise<WeeklyFiguresDto> => ({ weeks: EIGHT }),
@@ -69,7 +70,7 @@ async function render({
   answer?: () => Promise<WeeklyFiguresDto>;
   language?: 'ro' | 'en';
 } = {}) {
-  read = jest.fn(answer);
+  read = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

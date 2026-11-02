@@ -52,11 +52,11 @@ beforeEach(() => {
     value: undefined,
   });
   Element.prototype.setPointerCapture = () => {};
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   document.querySelector('.cdk-overlay-container')?.remove();
 });
 

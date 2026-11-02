@@ -5,22 +5,22 @@ import { GaragesService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { InviteStaff } from './invite-staff';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({ template: '' })
 class Host {
   readonly overlays = inject(Overlays);
 }
 
-let send: jest.Mock;
-let resend: jest.Mock;
+let send: Mock;
+let resend: Mock;
 let result: Promise<OverlayResult<'sent'>>;
 let current: ReturnType<typeof signal<MeDto | null>>;
 
@@ -43,8 +43,8 @@ async function open(
   features: Record<string, boolean> = {},
   card?: { id: string; name: string },
 ) {
-  send = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
-  resend = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
+  send = vi.fn(async () => ({ emailSent: true, id: 'invite-1' }));
+  resend = vi.fn(async () => ({ emailSent: true, id: 'invite-1' }));
   current = signal<MeDto | null>(owner(features));
   TestBed.configureTestingModule({
     providers: [
@@ -125,8 +125,8 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
-  jest.mocked(toast).mockReset();
+  vi.restoreAllMocks();
+  vi.mocked(toast).mockReset();
 });
 
 describe('the invite dialog', () => {
@@ -218,7 +218,7 @@ describe('the invite dialog', () => {
 
   // @traces 131-FR-011
   it('offers the link to copy when the e-mail could not be sent', async () => {
-    const writeText = jest.fn(async () => undefined);
+    const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },

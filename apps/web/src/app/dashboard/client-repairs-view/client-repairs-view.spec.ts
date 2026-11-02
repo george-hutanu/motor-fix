@@ -10,21 +10,15 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ClientRepairsView } from './client-repairs-view';
 import { CorrectRepairDialog } from '../correct-repair-dialog/correct-repair-dialog';
 import { Live } from '../live';
 
-// The dialog is its own spec's; here it is only what the view opens.
-jest.mock(
-  '../correct-repair-dialog/correct-repair-dialog',
-  () => ({ CorrectRepairDialog: class CorrectRepairDialog {} }),
-  { virtual: true },
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
 );
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
 
 const repair = (over: Partial<ClientRepairDto> = {}): ClientRepairDto => ({
   car: { brandName: 'VW', model: 'Golf', year: 2015 },
@@ -54,8 +48,8 @@ const listOf = (
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let list: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let open: Mock;
 
 async function render(
   answer: () => Promise<ClientRepairListDto> = async () =>
@@ -64,8 +58,8 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  list = jest.fn(answer);
-  open = jest.fn(async () => 'cancelled');
+  list = vi.fn(answer);
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       { provide: CarsService, useValue: { clientRepairsControllerList: list } },
@@ -109,7 +103,9 @@ const message = (kind: string, id = 'repair-1') =>
 const gone = () =>
   new HttpErrorResponse({ error: { code: 'not_found' }, status: 404 });
 
-beforeEach(() => (toast as unknown as jest.Mock).mockClear());
+beforeEach(() => {
+  (toast as unknown as Mock).mockClear();
+});
 afterEach(() => TestBed.resetTestingModule());
 
 // @traces 1400-FR-001 1400-FR-002

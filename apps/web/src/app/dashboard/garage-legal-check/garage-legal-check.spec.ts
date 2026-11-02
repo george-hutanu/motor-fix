@@ -8,6 +8,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { GarageLegalCheck } from './garage-legal-check';
 import { DocumentsUpload } from '../documents-upload/documents-upload';
@@ -48,8 +49,8 @@ const ME = {
   garageId: 'garage-1',
 } as unknown as MeDto;
 
-let read: jest.Mock;
-let open: jest.Mock;
+let read: Mock;
+let open: Mock;
 let live: ReturnType<typeof fakeLive>;
 
 async function settle(fixture: {
@@ -64,8 +65,8 @@ async function settle(fixture: {
 }
 
 async function render(result: unknown = 'cancelled') {
-  read = jest.fn(() => Promise.resolve(ANSWER));
-  open = jest.fn(() => Promise.resolve(result));
+  read = vi.fn(() => Promise.resolve(ANSWER));
+  open = vi.fn(() => Promise.resolve(result));
   live = fakeLive();
   const me = signal(ME);
   TestBed.configureTestingModule({

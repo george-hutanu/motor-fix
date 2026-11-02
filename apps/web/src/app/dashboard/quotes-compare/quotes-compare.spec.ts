@@ -10,6 +10,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { AcceptQuoteDialog } from './accept-quote-dialog/accept-quote-dialog';
 import { DeclineQuoteDialog } from './decline-quote-dialog/decline-quote-dialog';
@@ -103,8 +104,8 @@ type Answer = QuoteComparisonDto | Error | Promise<never>;
 
 let events: Subject<LiveMessage>;
 let offline: ReturnType<typeof signal<boolean>>;
-let read: jest.Mock;
-let open: jest.Mock;
+let read: Mock;
+let open: Mock;
 
 async function render(
   answers: Answer[],
@@ -119,14 +120,14 @@ async function render(
   events = new Subject();
   offline = signal(false);
   let call = 0;
-  read = jest.fn(() => {
+  read = vi.fn(() => {
     const answer = answers[Math.min(call++, answers.length - 1)];
     return answer instanceof Error
       ? Promise.reject(answer)
       : Promise.resolve(answer);
   });
   let opened = 0;
-  open = jest.fn(() => {
+  open = vi.fn(() => {
     const result = results[Math.min(opened++, results.length - 1)];
     return result instanceof Promise ? result : Promise.resolve(result);
   });
@@ -445,7 +446,7 @@ describe('sorting the comparison', () => {
   });
 
   it('starts on the fastest when the storage cannot be read', async () => {
-    const getItem = jest
+    const getItem = vi
       .spyOn(Storage.prototype, 'getItem')
       .mockImplementation(() => {
         throw new Error('SecurityError');
@@ -587,11 +588,12 @@ describe('the comparison kept current', () => {
 
 // @traces 313-FR-007
 describe('the comparison’s clock', () => {
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('takes Acceptă away once a quote expires while the panel is open', async () => {
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: Date.parse('2026-10-17T10:00:00.000Z'),
+      toNotFake: [
         'setTimeout',
         'clearTimeout',
         'setImmediate',
@@ -599,7 +601,6 @@ describe('the comparison’s clock', () => {
         'nextTick',
         'queueMicrotask',
       ],
-      now: Date.parse('2026-10-17T10:00:00.000Z'),
     });
     const soon = quote({
       expiresAt: '2026-10-17T10:00:30.000Z',
@@ -612,7 +613,7 @@ describe('the comparison’s clock', () => {
     ]);
     expect(acceptOf(rows(element)[0])).not.toBeNull();
 
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     await settle();
 
     expect(acceptOf(rows(element)[0])).toBeNull();
@@ -622,8 +623,9 @@ describe('the comparison’s clock', () => {
 
   // @traces 314-FR-005
   it('measures the time left from the re-read, so a fresh acceptance reads 23 h', async () => {
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: Date.parse('2026-10-17T10:00:00.000Z'),
+      toNotFake: [
         'setTimeout',
         'clearTimeout',
         'setImmediate',
@@ -631,7 +633,6 @@ describe('the comparison’s clock', () => {
         'nextTick',
         'queueMicrotask',
       ],
-      now: Date.parse('2026-10-17T10:00:00.000Z'),
     });
     const loaded = Date.now();
     const accepted = comparison({
@@ -650,10 +651,10 @@ describe('the comparison’s clock', () => {
       },
     });
     const { element, settle } = await render([comparison(), accepted]);
-    jest.setSystemTime(loaded + 30_000);
+    vi.setSystemTime(loaded + 30_000);
 
     emit('quote.accepted');
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
     await settle();
 
     expect(read).toHaveBeenCalledTimes(2);

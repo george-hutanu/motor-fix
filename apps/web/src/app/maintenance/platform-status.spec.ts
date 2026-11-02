@@ -24,7 +24,7 @@ function fakeStream() {
 
 async function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
   const pending: ((answer: Answer) => void)[] = [];
-  const status = jest.fn(
+  const status = vi.fn(
     () =>
       new Promise<{ maintenance: boolean }>((resolve, reject) => {
         const settle = (answer: Answer) =>
@@ -36,11 +36,11 @@ async function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
   );
   const current = signal<MeDto | null>(null);
   const live = { ...fakeStream(), state: signal('closed') };
-  const leave = jest.fn();
-  const voice = { read: jest.fn(async () => undefined) };
+  const leave = vi.fn();
+  const voice = { read: vi.fn(async () => undefined) };
   const publicLive = {
     ...fakeStream(),
-    register: jest.fn(() => leave),
+    register: vi.fn(() => leave),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -84,7 +84,7 @@ const changed = (id: string): LiveMessage =>
 const account = (roles: MeDto['roles']) => ({ roles }) as MeDto;
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 
@@ -204,14 +204,14 @@ describe('PlatformStatus', () => {
   });
 
   it('holds the public stream, once the page has settled, while the signed-in stream is closed', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { leave, live, publicLive } = await setUp();
     await TestBed.inject(ApplicationRef).whenStable();
-    await jest.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     TestBed.tick();
     expect(publicLive.register).not.toHaveBeenCalled();
 
-    await jest.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     TestBed.tick();
     expect(publicLive.register).toHaveBeenCalledTimes(1);
     expect(publicLive.register).toHaveBeenCalledWith({});
@@ -226,7 +226,7 @@ describe('PlatformStatus', () => {
   });
 
   it('waits for the network to go quiet before holding the public stream', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const seen: (() => void)[] = [];
     const real = globalThis.PerformanceObserver;
     globalThis.PerformanceObserver = class {
@@ -239,14 +239,14 @@ describe('PlatformStatus', () => {
     try {
       const { publicLive } = await setUp();
       await TestBed.inject(ApplicationRef).whenStable();
-      await jest.advanceTimersByTimeAsync(1_500);
+      await vi.advanceTimersByTimeAsync(1_500);
       // A map still fetching its tiles: a download ends.
       for (const ended of seen) ended();
-      await jest.advanceTimersByTimeAsync(1_500);
+      await vi.advanceTimersByTimeAsync(1_500);
       TestBed.tick();
       expect(publicLive.register).not.toHaveBeenCalled();
 
-      await jest.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(500);
       TestBed.tick();
       expect(publicLive.register).toHaveBeenCalledTimes(1);
     } finally {

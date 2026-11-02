@@ -3,20 +3,21 @@ import {
   EVENT_SESSION_START,
   STORAGE_KEY,
 } from '@grafana/faro-web-sdk';
+import type { Mock } from 'vitest';
 
 import { sessionSync } from './session';
 
 const ID = /^[A-Za-z0-9]{10}$/;
 const SAMPLED = { attributes: { isSampled: 'true' } };
 
-let api: { pushEvent: jest.Mock; setSession: jest.Mock };
+let api: { pushEvent: Mock; setSession: Mock };
 
 beforeEach(() => {
   sessionStorage.clear();
-  api = { pushEvent: jest.fn(), setSession: jest.fn() };
+  api = { pushEvent: vi.fn(), setSession: vi.fn() };
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const stored = () => sessionStorage.getItem(STORAGE_KEY);
 const sessionIds = () =>
@@ -142,13 +143,13 @@ describe('sessionSync', () => {
 
   // @traces 947-FR-012
   it('keeps the session in memory when the device refuses storage, and never throws', () => {
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied');
     });
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('denied');
     });
-    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
       throw new Error('denied');
     });
     const sync = sessionSync(api);

@@ -66,8 +66,8 @@ class Host {
 }
 
 let fixture: ComponentFixture<Host>;
-const track = jest.fn();
-const open = jest.fn(() => new Promise<never>(() => undefined));
+const track = vi.fn();
+const open = vi.fn(() => new Promise<never>(() => undefined));
 
 beforeEach(async () => {
   track.mockClear();
@@ -231,7 +231,7 @@ const order = () =>
 // Renders the section afresh, as a browser of this user agent would.
 async function on(agent: string, platform = 'browser') {
   fixture.destroy();
-  jest.spyOn(navigator, 'userAgent', 'get').mockReturnValue(agent);
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(agent);
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
@@ -253,7 +253,7 @@ async function on(agent: string, platform = 'browser') {
 // @traces 1366-FR-012
 // @traces 1366-FR-013
 describe('where a placed workshop is, on a map and by directions', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('shows the map first, then the title, the address, the hours and the directions last', async () => {
     await show(PLACED);
@@ -376,7 +376,7 @@ describe('where a garage with no point is', () => {
 
 // @traces 1366-FR-011
 describe('a tap on the directions', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('counts it with the platform only', async () => {
     await show(PLACED);

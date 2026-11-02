@@ -1,11 +1,11 @@
 import { setup } from './signed-in.testing';
 
 function session() {
-  return setup({ me: { meControllerMe: jest.fn() } }).session;
+  return setup({ me: { meControllerMe: vi.fn() } }).session;
 }
 
 beforeEach(() => sessionStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the kept return address', () => {
   it.each([
@@ -77,7 +77,7 @@ describe('the kept return address', () => {
 
   it('does not throw when storage refuses a write, and gives null', () => {
     const s = session();
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError');
     });
 
@@ -87,7 +87,7 @@ describe('the kept return address', () => {
 
   it('gives null when storage refuses a read', () => {
     const s = session();
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('denied', 'SecurityError');
     });
 
@@ -97,7 +97,7 @@ describe('the kept return address', () => {
   it('gives null when storage refuses the removal', () => {
     const s = session();
     s.keepReturnTo('/app/driver/cars');
-    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
       throw new DOMException('denied', 'SecurityError');
     });
 

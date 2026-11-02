@@ -36,7 +36,9 @@ function sources(dir: string): string[] {
   );
 }
 
-// The projects on Vitest hand Stryker their vitest.config.mts instead.
+// The Angular projects (vitest.config.ts) and the Nest projects on Vitest
+// (vitest.config.mts) hand Stryker their Vitest config; what follows about a
+// Jest config holds for the others.
 const onJest = mutated.filter((root) =>
   existsSync(join(repo, root, 'jest.config.cts')),
 );

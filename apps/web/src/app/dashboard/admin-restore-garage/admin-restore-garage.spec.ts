@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   AdminRestoreGarage,
@@ -44,7 +45,7 @@ const RESTORED = {
   untilTime: '2026-10-03T09:00:00.000Z',
 };
 
-let restore: jest.Mock;
+let restore: Mock;
 let result: Promise<OverlayResult<RestoreResult>>;
 
 async function settle() {
@@ -58,7 +59,7 @@ async function open(
   extra: Partial<AdminRestoreGarageData> = {},
   language: 'ro' | 'en' = 'ro',
 ) {
-  restore = jest.fn(async () => RESTORED);
+  restore = vi.fn(async () => RESTORED);
   TestBed.configureTestingModule({
     providers: [
       {

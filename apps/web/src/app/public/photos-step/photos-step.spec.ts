@@ -472,7 +472,7 @@ describe('ordering and removing the photos', () => {
   });
 
   it('stops asking about a photo that never finishes processing', async () => {
-    jest.useFakeTimers({ doNotFake: ['queueMicrotask', 'nextTick'] });
+    vi.useFakeTimers({ toNotFake: ['queueMicrotask', 'nextTick'] });
     try {
       const opened = await open({ files: [keyOf(0)] });
       const pending = () =>
@@ -486,7 +486,7 @@ describe('ordering and removing the photos', () => {
           photos: [{ key: keyOf(0), position: 0, processed: false }],
         });
         await opened.settle();
-        await jest.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(5000);
         await opened.settle();
       }
 
@@ -494,7 +494,7 @@ describe('ordering and removing the photos', () => {
       expect(reads).toBeLessThan(40);
       expect(tiles(opened.step)).toHaveLength(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -720,7 +720,7 @@ describe('photos waiting for signal survive the page', () => {
 
   // @traces 1191-FR-001
   it('waits 1, 2, 4 and 8 s between sends lost to a dropped connection, then fails the photo until the owner retries', async () => {
-    jest.useFakeTimers({ doNotFake: ['queueMicrotask', 'nextTick'] });
+    vi.useFakeTimers({ toNotFake: ['queueMicrotask', 'nextTick'] });
     try {
       const opened = await open();
       await choose(opened, [photo('atelier.jpg')]);
@@ -731,17 +731,17 @@ describe('photos waiting for signal survive the page', () => {
         await opened.settle();
         expect(text(tiles(opened.step)[0])).toContain('Așteaptă conexiunea');
 
-        await jest.advanceTimersByTimeAsync(wait - 1);
+        await vi.advanceTimersByTimeAsync(wait - 1);
         await opened.settle();
         expect(askedForAddress(opened.http)).toHaveLength(0);
-        await jest.advanceTimersByTimeAsync(1);
+        await vi.advanceTimersByTimeAsync(1);
         await opened.settle();
       }
       await answerAddress(opened, askedForAddress(opened.http)[0]!, 0);
       dropped(opened.http.expectOne(STORE));
       await opened.settle();
 
-      await jest.advanceTimersByTimeAsync(60_000);
+      await vi.advanceTimersByTimeAsync(60_000);
       await opened.settle();
       expect(askedForAddress(opened.http)).toHaveLength(0);
       const retry = button(tiles(opened.step)[0], /^Reîncearcă/);
@@ -751,7 +751,7 @@ describe('photos waiting for signal survive the page', () => {
       await opened.settle();
       expect(askedForAddress(opened.http)).toHaveLength(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -861,7 +861,7 @@ describe('photos waiting for signal survive the page', () => {
 
   // @traces 1191-FR-001
   it('only confirms again a photo whose confirm answer was lost, never sending it twice', async () => {
-    jest.useFakeTimers({ doNotFake: ['queueMicrotask', 'nextTick'] });
+    vi.useFakeTimers({ toNotFake: ['queueMicrotask', 'nextTick'] });
     try {
       const opened = await open();
       await choose(opened, [photo('atelier.jpg')]);
@@ -873,7 +873,7 @@ describe('photos waiting for signal survive the page', () => {
       dropped(confirmOf(opened.http));
       await opened.settle();
 
-      await jest.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       await opened.settle();
 
       expect(askedForAddress(opened.http)).toHaveLength(0);
@@ -884,13 +884,13 @@ describe('photos waiting for signal survive the page', () => {
       expect(opened.fixture.componentInstance.files()).toEqual([keyOf(0)]);
       expect(await queued()).toEqual([]);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   // @traces 1191-FR-001
   it('gives a photo up as failed when its fifth try finds the store lost it', async () => {
-    jest.useFakeTimers({ doNotFake: ['queueMicrotask', 'nextTick'] });
+    vi.useFakeTimers({ toNotFake: ['queueMicrotask', 'nextTick'] });
     try {
       const opened = await open();
       await choose(opened, [photo('atelier.jpg')]);
@@ -902,7 +902,7 @@ describe('photos waiting for signal survive the page', () => {
       for (const wait of [1000, 2000, 4000, 8000]) {
         dropped(confirmOf(opened.http));
         await opened.settle();
-        await jest.advanceTimersByTimeAsync(wait);
+        await vi.advanceTimersByTimeAsync(wait);
         await opened.settle();
       }
 
@@ -915,7 +915,7 @@ describe('photos waiting for signal survive the page', () => {
       expect(askedForAddress(opened.http)).toHaveLength(0);
       expect(button(tiles(opened.step)[0], /^Reîncearcă/)).toBeDefined();
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 

@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import {
   createServer,
   request as httpRequest,
@@ -11,6 +8,7 @@ import {
 import type { AddressInfo, Socket } from 'node:net';
 
 import express from 'express';
+import { type MockInstance, vi } from 'vitest';
 
 import { mountEdge } from './edge';
 
@@ -56,8 +54,8 @@ describe('web edge proxy failures and retries', () => {
     attempt: number,
   ) => void;
   let attempts: Map<string, number>;
-  let out: jest.SpyInstance;
-  let err: jest.SpyInstance;
+  let out: MockInstance;
+  let err: MockInstance;
 
   const entries = (): Entry[] =>
     [...out.mock.calls, ...err.mock.calls]
@@ -98,8 +96,8 @@ describe('web edge proxy failures and retries', () => {
   }
 
   beforeEach(async () => {
-    out = jest.spyOn(console, 'log').mockImplementation(() => {});
-    err = jest.spyOn(console, 'error').mockImplementation(() => {});
+    out = vi.spyOn(console, 'log').mockImplementation(() => {});
+    err = vi.spyOn(console, 'error').mockImplementation(() => {});
     seen = [];
     attempts = new Map();
     behave = (_req, res) => {
@@ -124,7 +122,7 @@ describe('web edge proxy failures and retries', () => {
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     web.closeAllConnections();
     upstream.closeAllConnections();
     await Promise.all([close(web), close(upstream)]);

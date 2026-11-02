@@ -9,6 +9,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { EMPTY, of, throwError } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import {
   FileUploader,
@@ -34,12 +35,12 @@ describe('FileUploader under hostile conditions', () => {
   let events: UploadEvent<string>[];
   let failure: unknown;
   let completed: boolean;
-  let ask: jest.Mock;
-  let confirm: jest.Mock;
+  let ask: Mock;
+  let confirm: Mock;
   const file = new Blob(['jpeg bytes'], { type: 'image/jpeg' });
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -49,13 +50,13 @@ describe('FileUploader under hostile conditions', () => {
     failure = undefined;
     completed = false;
     let asked = 0;
-    ask = jest.fn(() => of(address(++asked)));
-    confirm = jest.fn((key: string) => of(`final:${key}`));
+    ask = vi.fn(() => of(address(++asked)));
+    confirm = vi.fn((key: string) => of(`final:${key}`));
   });
 
   afterEach(() => {
     http.verify();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   function start(blob: Blob = file) {
@@ -71,7 +72,7 @@ describe('FileUploader under hostile conditions', () => {
   }
 
   // Lets the checksum of the blob resolve so the address is asked for.
-  const flush = () => jest.advanceTimersByTimeAsync(0);
+  const flush = () => vi.advanceTimersByTimeAsync(0);
 
   const ok = (n: number) =>
     http
@@ -216,9 +217,9 @@ describe('FileUploader under hostile conditions', () => {
     await flush();
 
     dropConnection(1);
-    jest.advanceTimersByTime(999);
+    vi.advanceTimersByTime(999);
     http.expectNone(address(1).url);
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
 
     ok(1);
     expect(events).toEqual([
@@ -233,11 +234,11 @@ describe('FileUploader under hostile conditions', () => {
     let requests = 0;
 
     for (const wait of [0, 1000, 2000, 4000]) {
-      jest.advanceTimersByTime(wait);
+      vi.advanceTimersByTime(wait);
       dropConnection(1);
       requests++;
     }
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     http.expectNone(() => true);
     expect(requests).toBe(4);
@@ -250,9 +251,9 @@ describe('FileUploader under hostile conditions', () => {
     await flush();
 
     dropConnection(1);
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     dropConnection(1);
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
     refuse(1, 403);
     ok(2);
 
@@ -270,7 +271,7 @@ describe('FileUploader under hostile conditions', () => {
 
     refuse(1, 403);
     refuse(2, 403);
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     http.expectNone(() => true);
     expect(ask).toHaveBeenCalledTimes(2);
@@ -285,7 +286,7 @@ describe('FileUploader under hostile conditions', () => {
     await flush();
 
     refuse(1, status);
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     http.expectNone(() => true);
     expect(ask).toHaveBeenCalledTimes(1);
@@ -336,7 +337,7 @@ describe('FileUploader under hostile conditions', () => {
     await flush();
 
     ok(1);
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     expect(confirm).toHaveBeenCalledTimes(1);
   });
@@ -347,7 +348,7 @@ describe('FileUploader under hostile conditions', () => {
     await flush();
 
     ok(1);
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     http.expectNone(() => true);
     expect(confirm).toHaveBeenCalledTimes(1);
@@ -373,7 +374,7 @@ describe('FileUploader under hostile conditions', () => {
     dropConnection(1);
 
     subscription.unsubscribe();
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     http.expectNone(() => true);
     expect(confirm).not.toHaveBeenCalled();

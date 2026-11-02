@@ -11,6 +11,7 @@ import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { VerificationFile } from './verification-file';
 import { Live } from '../live';
@@ -19,10 +20,9 @@ import { Live } from '../live';
 // @traces 304-FR-011
 // @traces 304-FR-009
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const FILE = 'file-1';
 const NOW = new Date();
@@ -171,18 +171,18 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let answer: () => Promise<VerificationFileDto>;
 let api: {
-  verificationFileControllerChanges: jest.Mock;
-  verificationFileControllerCorrect: jest.Mock;
-  verificationFileControllerDecision: jest.Mock;
-  verificationFileControllerOpen: jest.Mock;
-  verificationFileControllerReopen: jest.Mock;
-  verificationFileControllerRead: jest.Mock;
-  verificationChecksControllerRecord: jest.Mock;
+  verificationFileControllerChanges: Mock;
+  verificationFileControllerCorrect: Mock;
+  verificationFileControllerDecision: Mock;
+  verificationFileControllerOpen: Mock;
+  verificationFileControllerReopen: Mock;
+  verificationFileControllerRead: Mock;
+  verificationChecksControllerRecord: Mock;
 };
-let documents: { legalDocumentsControllerPageAddress: jest.Mock };
-let overlays: { open: jest.Mock };
+let documents: { legalDocumentsControllerPageAddress: Mock };
+let overlays: { open: Mock };
 let drawer: VerificationFile;
-let tab: { close: jest.Mock; location: { href: string }; opener: unknown };
+let tab: { close: Mock; location: { href: string }; opener: unknown };
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -199,29 +199,29 @@ async function open(
   resync = new Subject();
   answer = typeof file === 'function' ? file : async () => file;
   api = {
-    verificationChecksControllerRecord: jest.fn(),
-    verificationFileControllerChanges: jest.fn(async () => ({
+    verificationChecksControllerRecord: vi.fn(),
+    verificationFileControllerChanges: vi.fn(async () => ({
       changes: [],
       requestedAt: DECIDED_AT,
       resubmitted: true,
       total: 0,
     })),
-    verificationFileControllerCorrect: jest.fn(),
-    verificationFileControllerDecision: jest.fn(),
-    verificationFileControllerOpen: jest.fn(() => answer()),
-    verificationFileControllerRead: jest.fn(() => answer()),
-    verificationFileControllerReopen: jest.fn(),
+    verificationFileControllerCorrect: vi.fn(),
+    verificationFileControllerDecision: vi.fn(),
+    verificationFileControllerOpen: vi.fn(() => answer()),
+    verificationFileControllerRead: vi.fn(() => answer()),
+    verificationFileControllerReopen: vi.fn(),
   };
   documents = {
-    legalDocumentsControllerPageAddress: jest.fn(async () => ({
+    legalDocumentsControllerPageAddress: vi.fn(async () => ({
       expiresAt: new Date(NOW.getTime() + 300_000).toISOString(),
       url: 'https://store.test/signed',
     })),
   };
-  overlays = { open: jest.fn() };
-  tab = { close: jest.fn(), location: { href: '' }, opener: {} };
-  jest.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
-  jest.mocked(toast).mockClear();
+  overlays = { open: vi.fn() };
+  tab = { close: vi.fn(), location: { href: '' }, opener: {} };
+  vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+  vi.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
       { provide: AdminService, useValue: api },
@@ -230,9 +230,9 @@ async function open(
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { fileId: FILE },
-          markUnchanged: jest.fn(),
+          markUnchanged: vi.fn(),
         },
       },
       {
@@ -303,7 +303,7 @@ const unprocessable = (code: string) =>
 
 afterEach(() => {
   document.body.innerHTML = '';
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('asking a garage for more from the drawer', () => {

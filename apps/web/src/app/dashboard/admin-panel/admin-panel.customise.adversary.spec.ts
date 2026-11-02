@@ -44,8 +44,8 @@ async function open({
 } = {}) {
   const events = new Subject<LiveMessage>();
   const admin = {
-    adminOverviewControllerGrowth: jest.fn(async () => ({ months: [] })),
-    adminOverviewControllerOverview: jest.fn(async () => ({
+    adminOverviewControllerGrowth: vi.fn(async () => ({ months: [] })),
+    adminOverviewControllerOverview: vi.fn(async () => ({
       activeDrivers: 10,
       answerRate: 50,
       bookings: 1,
@@ -57,18 +57,18 @@ async function open({
       reportsPending: 0,
       requestsSent: 3,
     })),
-    adminOverviewControllerQueue: jest.fn(async () => ({
+    adminOverviewControllerQueue: vi.fn(async () => ({
       items: [],
       total: 0,
     })),
-    demandControllerDemand: jest.fn(async () => ({
+    demandControllerDemand: vi.fn(async () => ({
       brands: [],
       firstDay: '2026-09-18',
       jobs: [],
       lastDay: '2026-10-17',
       requests: 0,
     })),
-    reportQueueControllerList: jest.fn(async () => ({
+    reportQueueControllerList: vi.fn(async () => ({
       items: [],
       oldestCreatedAt: null,
       overdue: 0,
@@ -76,7 +76,7 @@ async function open({
       pageSize: 20,
       total: 0,
     })),
-    systemLogControllerList: jest.fn(async () => ({ items: [] })),
+    systemLogControllerList: vi.fn(async () => ({ items: [] })),
   };
   const me = signal<MeDto | null>({
     id: 'admin-1',
@@ -84,9 +84,9 @@ async function open({
     roles: ['admin'],
   } as unknown as MeDto);
   const layout = {
-    dashboardLayoutsControllerRead: jest.fn(read),
-    dashboardLayoutsControllerReset: jest.fn(async () => layoutAnswer()),
-    dashboardLayoutsControllerSave: jest.fn(
+    dashboardLayoutsControllerRead: vi.fn(read),
+    dashboardLayoutsControllerReset: vi.fn(async () => layoutAnswer()),
+    dashboardLayoutsControllerSave: vi.fn(
       save ??
         (async ({ body }: { body: { panels: DashboardPanelDto[] } }) =>
           layoutAnswer(body.panels)),

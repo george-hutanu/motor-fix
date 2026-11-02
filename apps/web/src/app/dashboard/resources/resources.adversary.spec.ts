@@ -48,8 +48,8 @@ let current: ReturnType<typeof signal<MeDto | null>>;
 let live: ReturnType<typeof fakeLive>;
 
 beforeEach(() => {
-  jest.useFakeTimers();
-  jest.setSystemTime(new Date('2026-10-30T09:00:00.000Z'));
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-10-30T09:00:00.000Z'));
   current = signal<MeDto | null>(A);
   live = fakeLive();
   TestBed.configureTestingModule({
@@ -62,7 +62,7 @@ beforeEach(() => {
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 function open<K extends keyof Held>(
@@ -80,8 +80,8 @@ function open<K extends keyof Held>(
   return { close: () => injector.destroy(), view };
 }
 
-const settle = () => jest.advanceTimersByTimeAsync(0);
-const later = (ms: number) => jest.advanceTimersByTimeAsync(ms);
+const settle = () => vi.advanceTimersByTimeAsync(0);
+const later = (ms: number) => vi.advanceTimersByTimeAsync(ms);
 
 async function visit<K extends keyof Held>(
   type: K,
@@ -101,7 +101,7 @@ describe('the stale time at its edges', () => {
   ])(
     'for the driver’s requests, %s 30 s reads %i time(s)',
     async (_, age, reads) => {
-      const load = jest.fn(async () => requests('req-1'));
+      const load = vi.fn(async () => requests('req-1'));
       await visit('requests', load);
       await later(age);
 
@@ -114,7 +114,7 @@ describe('the stale time at its edges', () => {
 
   it('measures the age from the answer, not from the start of a slow read', async () => {
     const answer = deferred<CarDto[]>();
-    const load = jest.fn(() => answer.promise);
+    const load = vi.fn(() => answer.promise);
     const first = open('cars', load);
     await later(200_000);
     answer.resolve([car('car-1')]);
@@ -129,8 +129,8 @@ describe('the stale time at its edges', () => {
   });
 
   it('keeps the age of the last full read when a stale read fails, so the next open reads again', async () => {
-    const load = jest
-      .fn<Promise<RequestListDto>, []>()
+    const load = vi
+      .fn<() => Promise<RequestListDto>>()
       .mockResolvedValueOnce(requests('req-1'))
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValue(requests('req-2'));
@@ -148,8 +148,8 @@ describe('the stale time at its edges', () => {
   });
 
   it('reads at the next open after a failed first read, with no wait for any stale time', async () => {
-    const load = jest
-      .fn<Promise<CarDto[]>, []>()
+    const load = vi
+      .fn<() => Promise<CarDto[]>>()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([car('car-1')]);
     await visit('cars', load);
@@ -163,9 +163,9 @@ describe('the stale time at its edges', () => {
   });
 
   it('treats a clock that moved backwards as stale rather than fresh for ever', async () => {
-    const load = jest.fn(async () => [car('car-1')]);
+    const load = vi.fn(async () => [car('car-1')]);
     await visit('cars', load);
-    jest.setSystemTime(new Date('2026-10-30T07:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-10-30T07:00:00.000Z'));
 
     open('cars', load);
     await settle();
@@ -177,8 +177,8 @@ describe('the stale time at its edges', () => {
 // @traces 1316-FR-001 1316-FR-002 1316-FR-010
 describe('several resource types', () => {
   it('ages the garage lists apart from one another', async () => {
-    const waiting = jest.fn(async () => rows('w-1'));
-    const quoted = jest.fn(async () => rows('q-1'));
+    const waiting = vi.fn(async () => rows('w-1'));
+    const quoted = vi.fn(async () => rows('q-1'));
     await visit('garageWaiting', waiting);
     await later(20_000);
     await visit('garageQuoted', quoted);
@@ -203,8 +203,8 @@ describe('several resource types', () => {
   });
 
   it('a live event for one type re-reads only that type', async () => {
-    const loadCars = jest.fn(async () => [car('car-1')]);
-    const loadRequests = jest.fn(async () => requests('req-1'));
+    const loadCars = vi.fn(async () => [car('car-1')]);
+    const loadRequests = vi.fn(async () => requests('req-1'));
     open('cars', loadCars, ['quote.accepted']);
     open('requests', loadRequests, ['request.created']);
     await settle();
@@ -217,7 +217,7 @@ describe('several resource types', () => {
   });
 
   it('holds a null garage list as a value, shown at once with no read inside the stale time', async () => {
-    const load = jest.fn(async () => null);
+    const load = vi.fn(async () => null);
     await visit('garageWaiting', load);
 
     const { view } = open('garageWaiting', load);
@@ -229,7 +229,7 @@ describe('several resource types', () => {
   });
 
   it('keeps an empty list as a held value rather than treating it as nothing held', async () => {
-    const load = jest.fn(async () => [] as CarDto[]);
+    const load = vi.fn(async () => [] as CarDto[]);
     await visit('cars', load);
 
     const { view } = open('cars', load);
@@ -242,7 +242,7 @@ describe('several resource types', () => {
 
   it('holds ten thousand cars and returns the same list at once', async () => {
     const many = Array.from({ length: 10_000 }, (_, i) => car(`car-${i}`));
-    const load = jest.fn(async () => many);
+    const load = vi.fn(async () => many);
     await visit('cars', load);
 
     const { view } = open('cars', load);
@@ -282,7 +282,7 @@ describe('a change during a read', () => {
 
   it('hands a null garage list to the change as null', async () => {
     await visit('garageWaiting', async () => null);
-    const change = jest.fn((value: GarageRequestListDto | null) => value);
+    const change = vi.fn((value: GarageRequestListDto | null) => value);
 
     TestBed.inject(Resources).update('garageWaiting', change);
 
@@ -290,7 +290,7 @@ describe('a change during a read', () => {
   });
 
   it('keeps the age when the same change is applied twice', async () => {
-    const load = jest.fn(async () => [car('car-1')]);
+    const load = vi.fn(async () => [car('car-1')]);
     await visit('cars', load);
     await later(299_000);
     const store = TestBed.inject(Resources);
@@ -371,7 +371,7 @@ describe('the owner changing mid-read', () => {
     const forA = deferred<CarDto[]>();
     open('cars', () => forA.promise);
     current.set(B);
-    const loadB = jest.fn(never);
+    const loadB = vi.fn(never);
 
     open('cars', loadB);
     await settle();
@@ -486,7 +486,7 @@ describe('the owner changing mid-read', () => {
 // @traces 1316-FR-009 1316-FR-010
 describe('where the copy lives', () => {
   it('writes nothing to session storage, local storage or cookies through a full cycle of read, change and sign-out', async () => {
-    const local = jest.spyOn(Storage.prototype, 'setItem');
+    const local = vi.spyOn(Storage.prototype, 'setItem');
     try {
       await visit('cars', async () => [car('car-1')]);
       TestBed.inject(Resources).update('cars', (cars) => [...cars, car('c2')]);

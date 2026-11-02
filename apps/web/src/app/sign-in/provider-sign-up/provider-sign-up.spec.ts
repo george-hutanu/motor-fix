@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ProviderSignUp } from './provider-sign-up';
 import { Consent } from '../../consent/consent';
@@ -20,8 +21,8 @@ type Pending = {
   email?: string;
 } | null;
 
-let completeProviderSignUp: jest.Mock;
-let track: jest.Mock;
+let completeProviderSignUp: Mock;
+let track: Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 
 async function settle() {
@@ -32,8 +33,8 @@ async function settle() {
 }
 
 async function open(pending: Pending, language: 'ro' | 'en' = 'ro') {
-  completeProviderSignUp = jest.fn(async () => ({ landing: '/app/driver' }));
-  track = jest.fn();
+  completeProviderSignUp = vi.fn(async () => ({ landing: '/app/driver' }));
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: Consent, useValue: { track } },
@@ -41,7 +42,7 @@ async function open(pending: Pending, language: 'ro' | 'en' = 'ro') {
         provide: Session,
         useValue: {
           completeProviderSignUp,
-          providerPending: jest.fn(async () => pending),
+          providerPending: vi.fn(async () => pending),
         },
       },
     ],

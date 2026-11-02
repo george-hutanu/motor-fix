@@ -14,18 +14,18 @@ function sessionSetup({
   renews?: boolean;
 } = {}) {
   let tokens = 0;
-  const meControllerMe = jest.fn(() => (me ? Promise.resolve(me) : refused()));
+  const meControllerMe = vi.fn(() => (me ? Promise.resolve(me) : refused()));
   const parts = setup({
     auth: {
-      authControllerRefresh: jest.fn(() =>
+      authControllerRefresh: vi.fn(() =>
         renews
           ? Promise.resolve({ accessToken: `renewed-${++tokens}` })
           : refused(),
       ),
-      authControllerSignIn: jest.fn(() =>
+      authControllerSignIn: vi.fn(() =>
         Promise.resolve({ accessToken: 'signed-in' }),
       ),
-      passwordResetControllerComplete: jest.fn(() =>
+      passwordResetControllerComplete: vi.fn(() =>
         Promise.resolve({ accessToken: 'reset' }),
       ),
     },
@@ -256,7 +256,7 @@ describe('Session role hint', () => {
     const { api, meControllerMe, session } = sessionSetup();
     await session.load();
     Object.assign(api, {
-      authControllerSwitchRole: jest.fn(() =>
+      authControllerSwitchRole: vi.fn(() =>
         Promise.resolve({ accessToken: 'switched' }),
       ),
     });

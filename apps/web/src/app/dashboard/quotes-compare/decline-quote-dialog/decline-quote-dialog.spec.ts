@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { QuotesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type DeclineQuoteData,
@@ -17,8 +18,8 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let decline: jest.Mock;
-let reread: jest.Mock;
+let decline: Mock;
+let reread: Mock;
 let offline: ReturnType<typeof signal<boolean>>;
 let result: Promise<DeclineQuoteResult | 'cancelled'>;
 
@@ -36,12 +37,12 @@ async function open({
   language?: 'ro' | 'en';
   answer?: Promise<unknown> | HttpErrorResponse;
 } = {}) {
-  decline = jest.fn(() =>
+  decline = vi.fn(() =>
     answer instanceof HttpErrorResponse
       ? Promise.reject(answer)
       : (answer ?? Promise.resolve({})),
   );
-  reread = jest.fn();
+  reread = vi.fn();
   offline = signal(false);
   TestBed.configureTestingModule({
     providers: [

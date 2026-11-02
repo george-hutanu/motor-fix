@@ -8,6 +8,7 @@ import {
 } from '@motor-fix/data-access';
 import { formatDay, formatLei, formatLeiRange, I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { VerificationChanges } from './verification-changes';
 import { Live } from '../live';
@@ -54,7 +55,7 @@ class Host {
 }
 
 let events: Subject<LiveMessage>;
-let read: jest.Mock;
+let read: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -68,7 +69,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
-  read = jest.fn(answer);
+  read = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       {

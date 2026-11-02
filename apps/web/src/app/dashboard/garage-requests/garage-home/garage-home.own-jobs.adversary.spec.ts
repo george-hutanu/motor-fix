@@ -65,7 +65,7 @@ async function render(
           }),
         },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       {
         provide: GaragesService,
         useValue: {

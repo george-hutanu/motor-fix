@@ -12,7 +12,7 @@ import {
   text,
 } from './lift-schedule.testing';
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 describe('the lift schedule panel under hostile data', () => {
   it('renders markup in a note and a customer name as plain text', async () => {

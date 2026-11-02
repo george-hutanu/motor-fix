@@ -90,8 +90,11 @@ const cells = (el: HTMLElement) =>
   [...el.querySelectorAll('table tbody tr')].map((tr) =>
     [...tr.querySelectorAll('td')].map((td) => td.textContent?.trim()),
   );
+// Chart.js rebuilds a tooltip's lines only when its point or position moves,
+// so each read closes the tooltip first and opens it on the point afresh.
 const tooltipLines = (chart: Chart, index: number) => {
   const active = [{ datasetIndex: 0, index }];
+  chart.tooltip?.setActiveElements([], { x: 0, y: 0 });
   chart.setActiveElements(active);
   chart.tooltip?.setActiveElements(active, { x: 0, y: 0 });
   chart.update('none');
@@ -213,6 +216,7 @@ describe('the chart components under hostile input', () => {
     );
   });
 
+  // Ten thousand table rows take jsdom several seconds to lay out.
   it('draw ten thousand points as one chart with every point in the table', async () => {
     const many = Array.from({ length: 10000 }, (_, i) => ({
       label: `L${i}`,
@@ -228,7 +232,7 @@ describe('the chart components under hostile input', () => {
     expect(canvasOf(el)?.getAttribute('aria-label')).toContain(
       'L0 – L9999. Cea mai mare valoare: 99,99 lei, L9999. Cea mai mică: 0 lei, L0.',
     );
-  });
+  }, 30_000);
 
   it('keep two points that share a label as two rows and two bars', async () => {
     const [fixture, el] = await render((h) =>

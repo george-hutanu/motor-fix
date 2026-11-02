@@ -27,8 +27,8 @@ async function render(
       {
         provide: SupportService,
         useValue: {
-          supportContactControllerContact: jest.fn(contact),
-          supportMessagesControllerCreate: jest.fn(),
+          supportContactControllerContact: vi.fn(contact),
+          supportMessagesControllerCreate: vi.fn(),
         },
       },
     ],

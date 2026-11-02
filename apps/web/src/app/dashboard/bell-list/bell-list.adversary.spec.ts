@@ -43,10 +43,10 @@ async function render(
   read: () => Promise<unknown> = async () => row('x'),
 ) {
   const api = {
-    bellControllerList: jest.fn(async () => ({ items, nextCursor: null })),
-    bellControllerRead: jest.fn(read),
-    bellControllerReadAll: jest.fn(async () => undefined),
-    bellControllerUnreadCount: jest.fn(async () => ({ count: 0 })),
+    bellControllerList: vi.fn(async () => ({ items, nextCursor: null })),
+    bellControllerRead: vi.fn(read),
+    bellControllerReadAll: vi.fn(async () => undefined),
+    bellControllerUnreadCount: vi.fn(async () => ({ count: 0 })),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -94,7 +94,7 @@ describe('BellList taps under failure', () => {
   // @traces 032-FR-002
   it('treats an empty link as no link and keeps the list open', async () => {
     const { api, element } = await render([row('a', { link: '' })]);
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
     await tap(element);
 

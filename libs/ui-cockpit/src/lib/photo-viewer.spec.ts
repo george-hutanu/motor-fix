@@ -77,7 +77,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   globalThis.Image = RealImage;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   fixture.destroy();
 });
 
@@ -285,9 +285,9 @@ describe('the photo viewer', () => {
 
   it('blocks the page scroll behind it while open', async () => {
     // jsdom lays nothing out, and the CDK only blocks a page taller than the window.
-    jest
-      .spyOn(document.documentElement, 'scrollHeight', 'get')
-      .mockReturnValue(window.innerHeight * 4);
+    vi.spyOn(document.documentElement, 'scrollHeight', 'get').mockReturnValue(
+      window.innerHeight * 4,
+    );
     await open(0);
     expect(
       document.documentElement.classList.contains('cdk-global-scrollblock'),

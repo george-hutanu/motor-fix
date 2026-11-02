@@ -5,10 +5,12 @@
 # with only // TODO comments" (spec-kit Discussion #1619).
 #
 # Ported from speckit-demo (`npm test && npm run lint` on every stop). Running
-# the whole Jest suite plus a workspace typecheck at every stop is too slow in
+# every suite plus a workspace typecheck at every stop is too slow in
 # this monorepo, so the gate is scoped to what actually changed:
-#   - `jest --onlyChanged` — the tests related to uncommitted changes, and
-#     `vitest run --changed` per changed project that has a vitest.config.mts
+#   - `vitest run --changed` per changed project on Vitest, against its own
+#     config (the five Angular projects' vitest.config.ts, web's node specs on
+#     vitest-node.config.ts, any other project's nearest vitest.config.mts),
+#     and `jest --onlyChanged` for changed files no Vitest config claims
 #   - `biome check` on the changed TS files
 # Each half is skipped while its tool is not installed yet (before the Nx
 # scaffold lands).
@@ -19,6 +21,19 @@
 # never block twice in a row (Claude Code's own contract).
 # ---------------------------------------------------------------------------
 set -uo pipefail
+
+# The Vitest config of a path under one of the Angular projects, or nothing
+# (the same function as post-edit-check.sh, kept equal by stop-test-gate.spec.mjs).
+vitest_config() {
+  case "$1" in
+    apps/web/src/server/*|apps/web/src/app/app.config.spec.ts|apps/web/src/app/app.config.server.adversary.spec.ts) echo apps/web/vitest-node.config.ts ;;
+    apps/web/*) echo apps/web/vitest.config.ts ;;
+    libs/ui-cockpit/*|libs/overlays/*|libs/i18n/*|libs/media/*)
+      lib="${1#libs/}"
+      echo "libs/${lib%%/*}/vitest.config.ts"
+      ;;
+  esac
+}
 
 payload="$(cat)"
 case "$payload" in
@@ -40,38 +55,51 @@ if [ -x node_modules/.bin/biome ] && ! printf '%s\n' "$changed" | xargs npx --no
   exit 2
 fi
 
-# Each changed project with a vitest.config.mts runs its related specs on
-# Vitest, one heavy slot per project, beside Jest's run below.
+# The test runners share the machine with other sessions: each run takes a
+# heavy-command slot (scripts/heavy.sh) with two workers and waits at most
+# 300 s for one. No slot in time skips that run with a message rather than
+# trapping the session.
 heavy=""
 [ -f scripts/heavy.sh ] && heavy="sh scripts/heavy.sh"
-# A file's project is the nearest folder above it holding a vitest.config.mts
-# (libs/domain, or a root-level project such as scripts).
-vitest_projects="$(printf '%s\n' "$changed" | while read -r file; do
-    d="$(dirname "$file")"
+skipped() {
+  echo "{\"systemMessage\":\"Stop gate: $1 was skipped, every shared heavy-command slot stayed busy for 300 s. Run it before claiming the work is green.\"}"
+}
+
+# A file's Vitest config: an Angular project's own, else the nearest
+# vitest.config.mts above it (libs/domain, or a root-level project such as
+# scripts).
+config_of() {
+  config="$(vitest_config "$1")"
+  if [ -z "$config" ]; then
+    d="$(dirname "$1")"
     while [ "$d" != "." ] && [ "$d" != "/" ] && [ ! -f "$d/vitest.config.mts" ]; do d="$(dirname "$d")"; done
-    [ "$d" != "." ] && [ "$d" != "/" ] && echo "$d"
-  done | sort -u)"
-if [ -n "$vitest_projects" ] && [ -x node_modules/.bin/vitest ]; then
-  for project in $vitest_projects; do
-    HEAVY_WAIT="${HEAVY_WAIT:-300}" $heavy npx --no-install vitest run --changed --config "$project/vitest.config.mts" --passWithNoTests --maxWorkers=2 >&2 2>&1
+    [ "$d" != "." ] && [ "$d" != "/" ] && config="$d/vitest.config.mts"
+  fi
+  [ -n "$config" ] && echo "$config"
+}
+configs="$(printf '%s\n' "$changed" | while read -r f; do config_of "$f"; done | sort -u)"
+# Jest is asked only about the files no Vitest config claims.
+others="$(printf '%s\n' "$changed" | while read -r f; do [ -n "$(config_of "$f")" ] || echo "$f"; done)"
+
+if [ -n "$configs" ] && [ -x node_modules/.bin/vitest ]; then
+  for config in $configs; do
+    HEAVY_WAIT="${HEAVY_WAIT:-300}" $heavy npx --no-install vitest run --changed --config "$config" --passWithNoTests --maxWorkers=2 >&2 2>&1
     code=$?
     if [ "$code" -eq 124 ] && [ -n "$heavy" ]; then
-      echo "{\"systemMessage\":\"Stop gate: vitest run --changed for $project was skipped, every shared heavy-command slot stayed busy for 300 s. Run it before claiming the work is green.\"}"
+      skipped "vitest run --changed --config $config"
     elif [ "$code" -ne 0 ]; then
-      echo "❌ Stop gate: \`vitest run --changed --config $project/vitest.config.mts\` is red with uncommitted changes. Fix the failures (or revert the breaking edit) before finishing." >&2
+      echo "❌ Stop gate: \`vitest run --changed --config $config\` is red with uncommitted changes. Fix the failures (or revert the breaking edit) before finishing." >&2
       exit 2
     fi
   done
 fi
 
+[ -n "$others" ] || exit 0
 [ -x node_modules/.bin/jest ] || exit 0
-# Jest shares the machine with other sessions: it takes a heavy-command slot
-# (scripts/heavy.sh) with two workers and waits at most 300 s for one. No slot
-# in time skips the check with a message rather than trapping the session.
 HEAVY_WAIT="${HEAVY_WAIT:-300}" $heavy npx --no-install jest --onlyChanged --passWithNoTests --maxWorkers=2 >&2 2>&1
 code=$?
 if [ "$code" -eq 124 ] && [ -n "$heavy" ]; then
-  echo '{"systemMessage":"Stop gate: jest --onlyChanged was skipped, every shared heavy-command slot stayed busy for 300 s. Run it before claiming the work is green."}'
+  skipped "jest --onlyChanged"
   exit 0
 fi
 if [ "$code" -ne 0 ]; then

@@ -7,6 +7,7 @@ import {
   LanguageSwitch,
   provideRememberedLanguage,
 } from './switch';
+import { watchSwitches } from './watch-switches.testing';
 
 @Component({ imports: [LanguageSwitch], template: '<mf-language-switch />' })
 class Host {}
@@ -16,7 +17,7 @@ async function start() {
   const fixture = TestBed.createComponent(Host);
   fixture.detectChanges();
   await fixture.whenStable();
-  await new Promise((resolve) => setTimeout(resolve));
+  await settle();
   await fixture.whenStable();
   return {
     choice: TestBed.inject(LanguageChoice),
@@ -26,11 +27,13 @@ async function start() {
 
 async function otherTab(newValue: string | null, key = 'mf.lang') {
   window.dispatchEvent(new StorageEvent('storage', { key, newValue }));
-  await new Promise((resolve) => setTimeout(resolve));
+  await settle();
 }
 
+const settle = watchSwitches();
+
 beforeEach(() => localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('LanguageChoice.hold under hostile use', () => {
   // @traces 468-FR-001
@@ -54,7 +57,7 @@ describe('LanguageChoice.hold under hostile use', () => {
     await otherTab('en');
 
     release();
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
 
     expect(i18n.language()).toBe('ro');
   });
@@ -110,7 +113,7 @@ describe('LanguageChoice.hold under hostile use', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
     await fixture.whenStable();
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
 
     await otherTab('en');
 

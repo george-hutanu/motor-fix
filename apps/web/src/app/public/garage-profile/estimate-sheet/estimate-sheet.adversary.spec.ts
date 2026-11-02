@@ -52,20 +52,20 @@ async function render(language: 'ro' | 'en' = 'ro') {
       {
         provide: OVERLAY_TASK,
         useFactory: () => ({
-          close: jest.fn(),
+          close: vi.fn(),
           data: { garage, selection: inject(PriceSelection) },
-          focusStart: jest.fn(),
-          markUnchanged: jest.fn(),
+          focusStart: vi.fn(),
+          markUnchanged: vi.fn(),
         }),
       },
-      { provide: Overlays, useValue: { open: jest.fn(async () => undefined) } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn(async () => undefined) } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       {
         provide: Session,
         useValue: {
           current: signal(null),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: signal(null),
         },
       },

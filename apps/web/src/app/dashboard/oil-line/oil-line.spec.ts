@@ -29,8 +29,9 @@ const styles = readFileSync(join(__dirname, 'oil-line.css'), 'utf8');
 
 // Only Date is faked: Angular's stability checks still need real timers.
 function clockAt(at: string) {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date(at),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -46,7 +47,6 @@ function clockAt(at: string) {
       'hrtime',
       'performance',
     ],
-    now: new Date(at),
   });
 }
 
@@ -89,7 +89,7 @@ async function render(
 beforeEach(() => clockAt('2026-10-08T06:00:00Z'));
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 // @traces 029-FR-012

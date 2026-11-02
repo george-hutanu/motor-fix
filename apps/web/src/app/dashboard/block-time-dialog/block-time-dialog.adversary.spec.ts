@@ -10,15 +10,15 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { BlockTimeDialog } from './block-time-dialog';
 import type { BlockTimeData, BlockTimeResult } from './open-block-time';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({
   template: '<button type="button" id="opener">Blochează timp</button>',
@@ -50,10 +50,10 @@ const BLOCK: TimeBlockDto = {
   startsAt: '2030-07-11T07:00:00.000Z',
 };
 
-let read: jest.Mock;
-let create: jest.Mock;
-let update: jest.Mock;
-let remove: jest.Mock;
+let read: Mock;
+let create: Mock;
+let update: Mock;
+let remove: Mock;
 let result: Promise<BlockTimeResult | 'cancelled'>;
 let settled: BlockTimeResult | 'cancelled' | undefined;
 
@@ -78,13 +78,13 @@ async function open({
   language?: 'ro' | 'en';
   lifts?: boolean;
   offered?: TimeBlockOptionsDto;
-  reads?: jest.Mock;
+  reads?: Mock;
   team?: boolean;
 } = {}) {
-  read = reads ?? jest.fn(async () => offered);
-  create = jest.fn(async () => ({ ...BLOCK, id: 'block-2' }));
-  update = jest.fn(async () => BLOCK);
-  remove = jest.fn(async () => undefined);
+  read = reads ?? vi.fn(async () => offered);
+  create = vi.fn(async () => ({ ...BLOCK, id: 'block-2' }));
+  update = vi.fn(async () => BLOCK);
+  remove = vi.fn(async () => undefined);
   settled = undefined;
   TestBed.configureTestingModule({
     providers: [
@@ -184,7 +184,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
+  (toast as unknown as Mock).mockClear();
   if (online) Object.defineProperty(Navigator.prototype, 'onLine', online);
   TestBed.resetTestingModule();
 });
@@ -277,7 +277,7 @@ describe('the block-time dialog: hostile input', () => {
 
 // @traces 1403-FR-006
 describe('the block-time dialog: hostile refusal bodies', () => {
-  async function refusedWith(error: HttpErrorResponse, reads?: jest.Mock) {
+  async function refusedWith(error: HttpErrorResponse, reads?: Mock) {
     await open({ reads });
     create.mockRejectedValue(error);
     await set('mechanic', 'mech-1');
@@ -325,7 +325,7 @@ describe('the block-time dialog: hostile refusal bodies', () => {
   });
 
   it('keeps every choice when the options re-read after a taken slot fails too', async () => {
-    const reads = jest
+    const reads = vi
       .fn()
       .mockResolvedValueOnce(OPTIONS)
       .mockRejectedValue(refusal(500, {}));

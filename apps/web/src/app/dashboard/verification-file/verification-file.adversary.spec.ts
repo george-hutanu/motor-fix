@@ -12,16 +12,16 @@ import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { VerificationFile } from './verification-file';
 import { Live } from '../live';
 
 // @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-009 302-FR-010
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const FILE = 'file-1';
 const NOW = new Date();
@@ -158,13 +158,13 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let answer: () => Promise<VerificationFileDto>;
 let api: {
-  verificationFileControllerOpen: jest.Mock;
-  verificationFileControllerRead: jest.Mock;
-  verificationChecksControllerRecord: jest.Mock;
+  verificationFileControllerOpen: Mock;
+  verificationFileControllerRead: Mock;
+  verificationChecksControllerRecord: Mock;
 };
-let documents: { legalDocumentsControllerPageAddress: jest.Mock };
-let overlays: { open: jest.Mock };
-let tab: { close: jest.Mock; location: { href: string }; opener: unknown };
+let documents: { legalDocumentsControllerPageAddress: Mock };
+let overlays: { open: Mock };
+let tab: { close: Mock; location: { href: string }; opener: unknown };
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -181,20 +181,20 @@ async function open(
   resync = new Subject();
   answer = typeof file === 'function' ? file : async () => file;
   api = {
-    verificationChecksControllerRecord: jest.fn(),
-    verificationFileControllerOpen: jest.fn(() => answer()),
-    verificationFileControllerRead: jest.fn(() => answer()),
+    verificationChecksControllerRecord: vi.fn(),
+    verificationFileControllerOpen: vi.fn(() => answer()),
+    verificationFileControllerRead: vi.fn(() => answer()),
   };
   documents = {
-    legalDocumentsControllerPageAddress: jest.fn(async () => ({
+    legalDocumentsControllerPageAddress: vi.fn(async () => ({
       expiresAt: new Date(NOW.getTime() + 300_000).toISOString(),
       url: 'https://store.test/signed',
     })),
   };
-  overlays = { open: jest.fn() };
-  tab = { close: jest.fn(), location: { href: '' }, opener: {} };
-  jest.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
-  jest.mocked(toast).mockClear();
+  overlays = { open: vi.fn() };
+  tab = { close: vi.fn(), location: { href: '' }, opener: {} };
+  vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+  vi.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
       { provide: AdminService, useValue: api },
@@ -203,9 +203,9 @@ async function open(
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { fileId: FILE },
-          markUnchanged: jest.fn(),
+          markUnchanged: vi.fn(),
         },
       },
       {
@@ -278,7 +278,7 @@ const entry = (extra: Partial<AuditEntryDto>): AuditEntryDto =>
 
 afterEach(() => {
   document.body.innerHTML = '';
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const later = () => new Promise((resolve) => setTimeout(resolve, 350));

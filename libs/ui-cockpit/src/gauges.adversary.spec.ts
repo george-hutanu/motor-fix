@@ -49,7 +49,7 @@ function render() {
   };
 }
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('gauges exports', () => {
   it('exports the three parts from the library entry point', () => {
@@ -74,7 +74,7 @@ describe('lamp with hostile input', () => {
     undefined,
     42,
   ])('shows grey for the state %p', (state) => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     const t = render();
 
     t.host.state.set(state);
@@ -84,7 +84,7 @@ describe('lamp with hostile input', () => {
   });
 
   it('warns once per distinct unknown value, and not again for the same value', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const t = render();
 
     t.host.state.set('purple');
@@ -100,7 +100,7 @@ describe('lamp with hostile input', () => {
   });
 
   it('does not warn for any of the four valid states', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const t = render();
 
     for (const state of ['red', 'amber', 'grey', 'green']) {

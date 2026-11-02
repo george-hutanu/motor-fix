@@ -130,15 +130,15 @@ export async function renderPanel({
   read = () => Promise.resolve(schedule()),
   role = 'garage',
 }: RenderOptions = {}) {
-  jest.useFakeTimers({
-    advanceTimers: true,
-    doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+  vi.useFakeTimers({
     now: NOW,
+    shouldAdvanceTime: true,
+    toNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
   });
   const me = signal(account(role, features, NONE));
   const live = fakeLive();
-  const garageSchedule = jest.fn(read);
-  const open = jest.fn(async () => 'changed');
+  const garageSchedule = vi.fn(read);
+  const open = vi.fn(async () => 'changed');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

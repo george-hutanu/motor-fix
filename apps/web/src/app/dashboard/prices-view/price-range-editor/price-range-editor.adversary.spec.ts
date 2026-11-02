@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { GaragesService, type PriceListDto } from '@motor-fix/data-access';
 import { formatDuration, I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type EditableRow,
@@ -54,10 +55,10 @@ const LABOUR: PriceRangeEditorData = {
   labour: { fromBani: 18_000, toBani: 24_000 },
 };
 
-let setRange: jest.Mock;
-let setBrandRange: jest.Mock;
-let setLabour: jest.Mock;
-let read: jest.Mock;
+let setRange: Mock;
+let setBrandRange: Mock;
+let setLabour: Mock;
+let read: Mock;
 let result: Promise<PriceRangeEditorResult | 'cancelled'>;
 
 async function settle() {
@@ -74,16 +75,16 @@ async function open(
     title = BRAKES.nameRo,
   }: { language?: 'ro' | 'en'; title?: string } = {},
 ) {
-  setRange = jest.fn(async ({ body }) => ({
+  setRange = vi.fn(async ({ body }) => ({
     jobTypeId: 'brakes',
     priceId: 'price-brakes',
     updatedAt: NEWER,
     warnings: [],
     ...body,
   }));
-  setBrandRange = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
-  setLabour = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
-  read = jest.fn(
+  setBrandRange = vi.fn(async ({ body }) => ({ ...body, warnings: [] }));
+  setLabour = vi.fn(async ({ body }) => ({ ...body, warnings: [] }));
+  read = vi.fn(
     async (): Promise<PriceListDto> => ({
       items: [
         {

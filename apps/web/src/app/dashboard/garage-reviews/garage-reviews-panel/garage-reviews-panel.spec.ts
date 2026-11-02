@@ -11,11 +11,11 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { GarageReviewsPanel } from './garage-reviews-panel';
 import { Live } from '../../live';
 import type { ReplyData } from '../../reply-dialog/open-reply';
-import { openReportReview } from '../../report-review-dialog/open-report-review';
 import { Session } from '../../session';
 import {
   repliedReview,
@@ -24,10 +24,16 @@ import {
   staffReview,
 } from '../garage-reviews.testing';
 
-jest.mock('../../report-review-dialog/open-report-review', () => ({
-  openReportReview: jest.fn(),
-}));
-const reportOpened = openReportReview as jest.Mock;
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../../report-review-dialog/report-review-dialog');
+  await import('../../reply-dialog/reply-dialog');
+});
+
+// The builder bundles open-report-review into the spec, so the report task is
+// read where it opens: Overlays.open, with the review as its data.
+const reportOpened: Mock = vi.fn();
 
 const GARAGE = 'garage-1';
 const SLUG = 'service-auto-militari';
@@ -51,8 +57,8 @@ class Host {
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let read: jest.Mock;
-let opened: jest.Mock;
+let read: Mock;
+let opened: Mock;
 
 const rows = (count: number) =>
   Array.from({ length: count }, (_, i) => staffReview({ id: `r-${i + 1}` }));
@@ -73,8 +79,16 @@ async function render({
 } = {}) {
   events = new Subject();
   resync = new Subject();
-  read = jest.fn(answer);
-  opened = jest.fn(async () => 'cancelled');
+  read = vi.fn(answer);
+  opened = vi.fn(
+    async (
+      dialog: unknown,
+      config: { data?: { review?: unknown }; title?: string },
+    ) =>
+      config.title === 'garage.reviews.report.title'
+        ? reportOpened(dialog, config.data?.review)
+        : 'cancelled',
+  );
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

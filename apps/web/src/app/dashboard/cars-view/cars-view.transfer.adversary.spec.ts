@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { CarsView } from './cars-view';
 import type { fakeLive } from '../garage-requests/garage-requests.testing';
@@ -30,17 +31,17 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   ...over,
 });
 
-let list: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let open: Mock;
 
 async function render(
   answer: CarDto[] | Promise<never> = [car()],
   language: 'ro' | 'en' = 'ro',
 ) {
-  list = jest.fn(() =>
+  list = vi.fn(() =>
     answer instanceof Promise ? answer : Promise.resolve({ items: answer }),
   );
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       {
@@ -98,8 +99,9 @@ const _lines = (card: HTMLElement) =>
 // @traces 1392-FR-001 1392-FR-004 1392-FR-009
 describe('selling a car from its card', () => {
   beforeEach(() =>
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: new Date('2026-10-08T09:00:00Z'),
+      toNotFake: [
         'nextTick',
         'setImmediate',
         'clearImmediate',
@@ -115,11 +117,10 @@ describe('selling a car from its card', () => {
         'hrtime',
         'performance',
       ],
-      now: new Date('2026-10-08T09:00:00Z'),
     }),
   );
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
       n.innerHTML = '';
     });
@@ -196,7 +197,7 @@ describe('selling a car from its card', () => {
   });
 
   it('shows the menu again when the list re-read drops the transfer after an event', async () => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     const { element, settle } = await render([sold]);
     await settle();
     list.mockResolvedValue({ items: [car()] });

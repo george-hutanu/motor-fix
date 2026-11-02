@@ -13,7 +13,7 @@ const reduced = signal(false);
 let fixture: ComponentFixture<HowItWorks>;
 // The observer the counter waits on, and what it was told to watch.
 let observed: { callback: IntersectionObserverCallback; target?: Element }[];
-const scroll = jest.fn();
+const scroll = vi.fn();
 
 class FakeObserver {
   constructor(callback: IntersectionObserverCallback) {
@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 async function render(language: 'ro' | 'en' = 'ro', address?: string) {
@@ -188,18 +188,18 @@ describe('how MotorFix works', () => {
 // @traces 228-FR-006
 describe('the hourly rate counter', () => {
   it('rolls up to 180 once the section is in view', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const root = await render();
 
     expect(figure(root)).toBe('0');
     visible();
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
     fixture.detectChanges();
     const midway = Number(figure(root));
     expect(midway).toBeGreaterThan(0);
     expect(midway).toBeLessThan(180);
 
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     fixture.detectChanges();
     expect(figure(root)).toBe('180');
   });

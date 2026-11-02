@@ -11,6 +11,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { AdminProposedJobs } from './admin-proposed-jobs';
 import { Live } from '../live';
@@ -36,8 +37,8 @@ const job = (
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let read: jest.Mock;
-let open: jest.Mock;
+let read: Mock;
+let open: Mock;
 
 async function render(
   answer: () => Promise<AdminCatalogueJobsDto> = async () => ({
@@ -48,8 +49,8 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  read = jest.fn(answer);
-  open = jest.fn(async () => 'cancelled');
+  read = vi.fn(answer);
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       {

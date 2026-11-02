@@ -15,15 +15,15 @@ const scrolls: ScrollIntoViewOptions[] = [];
 beforeEach(() => {
   tops = [1000, 2000, 3000, 4000, 5000, 6000];
   scrolls.length = 0;
-  jest
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockImplementation(function (this: HTMLElement) {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+    function (this: HTMLElement) {
       const sections = [...document.querySelectorAll('section h2')];
       const top = tops[sections.indexOf(this)] ?? 0;
       return { bottom: top + 40, height: 40, top } as DOMRect;
-    });
+    },
+  );
   // A frame runs once the task that asked for it is over.
-  jest.spyOn(window, 'requestAnimationFrame').mockImplementation((run) => {
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((run) => {
     void Promise.resolve().then(() => run(0));
     return 1;
   });
@@ -37,7 +37,7 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 async function open(path: string, reduced = false) {
   TestBed.configureTestingModule({
@@ -80,7 +80,7 @@ const scrolled = async (harness: RouterTestingHarness, to: number[]) => {
   tops = to;
   window.dispatchEvent(new Event('scroll'));
   // Under a fake clock a frame is a timer of its own.
-  if ('clock' in setTimeout) await jest.advanceTimersByTimeAsync(16);
+  if ('clock' in setTimeout) await vi.advanceTimersByTimeAsync(16);
   await settle(harness);
 };
 const FLIGHT = [990, 1990, 2990, 3990, 4990, 5990];
@@ -93,7 +93,7 @@ async function withoutScrollEnd(run: () => Promise<void>) {
   try {
     await run();
   } finally {
-    jest.useRealTimers();
+    vi.useRealTimers();
     if (own) Object.defineProperty(window, 'onscrollend', own);
   }
 }
@@ -175,18 +175,18 @@ describe('a jump to a step under hostile timing', () => {
   it('counts the quiet time from the second jump when the first one is still flying', async () => {
     await withoutScrollEnd(async () => {
       const { harness, page } = await open('/ro/list-your-garage');
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+      vi.useFakeTimers({ toNotFake: ['setImmediate'] });
 
       entries(page)[3].click();
-      await jest.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(100);
       await scrolled(harness, FLIGHT);
-      await jest.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(100);
       entries(page)[1].click();
-      await jest.advanceTimersByTimeAsync(120);
+      await vi.advanceTimersByTimeAsync(120);
       await scrolled(harness, AT_STEP_3);
       expect(current(page)).toEqual(['2 Mărci']);
 
-      await jest.advanceTimersByTimeAsync(200);
+      await vi.advanceTimersByTimeAsync(200);
       await scrolled(harness, AT_STEP_3);
       expect(current(page)).toEqual(['3 Prețuri']);
     });
@@ -280,32 +280,32 @@ describe('a jump to a step under hostile timing', () => {
 
   it('keeps the hold through a long gap while the browser says when scrolls end', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       entries(page)[3].click();
-      await jest.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(2000);
       await scrolled(harness, FLIGHT);
-      await jest.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(2000);
       await scrolled(harness, AT_STEP_3);
 
       expect(current(page)).toEqual([FOURTH]);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('releases the hold after a flight that stops, whatever its length, when only the timer stands in', async () => {
     await withoutScrollEnd(async () => {
       const { harness, page } = await open('/ro/list-your-garage');
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+      vi.useFakeTimers({ toNotFake: ['setImmediate'] });
 
       entries(page)[3].click();
       for (let i = 0; i < 30; i++) {
-        await jest.advanceTimersByTimeAsync(100);
+        await vi.advanceTimersByTimeAsync(100);
         await scrolled(harness, i % 2 ? FLIGHT : AT_STEP_3);
         expect(current(page)).toEqual([FOURTH]);
       }
-      await jest.advanceTimersByTimeAsync(151);
+      await vi.advanceTimersByTimeAsync(151);
       await scrolled(harness, AT_STEP_3);
       expect(current(page)).toEqual(['3 Prețuri']);
     });
@@ -313,25 +313,25 @@ describe('a jump to a step under hostile timing', () => {
 
   it('lets go of a jump that never moves the page after three seconds, where the browser says when scrolls end', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       entries(page)[3].click();
-      await jest.advanceTimersByTimeAsync(3001);
+      await vi.advanceTimersByTimeAsync(3001);
       await scrolled(harness, AT_STEP_3);
 
       expect(current(page)).toEqual(['3 Prețuri']);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('lets go of a jump that never moves the page after three seconds, where the browser never says a scroll ended', async () => {
     await withoutScrollEnd(async () => {
       const { harness, page } = await open('/ro/list-your-garage');
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+      vi.useFakeTimers({ toNotFake: ['setImmediate'] });
 
       entries(page)[3].click();
-      await jest.advanceTimersByTimeAsync(3001);
+      await vi.advanceTimersByTimeAsync(3001);
       await scrolled(harness, AT_STEP_3);
 
       expect(current(page)).toEqual(['3 Prețuri']);
@@ -340,12 +340,12 @@ describe('a jump to a step under hostile timing', () => {
 
   it('holds a jump that has started moving past three seconds, until its scroll ends', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       entries(page)[3].click();
-      await jest.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(100);
       await scrolled(harness, FLIGHT);
-      await jest.advanceTimersByTimeAsync(4000);
+      await vi.advanceTimersByTimeAsync(4000);
       await scrolled(harness, AT_STEP_3);
       expect(current(page)).toEqual([FOURTH]);
 
@@ -353,20 +353,20 @@ describe('a jump to a step under hostile timing', () => {
       await scrolled(harness, AT_STEP_3);
       expect(current(page)).toEqual(['3 Prețuri']);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('counts the quiet time from the last scroll, not from a resize, when only the timer stands in', async () => {
     await withoutScrollEnd(async () => {
       const { harness, page } = await open('/ro/list-your-garage');
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+      vi.useFakeTimers({ toNotFake: ['setImmediate'] });
 
       entries(page)[3].click();
       await scrolled(harness, FLIGHT);
-      await jest.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(100);
       window.dispatchEvent(new Event('resize'));
-      await jest.advanceTimersByTimeAsync(60);
+      await vi.advanceTimersByTimeAsync(60);
       await scrolled(harness, AT_STEP_3);
       expect(current(page)).toEqual(['3 Prețuri']);
     });
@@ -375,13 +375,13 @@ describe('a jump to a step under hostile timing', () => {
   it('runs no timer after the page is destroyed in the middle of a jump', async () => {
     await withoutScrollEnd(async () => {
       const { harness, page } = await open('/ro/list-your-garage');
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+      vi.useFakeTimers({ toNotFake: ['setImmediate'] });
 
       entries(page)[3].click();
       await scrolled(harness, FLIGHT);
       harness.fixture.destroy();
 
-      expect(jest.getTimerCount()).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
     });
   });
 });

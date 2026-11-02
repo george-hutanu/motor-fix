@@ -14,12 +14,14 @@ import {
   flags,
   hasSpecs,
   IN_PLACE_ENV,
+  MUTATION_SPECS,
   markInPlace,
   mutationScore,
   reportsDir,
   scoreRecord,
   strykerOptions,
   summaryRows,
+  vitestSpecs,
 } from './mutation.ts';
 import { projectFloor } from './mutation-plan.ts';
 
@@ -418,6 +420,117 @@ describe('strykerOptions shared limits', () => {
 
     mkdirSync(join(repo, 'libs/x/jest.config.cts'));
     expect(() => strykerOptions('x', 'libs/x', false)).toThrow('EISDIR');
+  });
+});
+
+// @traces 1332-FR-008
+describe('strykerOptions for a project tested on Vitest', () => {
+  it.each([
+    ['web', 'apps/web'],
+    ['ui-cockpit', 'libs/ui-cockpit'],
+    ['overlays', 'libs/overlays'],
+    ['i18n', 'libs/i18n'],
+    ['media', 'libs/media'],
+  ])(
+    'runs %s on the Vitest runner with its own Vitest config',
+    (project, root) => {
+      write(`${root}/stryker.config.json`, floor(70));
+      write(`${root}/vitest.config.ts`);
+
+      const options = strykerOptions(project, root, false);
+
+      expect(options.testRunner).toBe('vitest');
+      expect(options.vitest).toEqual({
+        configFile: `${root}/vitest.config.ts`,
+        dir: `${root}/src`,
+        related: false,
+      });
+      expect(options.plugins).toEqual(
+        expect.arrayContaining([
+          '@stryker-mutator/vitest-runner',
+          '@stryker-mutator/typescript-checker',
+        ]),
+      );
+      expect(options).not.toHaveProperty('jest');
+      expect(options.checkers).toEqual(['typescript']);
+      expect(options.thresholds).toEqual({ break: 70, high: 80, low: 60 });
+    },
+  );
+
+  it('keeps a project with no Vitest config on Jest', () => {
+    write('libs/domain/stryker.config.json', floor(70));
+    write('libs/domain/jest.config.cts', 'module.exports = {};\n');
+
+    const options = strykerOptions('domain', 'libs/domain', false);
+
+    expect(options.testRunner).toBe('jest');
+    expect(options.jest).toEqual({ configFile: 'libs/domain/jest.config.cts' });
+    expect(options).not.toHaveProperty('vitest');
+    expect(options).not.toHaveProperty('plugins');
+  });
+
+  it('finds a Vitest config at the root of each of the five Angular projects', () => {
+    const missing = [
+      'apps/web',
+      'libs/ui-cockpit',
+      'libs/overlays',
+      'libs/i18n',
+      'libs/media',
+    ].filter(
+      (root) => !existsSync(join(__dirname, '..', root, 'vitest.config.ts')),
+    );
+
+    expect(missing).toEqual([]);
+  });
+});
+
+// @traces 1332-FR-009
+describe('vitestSpecs', () => {
+  beforeEach(() => {
+    write(
+      'scripts/mutation-shards.json',
+      JSON.stringify({
+        default: { measured: 'm', timeout: 60 },
+        projects: {
+          x: {
+            measured: 'm',
+            shards: {
+              auth: { folders: ['auth'], measured: 'm', timeout: 60 },
+              root: { folders: ['*'], measured: 'm', timeout: 60 },
+            },
+            timeout: 60,
+          },
+        },
+      }),
+    );
+  });
+
+  const specs = (shard: string) =>
+    JSON.parse(vitestSpecs('x', 'libs/x', shard)[MUTATION_SPECS] ?? 'null');
+
+  it("hands a named shard's spec globs to Vitest", () => {
+    expect(specs('auth')).toEqual({
+      exclude: [],
+      include: ['**/libs/x/src/auth/**/*.{spec,test}.ts'],
+    });
+    expect(specs('root')).toEqual({
+      exclude: [],
+      include: ['**/libs/x/src/*.{spec,test}.ts'],
+    });
+  });
+
+  it('gives rest every spec outside the named shards', () => {
+    expect(specs('rest')).toEqual({
+      exclude: [
+        '**/libs/x/src/auth/**/*.{spec,test}.ts',
+        '**/libs/x/src/*.{spec,test}.ts',
+      ],
+      include: ['**/libs/x/src/**/*.{spec,test}.ts'],
+    });
+  });
+
+  it('refuses a shard the project does not have', () => {
+    expect(() => vitestSpecs('x', 'libs/x', 'nope')).toThrow('nope');
   });
 });
 

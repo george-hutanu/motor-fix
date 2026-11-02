@@ -5,6 +5,7 @@ import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { RequestSavedQuote } from './request-saved-quote';
 import { Consent } from '../../../consent/consent';
@@ -15,13 +16,20 @@ import type {
 import { PUBLIC_READ } from '../../../public-read';
 import { Voice } from '../../../voice/voice';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: Object.assign(
-    jest.fn(() => 'bar'),
-    { dismiss: jest.fn() },
-  ),
-}));
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../../../public/garage-profile/request-quote/request-quote');
+});
+
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), {
+    toast: Object.assign(
+      vi.fn(() => 'bar'),
+      { dismiss: vi.fn() },
+    ),
+  }),
+);
 
 const GARAGE = {
   brand: null,
@@ -41,9 +49,9 @@ const GARAGE = {
 const failure = (status: number) =>
   new HttpErrorResponse({ error: { status }, status });
 
-let read: jest.Mock;
-let open: jest.Mock;
-let track: jest.Mock;
+let read: Mock;
+let open: Mock;
+let track: Mock;
 
 async function render(
   options: {
@@ -52,9 +60,9 @@ async function render(
     language?: 'ro' | 'en';
   } = {},
 ) {
-  read = jest.fn(options.read ?? (async () => GARAGE));
-  open = jest.fn(async () => options.answer ?? 'cancelled');
-  track = jest.fn();
+  read = vi.fn(options.read ?? (async () => GARAGE));
+  open = vi.fn(async () => options.answer ?? 'cancelled');
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -91,7 +99,7 @@ async function settle() {
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.mocked(toast).mockClear();
+  vi.mocked(toast).mockClear();
 });
 
 // @traces 292-FR-001
@@ -185,7 +193,7 @@ describe('Cere ofertă on a saved garage', () => {
 
   it('goes where a link in the dialog points once it has closed', async () => {
     const { host } = await render({ answer: { go: '/app/driver/requests' } });
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigateByUrl')
       .mockResolvedValue(true);
 

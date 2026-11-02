@@ -61,7 +61,7 @@ This is the whole point of the command — read it before phase 1.
    answer. Where it computes none, pick the option that best fits the
    constitution (`.specify/memory/constitution.md`, Principle I first) and
    this repo's real code — `package.json`, `nx.json`, `biome.jsonc`,
-   `jest.config.ts`, the touched workspace — and say which evidence decided
+   `vitest.preset.mts`, `vitest.shared.ts`, the touched workspace — and say which evidence decided
    it.
 3. **Assumptions are written down, not held in memory.** Every autonomous
    answer lands in the artifact the phase owns (spec Clarifications /

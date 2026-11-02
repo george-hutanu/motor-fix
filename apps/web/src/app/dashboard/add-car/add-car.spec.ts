@@ -9,6 +9,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { AddCar } from './add-car';
 import { openAddCar } from './open-add-car';
@@ -55,8 +56,8 @@ const saved: CarDto = {
   year: 2019,
 };
 
-let search: jest.Mock;
-let create: jest.Mock;
+let search: Mock;
+let create: Mock;
 let result: Promise<OverlayResult<CarDto>>;
 
 const NEXT_YEAR = new Date().getFullYear() + 1;
@@ -78,7 +79,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
   plates: string[] = [],
 ): Promise<void> {
-  search = jest.fn(async ({ q }: { q?: string } = {}) => {
+  search = vi.fn(async ({ q }: { q?: string } = {}) => {
     const typed = (q ?? '').toLowerCase();
     return page(
       CATALOGUE.filter((b) =>
@@ -90,7 +91,7 @@ async function open(
       ),
     );
   });
-  create = jest.fn(async () => saved);
+  create = vi.fn(async () => saved);
   TestBed.configureTestingModule({
     providers: [
       { provide: BrandsService, useValue: { brandsControllerSearch: search } },
@@ -185,7 +186,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the add-a-car dialog', () => {
@@ -437,7 +438,7 @@ describe('saving', () => {
 
 describe('openAddCar', () => {
   it('opens the add-car dialog with the plates already held and answers what it closes with', async () => {
-    const open = jest.fn(async () => 'cancelled' as const);
+    const open = vi.fn(async () => 'cancelled' as const);
     const overlays = { open } as unknown as Overlays;
 
     await expect(openAddCar(overlays, ['CJ12ABC'])).resolves.toBe('cancelled');
@@ -459,24 +460,24 @@ const stored: CarDto = {
   updatedAt: '2026-10-08T07:00:00.000Z',
 };
 
-let update: jest.Mock;
-let listCars: jest.Mock;
+let update: Mock;
+let listCars: Mock;
 let edited: Promise<OverlayResult<CarDto>>;
-let gone: jest.Mock;
+let gone: Mock;
 
 async function openEdit(
   language: 'ro' | 'en' = 'ro',
   car: CarDto = stored,
   focus?: 'itpUntil' | 'rcaUntil' | 'rovinietaUntil' | 'nextServiceKm',
 ): Promise<void> {
-  search = jest.fn(async () => page(CATALOGUE));
-  create = jest.fn(async () => saved);
-  update = jest.fn(async () => ({
+  search = vi.fn(async () => page(CATALOGUE));
+  create = vi.fn(async () => saved);
+  update = vi.fn(async () => ({
     ...car,
     updatedAt: '2026-10-08T08:00:00.000Z',
   }));
-  listCars = jest.fn(async () => ({ items: [car] }));
-  gone = jest.fn();
+  listCars = vi.fn(async () => ({ items: [car] }));
+  gone = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: BrandsService, useValue: { brandsControllerSearch: search } },
@@ -821,7 +822,7 @@ describe('the edit dialog', () => {
 describe('openAddCar for a car', () => {
   // @traces 092-FR-010
   it('opens the dialog for that car under the edit title', async () => {
-    const open = jest.fn(async () => 'cancelled' as const);
+    const open = vi.fn(async () => 'cancelled' as const);
     const overlays = { open } as unknown as Overlays;
 
     await openAddCar(overlays, ['B123ABC'], { car: stored, focus: 'itpUntil' });

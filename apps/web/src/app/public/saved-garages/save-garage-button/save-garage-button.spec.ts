@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { SaveGarageButton } from './save-garage-button';
 import { Session } from '../../../dashboard/session';
@@ -11,8 +12,8 @@ type Role = MeDto['role'];
 
 let ids: ReturnType<typeof signal<ReadonlySet<string>>>;
 let unavailable: ReturnType<typeof signal<ReadonlySet<string>>>;
-let tap: jest.Mock;
-let renew: jest.Mock;
+let tap: Mock;
+let renew: Mock;
 
 async function render(
   options: {
@@ -26,8 +27,8 @@ async function render(
 ) {
   ids = signal(new Set(options.saved ? ['g1'] : []));
   unavailable = signal(new Set(options.unavailable ? ['g1'] : []));
-  tap = jest.fn(async () => undefined);
-  renew = jest.fn(async () => true);
+  tap = vi.fn(async () => undefined);
+  renew = vi.fn(async () => true);
   TestBed.configureTestingModule({
     providers: [
       { provide: SavedGarages, useValue: { ids, tap, unavailable } },

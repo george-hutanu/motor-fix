@@ -5,6 +5,7 @@ import { BookingsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   type CancelBookingData,
@@ -12,10 +13,9 @@ import {
   type CancelBookingResult,
 } from './cancel-booking-dialog';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({ template: '' })
 class Host {
@@ -25,7 +25,7 @@ class Host {
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 
-let cancel: jest.Mock;
+let cancel: Mock;
 let result: Promise<CancelBookingResult | 'cancelled'>;
 let data: CancelBookingData;
 
@@ -47,7 +47,7 @@ async function open({
   startsAt?: string;
   startsIn?: number;
 } = {}) {
-  cancel = jest.fn(async () => ({ status: 'cancelled' }));
+  cancel = vi.fn(async () => ({ status: 'cancelled' }));
   data = {
     bookingId: 'booking-1',
     garage,
@@ -120,9 +120,9 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
-  jest.restoreAllMocks();
-  jest.useRealTimers();
+  (toast as unknown as Mock).mockClear();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 

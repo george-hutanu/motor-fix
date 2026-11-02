@@ -357,7 +357,7 @@ describe('HomeCards', () => {
   // @traces 227-FR-014
   it('says the garages could not load, and asks again on retry', async () => {
     const page = await render([garageOf()], { failed: true });
-    const retry = jest.fn();
+    const retry = vi.fn();
     fixture.componentInstance.retry.subscribe(retry);
 
     const alert = page.querySelector('[role="alert"]');

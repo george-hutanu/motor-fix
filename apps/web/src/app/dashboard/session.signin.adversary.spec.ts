@@ -19,14 +19,14 @@ const flush = () => new Promise((resolve) => setTimeout(resolve));
 function concurrentSetup() {
   const { auth, me, session } = setup({
     auth: {
-      authControllerRefresh: jest.fn(() =>
+      authControllerRefresh: vi.fn(() =>
         Promise.resolve({ accessToken: 'renewed' } as { accessToken?: string }),
       ),
-      authControllerSignIn: jest.fn(() =>
+      authControllerSignIn: vi.fn(() =>
         Promise.resolve({ accessToken: 'signed-in' }),
       ),
     },
-    me: { meControllerMe: jest.fn(() => Promise.resolve(andrei)) },
+    me: { meControllerMe: vi.fn(() => Promise.resolve(andrei)) },
   });
   return { api: auth, me: me.meControllerMe, session };
 }

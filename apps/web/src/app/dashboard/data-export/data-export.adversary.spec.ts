@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { type DataExportDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { DataExport } from './data-export';
 import en from '../../../../../../libs/i18n/src/shell/en.json';
@@ -30,9 +31,9 @@ const refusal = (status: number, code: string) =>
     url: '/api/v1/me/data-export',
   });
 
-let latest: jest.Mock;
-let request: jest.Mock;
-let download: jest.Mock;
+let latest: Mock;
+let request: Mock;
+let download: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -45,14 +46,14 @@ async function render(
   answers: Array<DataExportDto | null | HttpErrorResponse>,
   language: 'ro' | 'en' = 'ro',
 ) {
-  latest = jest.fn();
+  latest = vi.fn();
   for (const answer of answers) {
     if (answer instanceof HttpErrorResponse)
       latest.mockRejectedValueOnce(answer);
     else latest.mockResolvedValueOnce(answer);
   }
-  request = jest.fn();
-  download = jest.fn();
+  request = vi.fn();
+  download = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       {
@@ -82,7 +83,7 @@ const text = (element: HTMLElement) =>
   (element.textContent ?? '').replace(/\s+/g, ' ');
 
 describe('"Descarcă datele mele" under unusual server answers', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('keeps the button enabled for a failed row even if canRequestAt is in the future', async () => {
     const element = await render([
@@ -139,14 +140,14 @@ describe('"Descarcă datele mele" under unusual server answers', () => {
       headers: new Headers(),
     });
     const names: string[] = [];
-    jest
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(function (this: HTMLAnchorElement) {
-        names.push(this.download);
-      });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
     Object.assign(URL, {
-      createObjectURL: jest.fn(() => 'blob:zip'),
-      revokeObjectURL: jest.fn(),
+      createObjectURL: vi.fn(() => 'blob:zip'),
+      revokeObjectURL: vi.fn(),
     });
 
     link(element)?.click();
@@ -167,14 +168,14 @@ describe('"Descarcă datele mele" under unusual server answers', () => {
       }),
     });
     const names: string[] = [];
-    jest
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(function (this: HTMLAnchorElement) {
-        names.push(this.download);
-      });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
     Object.assign(URL, {
-      createObjectURL: jest.fn(() => 'blob:zip'),
-      revokeObjectURL: jest.fn(),
+      createObjectURL: vi.fn(() => 'blob:zip'),
+      revokeObjectURL: vi.fn(),
     });
 
     link(element)?.click();
@@ -191,12 +192,12 @@ describe('"Descarcă datele mele" under unusual server answers', () => {
       body: new Blob(['zip']),
       headers: new Headers(),
     });
-    jest
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => undefined);
-    const revoke = jest.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+      () => undefined,
+    );
+    const revoke = vi.fn();
     Object.assign(URL, {
-      createObjectURL: jest.fn(() => 'blob:zip'),
+      createObjectURL: vi.fn(() => 'blob:zip'),
       revokeObjectURL: revoke,
     });
 
@@ -217,12 +218,12 @@ describe('"Descarcă datele mele" under unusual server answers', () => {
         done = resolve;
       }),
     );
-    jest
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+      () => undefined,
+    );
     Object.assign(URL, {
-      createObjectURL: jest.fn(() => 'blob:zip'),
-      revokeObjectURL: jest.fn(),
+      createObjectURL: vi.fn(() => 'blob:zip'),
+      revokeObjectURL: vi.fn(),
     });
 
     link(element)?.click();

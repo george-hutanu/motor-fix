@@ -21,7 +21,7 @@ const tick = () => new Promise((r) => setTimeout(r));
 
 function setup() {
   const answers: ReturnType<typeof deferred<number>>[] = [];
-  const load = jest.fn(() => {
+  const load = vi.fn(() => {
     const next = deferred<number>();
     answers.push(next);
     return next.promise;

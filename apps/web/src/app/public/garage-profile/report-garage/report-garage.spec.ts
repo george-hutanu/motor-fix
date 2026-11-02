@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ReportGarage } from './report-garage';
 
@@ -19,7 +20,7 @@ const GARAGE = {
 } as PublicGarageDto;
 const TEXT = 'Au cerut plata înainte și nu au reparat mașina.';
 
-let send: jest.Mock;
+let send: Mock;
 let result: Promise<OverlayResult<unknown>>;
 
 async function settle() {
@@ -30,7 +31,7 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  send = jest.fn(async () => ({
+  send = vi.fn(async () => ({
     createdAt: '2026-10-09T10:00:00.000Z',
     id: 'report-1',
   }));

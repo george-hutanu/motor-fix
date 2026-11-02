@@ -9,7 +9,7 @@ import { openBlockTime } from './open-block-time';
 // @traces 1403-FR-010
 describe('opening the block-time dialog', () => {
   const overlays = () => {
-    const open = jest.fn().mockResolvedValue('blocked');
+    const open = vi.fn().mockResolvedValue('blocked');
     return { open, overlays: { open } as unknown as Overlays };
   };
 

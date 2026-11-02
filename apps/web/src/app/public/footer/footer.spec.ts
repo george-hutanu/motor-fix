@@ -6,22 +6,23 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PublicFooter } from './footer';
 import { CookieSettings } from '../../consent/cookie-settings/cookie-settings';
 import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 
-let overlays: { open: jest.Mock };
-let signIn: { start: jest.Mock };
+let overlays: { open: Mock };
+let signIn: { start: Mock };
 const session = {
   current: signal<{ id: string } | null>(null),
-  load: jest.fn(),
+  load: vi.fn(),
 };
 
 async function render(language: 'ro' | 'en' = 'ro') {
-  overlays = { open: jest.fn(async () => undefined) };
-  signIn = { start: jest.fn(async () => undefined) };
+  overlays = { open: vi.fn(async () => undefined) };
+  signIn = { start: vi.fn(async () => undefined) };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

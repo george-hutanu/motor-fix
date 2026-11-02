@@ -175,7 +175,7 @@ describe('language addresses', () => {
   it('moves the address to the new language, keeping the rest, with no new history entry', async () => {
     const harness = await open('/ro?from=search#top');
     const router = TestBed.inject(Router);
-    const navigate = jest.spyOn(router, 'navigateByUrl');
+    const navigate = vi.spyOn(router, 'navigateByUrl');
 
     await TestBed.inject(I18n).use('en');
     await settle(harness);
@@ -424,7 +424,7 @@ describe('language addresses', () => {
     const release = TestBed.inject(PendingTasks).add();
     try {
       await router.navigateByUrl('/');
-      const navigate = jest.spyOn(router, 'navigateByUrl');
+      const navigate = vi.spyOn(router, 'navigateByUrl');
 
       expect(url()).toBe('/');
 
@@ -538,11 +538,9 @@ describe('cockpitTexts', () => {
     const router = TestBed.inject(Router);
     const enter = i18n.enter.bind(i18n);
     // A task later than anything the router does before it matches a route.
-    jest
-      .spyOn(i18n, 'enter')
-      .mockImplementation((area) =>
-        new Promise((resolve) => setTimeout(resolve)).then(() => enter(area)),
-      );
+    vi.spyOn(i18n, 'enter').mockImplementation((area) =>
+      new Promise((resolve) => setTimeout(resolve)).then(() => enter(area)),
+    );
     const atMatch: string[] = [];
     router.events.subscribe((event) => {
       if (event instanceof RoutesRecognized)

@@ -255,17 +255,17 @@ describe('AdminGrowth', () => {
   });
 
   it('reads the growth once on opening and never again by itself', async () => {
-    jest.useFakeTimers({ doNotFake: ['setTimeout', 'queueMicrotask'] });
+    vi.useFakeTimers({ toNotFake: ['setTimeout', 'queueMicrotask'] });
     try {
       answer = async () => ({ months: TWELVE });
       await open();
 
-      jest.advanceTimersByTime(60 * 60 * 1000);
+      vi.advanceTimersByTime(60 * 60 * 1000);
       await settle();
 
       expect(reads).toBe(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });

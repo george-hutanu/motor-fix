@@ -16,6 +16,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock, Mocked } from 'vitest';
 
 import { FilterWarm } from './filter-warm/filter-warm';
 import { Results } from './results';
@@ -69,7 +70,7 @@ type Read = {
 };
 let reads: Read[];
 const searchApi = {
-  garageSearchControllerForBrand: jest.fn(
+  garageSearchControllerForBrand: vi.fn(
     (params: GarageSearchControllerForBrand$Params) =>
       new Promise<GarageSearchPageDto>((resolve, reject) => {
         reads.push({
@@ -98,28 +99,28 @@ const pinsOf = (count: number): GaragePinsDto => ({
   total: count,
 });
 let pinsAnswer: GaragePinsDto;
-const pinsApi = jest.fn((_params: GarageSearchControllerPins$Params) =>
+const pinsApi = vi.fn((_params: GarageSearchControllerPins$Params) =>
   Promise.resolve(pinsAnswer),
 );
 Object.assign(searchApi, { garageSearchControllerPins: pinsApi });
-const mapView: jest.Mocked<ResultsMapView> = {
-  destroy: jest.fn(),
-  fit: jest.fn(),
-  light: jest.fn(),
-  mark: jest.fn(),
-  show: jest.fn(),
-  spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 100, y: 200 })),
+const mapView: Mocked<ResultsMapView> = {
+  destroy: vi.fn(),
+  fit: vi.fn(),
+  light: vi.fn(),
+  mark: vi.fn(),
+  show: vi.fn(),
+  spot: vi.fn((_at: { lat: number; lng: number }) => ({ x: 100, y: 200 })),
 };
 let mapMoved: (move: MapMove) => void;
 let mapPicked: (id: string | undefined) => void;
-const openMap = jest.fn((_host: HTMLElement, on: MapEvents) => {
+const openMap = vi.fn((_host: HTMLElement, on: MapEvents) => {
   mapMoved = on.moved;
   mapPicked = on.picked;
   return Promise.resolve(mapView);
 });
 let _dialog: (value: OverlayResult<Place>) => void;
 const overlays = {
-  open: jest.fn(
+  open: vi.fn(
     () =>
       new Promise<OverlayResult<Place>>((resolve) => {
         _dialog = resolve;
@@ -130,10 +131,10 @@ const overlays = {
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
 const live = {
-  names: jest.fn((_view: unknown) => true),
+  names: vi.fn((_view: unknown) => true),
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn((_view: unknown) => () => undefined),
+  register: vi.fn((_view: unknown) => () => undefined),
   resync,
 };
 const reduced = signal(false);
@@ -141,6 +142,9 @@ const reduced = signal(false);
 let harness: RouterTestingHarness;
 
 async function settle() {
+  // The place dialog and the filters come through import(), which takes
+  // tasks under Vitest.
+  await vi.dynamicImportSettled();
   for (let i = 0; i < 10; i++) await Promise.resolve();
   harness.detectChanges();
 }
@@ -156,7 +160,7 @@ async function configure(platform = 'browser') {
       { provide: REDUCED_MOTION, useValue: reduced },
       { provide: RESULTS_MAP, useValue: openMap },
       // The open-now warm reads through the same service; it has its own spec.
-      { provide: FilterWarm, useValue: { judge: jest.fn(), warm: jest.fn() } },
+      { provide: FilterWarm, useValue: { judge: vi.fn(), warm: vi.fn() } },
     ],
   });
   await TestBed.inject(I18n).enter('public');
@@ -178,7 +182,25 @@ beforeEach(() => {
   reduced.set(false);
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
+
+// The builder applies the stylesheets, and jsdom applies the sheet's phone
+// rule (its body scrolls) at every width: it skips the tablet-up media query
+// that makes the body display: contents, and it lays nothing out. The body
+// reads as display: contents, as it did with no stylesheet, so a card comes
+// into view through scrollIntoView.
+const computedStyle = window.getComputedStyle;
+beforeEach(() => {
+  window.getComputedStyle = (element, pseudo) =>
+    element.localName === 'div' &&
+    element.classList.contains('body') &&
+    element.parentElement?.localName === 'mf-results-sheet'
+      ? ({ display: 'contents', overflowY: 'auto' } as CSSStyleDeclaration)
+      : computedStyle.call(window, element, pseudo);
+});
+afterEach(() => {
+  window.getComputedStyle = computedStyle;
+});
 
 // Results searches only from a place: a page opened with a brand and neither
 // a place in the bar nor a kept one gets the bar's, unless the test wants
@@ -217,12 +239,12 @@ const keep = (place: Place) =>
 
 // @traces 270-FR-001 270-FR-004 270-FR-005 270-FR-006 270-FR-009 270-FR-010
 describe('Results, a card and its pin, under attack', () => {
-  let scroll: jest.Mock;
+  let scroll: Mock;
 
   beforeEach(async () => {
     await configure();
-    jest.useFakeTimers();
-    scroll = jest.fn();
+    vi.useFakeTimers();
+    scroll = vi.fn();
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
       value: scroll,
@@ -289,7 +311,7 @@ describe('Results, a card and its pin, under attack', () => {
     await picked('pin-3');
 
     send('garage.suspended', 'one');
-    await jest.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(300);
     await settle();
 
     expect(lit()).toBe('pin-3');
@@ -352,7 +374,7 @@ describe('Results, a card and its pin, under attack', () => {
     await point('Atelier Unu', 'pointerenter');
 
     send('garage.suspended', 'one');
-    await jest.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(300);
     await settle();
 
     expect(amber()).toEqual(['Service Doi']);
@@ -364,7 +386,7 @@ describe('Results, a card and its pin, under attack', () => {
     await tap('Service Doi');
 
     send('garage.updated', 'two');
-    await jest.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(300);
     await settle();
     await reads[1]?.fail();
 

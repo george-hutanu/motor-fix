@@ -8,18 +8,22 @@ import {
   ReviewsService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { GarageReviewsPanel } from './garage-reviews-panel';
 import { Live } from '../../live';
-import { openReportReview } from '../../report-review-dialog/open-report-review';
 import { Session } from '../../session';
 import { staffPage, staffReview } from '../garage-reviews.testing';
 
-jest.mock('../../report-review-dialog/open-report-review', () => ({
-  openReportReview: jest.fn(),
-}));
-const opened = openReportReview as jest.Mock;
+// The builder bundles open-report-review into the spec, so the report task is
+// read where it opens: Overlays.open, with the review as its data.
+const opened: Mock = vi.fn();
+const overlays = {
+  open: (dialog: unknown, config: { data: { review: unknown } }) =>
+    opened(dialog, config.data.review),
+};
 
 const GARAGE = 'garage-1';
 const me = () =>
@@ -40,7 +44,7 @@ class Host {
 }
 
 let events: Subject<LiveMessage>;
-let read: jest.Mock;
+let read: Mock;
 
 const answerFor = (id: string) => ({
   dueAt: '2026-10-27T12:00:00.000Z',
@@ -64,7 +68,7 @@ async function render({
   limit?: number;
 } = {}) {
   events = new Subject();
-  read = jest.fn(answer);
+  read = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -72,6 +76,7 @@ async function render({
         provide: ReviewsService,
         useValue: { garageReviewsControllerRead: read },
       },
+      { provide: Overlays, useValue: overlays },
       { provide: Session, useValue: { shown: signal(me()) } },
       {
         provide: Live,

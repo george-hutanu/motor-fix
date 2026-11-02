@@ -2,14 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PrivacyPanel } from './privacy-panel';
 import { CookieSettings } from '../../consent/cookie-settings/cookie-settings';
 
-let overlays: { open: jest.Mock };
+let overlays: { open: Mock };
 
 async function render(language: 'ro' | 'en' = 'ro') {
-  overlays = { open: jest.fn(async () => undefined) };
+  overlays = { open: vi.fn(async () => undefined) };
   TestBed.configureTestingModule({
     providers: [provideRouter([]), { provide: Overlays, useValue: overlays }],
   });

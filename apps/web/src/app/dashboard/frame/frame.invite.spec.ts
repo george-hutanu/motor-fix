@@ -32,8 +32,8 @@ const me = (role: string, capabilities: string[]) =>
   }) as unknown as MeDto;
 
 async function render(role: string, capabilities: string[]) {
-  Element.prototype.scrollIntoView = jest.fn();
-  const overlays = { open: jest.fn(async () => 'cancelled') };
+  Element.prototype.scrollIntoView = vi.fn();
+  const overlays = { open: vi.fn(async () => 'cancelled') };
   const account = signal<MeDto | null>(me(role, capabilities));
   TestBed.configureTestingModule({
     providers: [
@@ -57,11 +57,11 @@ async function render(role: string, capabilities: string[]) {
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events: new Subject<LiveMessage>(),
           offline: signal(false),
           on: () => NEVER,
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject<void>(),
           state: signal('open'),
         },

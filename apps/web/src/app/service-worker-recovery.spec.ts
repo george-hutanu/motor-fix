@@ -16,7 +16,7 @@ const broken: UnrecoverableStateEvent = {
 
 function start(isEnabled: boolean) {
   const unrecoverable = new Subject<UnrecoverableStateEvent>();
-  const reload = jest.fn();
+  const reload = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: SwUpdate, useValue: { isEnabled, unrecoverable } },

@@ -25,7 +25,7 @@ class Probe {
 }
 
 // Module-level, as the specs' service doubles are.
-const shown = jest.fn();
+const shown = vi.fn();
 
 async function render() {
   const fixture = TestBed.createComponent(Probe);

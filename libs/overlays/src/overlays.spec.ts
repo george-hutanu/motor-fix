@@ -307,7 +307,7 @@ describe('Overlays: open and close', () => {
   it('moves no history when it closes after the page moved on', async () => {
     const { host } = await openTask();
     history.pushState({ page: 'elsewhere' }, '');
-    const stepped = jest.fn();
+    const stepped = vi.fn();
     window.addEventListener('popstate', stepped);
 
     closeButton()?.click();
@@ -856,7 +856,7 @@ describe('Overlays: whether a sheet is open', () => {
 
   it('counts nothing when the sheet fails to open', async () => {
     await render();
-    const failing = jest
+    const failing = vi
       .spyOn(BrnDialogService.prototype, 'open')
       .mockImplementationOnce(() => {
         throw new Error('no overlay');
@@ -953,7 +953,7 @@ describe('Overlays: a task that fails to load', () => {
   }
 
   it('shows the error and a focused retry button in place of the skeleton, and logs nothing', async () => {
-    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     await openTask((host) => {
       host.task = () => Promise.reject(new Error('chunk failed'));
     });
@@ -1005,8 +1005,8 @@ describe('Overlays: a task that fails to load', () => {
 
   it('tries again on Retry: busy skeleton while it runs, then the task with its field focused', async () => {
     const second = deferred();
-    const loader = jest
-      .fn<Promise<typeof FormTask>, []>()
+    const loader = vi
+      .fn<() => Promise<typeof FormTask>>()
       .mockRejectedValueOnce(new Error('chunk failed'))
       .mockReturnValueOnce(second.promise);
     await openTask((host) => {
@@ -1033,7 +1033,7 @@ describe('Overlays: a task that fails to load', () => {
   });
 
   it('shows the error again each time a retry fails', async () => {
-    const loader = jest.fn(() => Promise.reject(new Error('chunk failed')));
+    const loader = vi.fn(() => Promise.reject(new Error('chunk failed')));
     await openTask((host) => {
       host.task = loader;
     });
@@ -1061,8 +1061,8 @@ describe('Overlays: a task that fails to load', () => {
   it('ignores a retry that answers after the panel closed, either way', async () => {
     for (const answer of ['resolve', 'reject'] as const) {
       const late = deferred();
-      const loader = jest
-        .fn<Promise<typeof FormTask>, []>()
+      const loader = vi
+        .fn<() => Promise<typeof FormTask>>()
         .mockRejectedValueOnce(new Error('chunk failed'))
         .mockReturnValueOnce(late.promise);
       const { host } = await openTask((h) => {

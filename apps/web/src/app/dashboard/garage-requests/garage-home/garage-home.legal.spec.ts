@@ -10,6 +10,7 @@ import {
   type MeDto,
   ReviewsService,
 } from '@motor-fix/data-access';
+import type { Mock } from 'vitest';
 
 import { GarageHome } from './garage-home';
 import { Live } from '../../live';
@@ -76,7 +77,7 @@ const account = (
     garageId: 'garage-1',
   }) as unknown as MeDto;
 
-let read: jest.Mock;
+let read: Mock;
 let live: ReturnType<typeof fakeLive>;
 
 async function settle(fixture: {
@@ -102,7 +103,7 @@ async function render(
     status?: Status;
   } = {},
 ) {
-  read = jest.fn(answer);
+  read = vi.fn(answer);
   live = fakeLive();
   const me = signal(account(role, status, checked));
   TestBed.configureTestingModule({

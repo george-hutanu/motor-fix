@@ -10,6 +10,7 @@ import {
 import { ConsentsService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import {
   ANALYTICS,
@@ -39,11 +40,11 @@ const choice = (overrides: Partial<StoredChoice> = {}): StoredChoice => ({
 });
 
 let api: {
-  consentsControllerMine: jest.Mock;
-  consentsControllerRecord: jest.Mock;
-  consentsControllerRecordMine: jest.Mock;
+  consentsControllerMine: Mock;
+  consentsControllerRecord: Mock;
+  consentsControllerRecordMine: Mock;
 };
-let analytics: { event: jest.Mock; load: jest.Mock; pageview: jest.Mock };
+let analytics: { event: Mock; load: Mock; pageview: Mock };
 let events: Subject<unknown>;
 let current: ReturnType<typeof signal<MeDto | null>>;
 
@@ -79,15 +80,15 @@ async function start({
 } = {}) {
   withMeta(domain);
   api = {
-    consentsControllerMine: jest.fn(async () => ({
+    consentsControllerMine: vi.fn(async () => ({
       accepted: [],
       analytics: null,
     })),
-    consentsControllerRecord: jest.fn(async () => ({ id: 'r1' })),
-    consentsControllerRecordMine: jest.fn(async () => ({ id: 'r2' })),
+    consentsControllerRecord: vi.fn(async () => ({ id: 'r1' })),
+    consentsControllerRecordMine: vi.fn(async () => ({ id: 'r2' })),
     ...calls,
   };
-  analytics = { event: jest.fn(), load: jest.fn(), pageview: jest.fn() };
+  analytics = { event: vi.fn(), load: vi.fn(), pageview: vi.fn() };
   events = new Subject();
   current = signal<MeDto | null>(null);
   TestBed.configureTestingModule({
@@ -125,13 +126,13 @@ async function start({
 const navigate = () => events.next(new NavigationEnd(1, '/ro', '/ro'));
 const signIn = (id = ACCOUNT) => current.set({ id } as MeDto);
 const failWith = (status: number) =>
-  jest.fn(async () => {
+  vi.fn(async () => {
     throw new HttpErrorResponse({ status });
   });
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   withMeta(null);
 });
 
@@ -171,7 +172,7 @@ describe('the first visit', () => {
   });
 
   it('shows no bar and reads nothing on the server', async () => {
-    const getItem = jest.spyOn(Storage.prototype, 'getItem');
+    const getItem = vi.spyOn(Storage.prototype, 'getItem');
 
     const consent = await start({ platform: 'server' });
 
@@ -195,7 +196,7 @@ describe('the first visit', () => {
     expect((await start()).showBar()).toBe(true);
 
     TestBed.resetTestingModule();
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
     expect((await start()).showBar()).toBe(true);
@@ -256,7 +257,7 @@ describe('the first visit', () => {
   });
 
   it('hides the bar even when the browser cannot keep the choice', async () => {
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('full');
     });
     const consent = await start();
@@ -341,13 +342,13 @@ describe('a record the server did not take', () => {
         {
           provide: ConsentsService,
           useValue: {
-            consentsControllerMine: jest.fn(),
+            consentsControllerMine: vi.fn(),
             consentsControllerRecord: failing,
           },
         },
         {
           provide: ANALYTICS,
-          useValue: { load: jest.fn(), pageview: jest.fn() },
+          useValue: { load: vi.fn(), pageview: vi.fn() },
         },
         { provide: Session, useValue: { current: signal(null) } },
         { provide: Router, useValue: { events: new Subject() } },
@@ -437,7 +438,7 @@ describe('the cookie settings', () => {
 // @traces 244-FR-012
 describe('after a sign-in', () => {
   const account = (analyticsChoice: object | null) =>
-    jest.fn(async () => ({ accepted: [], analytics: analyticsChoice }));
+    vi.fn(async () => ({ accepted: [], analytics: analyticsChoice }));
 
   async function signedIn(
     browser: StoredChoice | null,
@@ -592,7 +593,7 @@ describe('after a sign-in', () => {
     const late = new Promise((resolve) => {
       answer = resolve;
     });
-    const record = jest.fn(() => late);
+    const record = vi.fn(() => late);
     const recordMine = failWith(503);
     await start({
       calls: {
@@ -616,7 +617,7 @@ describe('after a sign-in', () => {
     const late = new Promise((resolve) => {
       answer = resolve;
     });
-    const mine = jest
+    const mine = vi
       .fn()
       .mockImplementationOnce(() => late)
       .mockImplementation(async () => ({ accepted: [], analytics: null }));
@@ -797,7 +798,7 @@ describe('a record refused until the account accepts the new texts', () => {
   it('stays pending, to go again once the texts are accepted', async () => {
     const consent = await start({
       calls: {
-        consentsControllerRecordMine: jest.fn(async () => {
+        consentsControllerRecordMine: vi.fn(async () => {
           throw new HttpErrorResponse({
             error: { code: 'consent_required' },
             status: 403,

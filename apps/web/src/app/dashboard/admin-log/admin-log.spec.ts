@@ -105,7 +105,7 @@ const added = (): LiveMessage =>
 afterEach(() => {
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 describe('AdminLog', () => {
@@ -124,13 +124,13 @@ describe('AdminLog', () => {
 
   // @traces 298-FR-003
   it("asks for today's entries from midnight in Bucharest, twenty at most", async () => {
-    jest.useFakeTimers({
-      doNotFake: ['setImmediate'],
+    vi.useFakeTimers({
       now: new Date('2026-10-17T12:00:00Z'),
+      toNotFake: ['setImmediate'],
     });
     answer = async () => logOf();
     const opening = open();
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
     await opening;
 
     expect(asked).toEqual([{ from: '2026-10-16T21:00:00.000Z' }]);
@@ -404,40 +404,40 @@ describe('AdminLog', () => {
 
   // @traces 298-FR-010
   it('re-reads at midnight in Bucharest from the new day, and again the next midnight', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['setImmediate'],
+    vi.useFakeTimers({
       now: new Date('2026-10-17T20:59:00Z'),
+      toNotFake: ['setImmediate'],
     });
     answer = async () => logOf(entry(1));
     const opening = open();
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
     await opening;
     expect(asked.map((a) => a.from)).toEqual(['2026-10-16T21:00:00.000Z']);
 
-    await jest.advanceTimersByTimeAsync(62_000);
+    await vi.advanceTimersByTimeAsync(62_000);
     expect(asked.map((a) => a.from)).toEqual([
       '2026-10-16T21:00:00.000Z',
       '2026-10-17T21:00:00.000Z',
     ]);
 
-    await jest.advanceTimersByTimeAsync(24 * 3_600_000);
+    await vi.advanceTimersByTimeAsync(24 * 3_600_000);
     expect(asked.map((a) => a.from).at(-1)).toBe('2026-10-18T21:00:00.000Z');
   });
 
   // @traces 298-FR-010
   it('asks from the start of the current day on every re-read', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['setImmediate'],
+    vi.useFakeTimers({
       now: new Date('2026-10-17T12:00:00Z'),
+      toNotFake: ['setImmediate'],
     });
     answer = async () => logOf();
     const opening = open();
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
     await opening;
 
-    jest.setSystemTime(new Date('2026-10-17T22:30:00Z'));
+    vi.setSystemTime(new Date('2026-10-17T22:30:00Z'));
     resync.next();
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
 
     expect(asked.at(-1)?.from).toBe('2026-10-17T21:00:00.000Z');
   });

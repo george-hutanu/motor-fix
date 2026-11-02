@@ -6,6 +6,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { type AuthSwitch, SignIn } from './sign-in';
 import { Session } from '../dashboard/session';
@@ -21,8 +22,8 @@ const problem = (status: number, code?: string) =>
     status,
   });
 
-let signIn: jest.Mock;
-let token: jest.Mock;
+let signIn: Mock;
+let token: Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 let online = true;
 
@@ -38,8 +39,8 @@ async function open(
   email?: string,
   phone?: string,
 ) {
-  signIn = jest.fn(async () => ({ landing: '/app/driver' }));
-  token = jest.fn(() => 'abc');
+  signIn = vi.fn(async () => ({ landing: '/app/driver' }));
+  token = vi.fn(() => 'abc');
   TestBed.configureTestingModule({
     providers: [{ provide: Session, useValue: { signIn, token } }],
   });
@@ -103,14 +104,14 @@ async function submit(email: string, password: string) {
 
 beforeEach(() => {
   online = true;
-  jest.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
+  vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
 });
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the sign-in dialog', () => {
@@ -509,7 +510,7 @@ describe('answers that refuse', () => {
 describe('the reason line', () => {
   async function openWith(data: { reason?: boolean } | undefined) {
     TestBed.configureTestingModule({
-      providers: [{ provide: Session, useValue: { signIn: jest.fn() } }],
+      providers: [{ provide: Session, useValue: { signIn: vi.fn() } }],
     });
     const host = TestBed.createComponent(Host);
     host.componentInstance.overlays.open(SignIn, {

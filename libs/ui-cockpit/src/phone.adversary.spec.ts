@@ -124,8 +124,8 @@ describe('layout signal at the edges', () => {
       <tbody hlmTBody>
         @for (row of rows(); track row) {
           <tr hlmTr>
-            <td hlmTd [column]="main()">{{ row }}</td>
-            <td hlmTd [column]="key()">x</td>
+            <td hlmTd [column]="$any(main())">{{ row }}</td>
+            <td hlmTd [column]="$any(key())">x</td>
           </tr>
         }
       </tbody>

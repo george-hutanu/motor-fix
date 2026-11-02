@@ -68,12 +68,12 @@ describe('the shared chart newest-bar label and value-less points', () => {
 
     expect(label(config)).toBeUndefined();
     const ctx = {
-      fillText: jest.fn(),
+      fillText: vi.fn(),
       measureText: () => ({ width: 2 }),
-      restore: jest.fn(),
-      save: jest.fn(),
+      restore: vi.fn(),
+      save: vi.fn(),
     };
-    const chart = { ctx, getDatasetMeta: jest.fn(), width: 100 };
+    const chart = { ctx, getDatasetMeta: vi.fn(), width: 100 };
     config.plugins[0].afterDatasetsDraw(chart, {}, {});
     expect(ctx.fillText).not.toHaveBeenCalled();
     expect(chart.getDatasetMeta).not.toHaveBeenCalled();

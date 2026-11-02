@@ -31,7 +31,7 @@ const on = (s: PriceSelection) => [...s.on()].sort();
 
 beforeEach(() => sessionStorage.clear());
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -122,10 +122,10 @@ describe('the jobs kept for the session', () => {
   });
 
   it('keeps working for the open page when storage is refused', () => {
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied');
     });
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('denied');
     });
     const s = selection();

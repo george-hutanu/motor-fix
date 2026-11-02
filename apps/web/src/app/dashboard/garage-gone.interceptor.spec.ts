@@ -50,7 +50,7 @@ let server: HttpTestingController;
 
 async function signedIn(first: MeDto = MECHANIC) {
   const parts = setup({
-    me: { meControllerMe: jest.fn(async () => first) },
+    me: { meControllerMe: vi.fn(async () => first) },
     providers: [
       provideHttpClient(withInterceptors([garageGoneInterceptor])),
       provideHttpClientTesting(),

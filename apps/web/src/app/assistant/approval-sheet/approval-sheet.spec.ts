@@ -9,6 +9,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ApprovalSheet, type ApprovalSheetData } from './approval-sheet';
 import { Live } from '../../dashboard/live';
@@ -41,7 +42,7 @@ const approval = (
   ...overrides,
 });
 
-let api: Record<string, jest.Mock>;
+let api: Record<string, Mock>;
 let events: Subject<LiveMessage>;
 let result: Promise<OverlayResult<string | null>>;
 
@@ -58,13 +59,13 @@ async function open(
 ) {
   events = new Subject();
   api = {
-    assistantApprovalsControllerApprove: jest.fn(async () => shown),
-    assistantApprovalsControllerGet: jest.fn(async () => shown),
-    assistantApprovalsControllerList: jest.fn(async () => ({
+    assistantApprovalsControllerApprove: vi.fn(async () => shown),
+    assistantApprovalsControllerGet: vi.fn(async () => shown),
+    assistantApprovalsControllerList: vi.fn(async () => ({
       items: [],
       pending: 0,
     })),
-    assistantApprovalsControllerRefuse: jest.fn(async () => shown),
+    assistantApprovalsControllerRefuse: vi.fn(async () => shown),
   };
   TestBed.configureTestingModule({
     providers: [

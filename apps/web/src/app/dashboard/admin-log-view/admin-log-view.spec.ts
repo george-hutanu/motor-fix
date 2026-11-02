@@ -73,8 +73,9 @@ class Observer {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: NOW,
+    toNotFake: [
       'queueMicrotask',
       'nextTick',
       'setImmediate',
@@ -84,7 +85,6 @@ beforeEach(() => {
       'clearInterval',
       'requestAnimationFrame',
     ],
-    now: NOW,
   });
   reads = [];
   seen = undefined;
@@ -101,8 +101,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
 });
@@ -603,10 +603,13 @@ describe('the new entries bar', () => {
   });
 
   it('never polls', async () => {
-    const every = jest.spyOn(globalThis, 'setInterval');
+    const every = vi.spyOn(globalThis, 'setInterval');
     await open();
 
-    expect(every).not.toHaveBeenCalled();
+    // Under the builder jsdom draws frames: its requestAnimationFrame runs on
+    // a 60 Hz interval of its own, which is not the view asking again.
+    const frames = 1000 / 60;
+    expect(every.mock.calls.filter(([, ms]) => ms !== frames)).toEqual([]);
   });
 });
 

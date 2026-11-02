@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { type AdminRepairDto, AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type AdminRepairData,
@@ -32,9 +33,9 @@ const repair = (extra: Partial<AdminRepairDto> = {}): AdminRepairDto => ({
   ...extra,
 });
 
-let correct: jest.Mock;
-let reread: jest.Mock;
-let saved: jest.Mock;
+let correct: Mock;
+let reread: Mock;
+let saved: Mock;
 let result: Promise<OverlayResult<AdminRepairResult>>;
 
 async function settle() {
@@ -48,7 +49,7 @@ async function open(
   loaded: AdminRepairDto = repair(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  correct ??= jest.fn(
+  correct ??= vi.fn(
     async ({ body }: { body: Partial<AdminRepairDto> }) =>
       ({
         ...loaded,
@@ -57,8 +58,8 @@ async function open(
         version: '2026-10-30T11:00:00.000Z',
       }) as AdminRepairDto,
   );
-  reread ??= jest.fn(async () => loaded);
-  saved = jest.fn();
+  reread ??= vi.fn(async () => loaded);
+  saved = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       {
@@ -133,8 +134,8 @@ const conflict = () =>
   });
 
 beforeEach(() => {
-  correct = undefined as unknown as jest.Mock;
-  reread = undefined as unknown as jest.Mock;
+  correct = undefined as unknown as Mock;
+  reread = undefined as unknown as Mock;
 });
 
 afterEach(() => {
@@ -360,7 +361,7 @@ describe('the repair dialog, correcting the repair', () => {
 
   it('disables Salvează and shows progress while the save is on its way', async () => {
     let answer: (value: AdminRepairDto) => void = () => undefined;
-    correct = jest.fn(
+    correct = vi.fn(
       () =>
         new Promise<AdminRepairDto>((resolve) => {
           answer = resolve;
@@ -469,7 +470,7 @@ describe('the repair dialog, correcting the repair', () => {
   });
 
   it("shows a field's 400 at that field and keeps the values", async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw new HttpErrorResponse({
         error: {
           code: 'validation_failed',
@@ -508,10 +509,10 @@ describe('the repair dialog, correcting the repair', () => {
 
 describe('the repair dialog, when the repair changed or is gone', () => {
   it('says it changed meanwhile, re-reads once and stays in the form with the new values', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
-    reread = jest.fn(async () =>
+    reread = vi.fn(async () =>
       repair({
         correctedBy: 'garage',
         costBani: 47000,
@@ -535,13 +536,11 @@ describe('the repair dialog, when the repair changed or is gone', () => {
   });
 
   it('sends the re-read version on the next save', async () => {
-    correct = jest
+    correct = vi
       .fn()
       .mockRejectedValueOnce(conflict())
       .mockResolvedValueOnce(repair({ costBani: 48000 }));
-    reread = jest.fn(async () =>
-      repair({ version: '2026-10-30T10:30:00.000Z' }),
-    );
+    reread = vi.fn(async () => repair({ version: '2026-10-30T10:30:00.000Z' }));
     await open();
     await press('Corectează');
     type(field('Suma, în lei'), '480');
@@ -557,10 +556,10 @@ describe('the repair dialog, when the repair changed or is gone', () => {
   });
 
   it('says the re-read failed and keeps the form when it does', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
-    reread = jest.fn(async () => {
+    reread = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 503 });
     });
     await open();
@@ -575,7 +574,7 @@ describe('the repair dialog, when the repair changed or is gone', () => {
   });
 
   it('closes gone when the save answers 404', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 404 });
     });
     await open();
@@ -588,10 +587,10 @@ describe('the repair dialog, when the repair changed or is gone', () => {
   });
 
   it('closes gone when the re-read after a 409 answers 404', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
-    reread = jest.fn(async () => {
+    reread = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 404 });
     });
     await open();
@@ -604,7 +603,7 @@ describe('the repair dialog, when the repair changed or is gone', () => {
   });
 
   it('says in English that it changed meanwhile', async () => {
-    correct = jest.fn(async () => {
+    correct = vi.fn(async () => {
       throw conflict();
     });
     await open(repair(), 'en');

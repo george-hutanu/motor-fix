@@ -37,16 +37,16 @@ const me = (role: string, capabilities: string[]) =>
 let closeTask: (result: unknown) => void;
 
 async function render(url: string, role = 'driver') {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const overlays = {
-    open: jest.fn(
+    open: vi.fn(
       () =>
         new Promise<unknown>((resolve) => {
           closeTask = resolve;
         }),
     ),
   };
-  const errors = { handleError: jest.fn() };
+  const errors = { handleError: vi.fn() };
   const account = signal<MeDto | null>(
     me(role, role === 'driver' ? ['driver.reviews'] : ['garage.own_jobs']),
   );
@@ -65,7 +65,7 @@ async function render(url: string, role = 'driver') {
           current: account,
           ended: new Subject<void>(),
           garageGone: () => false,
-          reload: jest.fn(async () => undefined),
+          reload: vi.fn(async () => undefined),
           shown: account,
           token: () => 'access',
         },
@@ -73,11 +73,11 @@ async function render(url: string, role = 'driver') {
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events: new Subject<LiveMessage>(),
           offline: signal(false),
           on: () => NEVER,
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject<void>(),
           state: signal('open'),
         },

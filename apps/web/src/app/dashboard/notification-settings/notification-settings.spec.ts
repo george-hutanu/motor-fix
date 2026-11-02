@@ -12,14 +12,14 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { NotificationSettings } from './notification-settings';
 import { Live } from '../live';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const GARAGE = 'a3b5c7d9-0000-4000-8000-000000000001';
 const OTHER = 'a3b5c7d9-0000-4000-8000-000000000002';
@@ -74,8 +74,8 @@ const answer = (staff: StaffNotificationsDto[]) =>
     staff,
   }) as unknown as NotificationPreferencesDto;
 
-let read: jest.Mock;
-let save: jest.Mock;
+let read: Mock;
+let save: Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 
@@ -83,10 +83,10 @@ async function render(
   staff: StaffNotificationsDto[] | Promise<never> = [owner()],
   language: 'ro' | 'en' = 'ro',
 ) {
-  read = jest.fn(() =>
+  read = vi.fn(() =>
     staff instanceof Promise ? staff : Promise.resolve(answer(staff)),
   );
-  save = jest.fn(async () => answer([owner()]));
+  save = vi.fn(async () => answer([owner()]));
   events = new Subject();
   resync = new Subject();
   TestBed.configureTestingModule({
@@ -132,7 +132,7 @@ const describedBy = (element: HTMLElement, control: HTMLElement) =>
 const event = (kind: string, id: string): LiveMessage =>
   ({ at: '2026-10-06T12:00:00.000Z', id, kind }) as LiveMessage;
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 describe('NotificationSettings', () => {
   // @traces 198-FR-014
@@ -325,7 +325,7 @@ describe('NotificationSettings', () => {
 
   // @traces 198-FR-014
   it('puts the switch back and says so when the save fails', async () => {
-    jest.mocked(toast).mockClear();
+    vi.mocked(toast).mockClear();
     const { element, settle } = await render();
     await settle();
     save.mockRejectedValueOnce(
@@ -349,7 +349,7 @@ describe('NotificationSettings', () => {
   // @traces 1315-FR-001 1315-FR-002 1315-FR-008
   // @traces 1315-FR-013 1315-FR-015
   it('shows the saved row again, not a guess, when two saves of one switch both fail', async () => {
-    jest.mocked(toast).mockClear();
+    vi.mocked(toast).mockClear();
     const { element, settle } = await render();
     await settle();
     let failFirst: (reason: unknown) => void = () => undefined;
@@ -533,23 +533,23 @@ describe('NotificationSettings', () => {
 
   // @traces 198-FR-015
   it('reads again on a preferences update, a feature change of a shown garage and a resync', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { settle } = await render();
     await settle();
     expect(read).toHaveBeenCalledTimes(1);
 
     events.next(event('notification_preferences.updated', 'event-1'));
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     expect(read).toHaveBeenCalledTimes(2);
 
     events.next(event('garage.features_changed', OTHER));
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     expect(read).toHaveBeenCalledTimes(2);
 
     events.next(event('garage.features_changed', GARAGE));
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     expect(read).toHaveBeenCalledTimes(3);
 
@@ -560,13 +560,13 @@ describe('NotificationSettings', () => {
 
   // @traces 198-FR-015
   it('makes one read of a burst of updates', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { settle } = await render();
     await settle();
 
     for (let i = 0; i < 5; i++)
       events.next(event('notification_preferences.updated', `event-${i}`));
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(read).toHaveBeenCalledTimes(2);

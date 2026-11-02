@@ -12,7 +12,7 @@ import {
   text,
 } from './lift-schedule.testing';
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 const DEBOUNCE = 400;
 
@@ -51,7 +51,7 @@ describe('the lift schedule live', () => {
     expect(blocks(element)[0].getAttribute('data-style')).toBe('todo');
 
     live.emit(kind, 'b-1');
-    jest.advanceTimersByTime(DEBOUNCE);
+    vi.advanceTimersByTime(DEBOUNCE);
     await settle();
 
     expect(blocks(element)[0].getAttribute('data-style')).toBe('work');
@@ -70,7 +70,7 @@ describe('the lift schedule live', () => {
     const { garageSchedule, live, settle } = await renderPanel();
 
     live.emit(kind, 'garage-1');
-    jest.advanceTimersByTime(DEBOUNCE);
+    vi.advanceTimersByTime(DEBOUNCE);
     await settle();
 
     expect(garageSchedule).toHaveBeenCalledTimes(2);

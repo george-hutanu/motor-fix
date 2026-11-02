@@ -3,6 +3,7 @@ import { fold, type PricesSection } from '@motor-fix/contracts';
 import { checkListing } from '@motor-fix/contracts/listing-check';
 import { CatalogueService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { PricesStep } from './prices-step';
 import type { MarkedBrand } from '../brands-section';
@@ -29,14 +30,14 @@ const TAKEN: MarkedBrand[] = [
   { brandId: id(102), name: 'Lada', stance: 'does_not_take' },
 ];
 
-let search: jest.Mock;
+let search: Mock;
 
 // The page's judgement of the section, as it hands it to the step.
 const judged = (value: PricesSection | undefined) =>
   forStep(checkListing({ data: { steps: value ? { '3': value } : {} } }), 3);
 
 beforeEach(() => {
-  search = jest.fn(
+  search = vi.fn(
     async ({ ids, keys, q = '' }: Record<string, string | undefined> = {}) => {
       if (ids !== undefined || keys !== undefined) {
         const wanted = new Set([
@@ -291,14 +292,14 @@ describe('step 3, the prices', () => {
   it('says the search is down when the catalogue does not answer in time', async () => {
     const { fixture, step } = await open({ jobs: [] });
     search.mockImplementation(() => new Promise(() => undefined));
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const field = searchField(step);
       field.value = 'fr';
       field.dispatchEvent(new Event('input'));
-      await jest.advanceTimersByTimeAsync(11_000);
+      await vi.advanceTimersByTimeAsync(11_000);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
     await settle(fixture);
 

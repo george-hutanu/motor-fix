@@ -18,6 +18,7 @@ import {
   ReviewsService,
 } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { GarageHome } from './garage-home';
 import { DashboardSectionsPanel } from '../../dashboard-sections-panel/dashboard-sections-panel';
@@ -96,12 +97,12 @@ async function render(
 ) {
   const me = signal(account(role, status, features, permissions));
   const live = fakeLive();
-  const open = jest.fn(async () => 'done');
+  const open = vi.fn(async () => 'done');
   const api = {
-    dashboardLayoutsControllerRead: jest.fn(
+    dashboardLayoutsControllerRead: vi.fn(
       read ?? (async () => answer(layoutOf(), role)),
     ),
-    dashboardLayoutsControllerSave: jest.fn(
+    dashboardLayoutsControllerSave: vi.fn(
       save ??
         (async ({ body }: { body: { panels: DashboardPanelDto[] } }) =>
           answer(body.panels, role)),
@@ -185,7 +186,7 @@ type Opened = [
   unknown,
   { data: { rows: () => { key: string; shown: boolean }[] } },
 ];
-const openedRows = (open: jest.Mock) =>
+const openedRows = (open: Mock) =>
   (open.mock.calls[0] as unknown as Opened)[1].data.rows();
 
 // @traces 011-FR-002

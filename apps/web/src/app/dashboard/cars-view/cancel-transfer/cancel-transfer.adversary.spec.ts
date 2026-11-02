@@ -4,8 +4,15 @@ import { TestBed } from '@angular/core/testing';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { openCancelTransfer } from './open-cancel-transfer';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./cancel-transfer');
+});
 
 @Component({ template: '' })
 class Host {
@@ -35,7 +42,7 @@ const bmw: CarDto = {
 const refusal = (status: number, body: object) =>
   new HttpErrorResponse({ error: body, status });
 
-let cancel: jest.Mock;
+let cancel: Mock;
 let result: Promise<OverlayResult<boolean>>;
 
 async function settle() {
@@ -50,7 +57,7 @@ async function open(
   answer: () => Promise<void> = async () => undefined,
   forCar: CarDto = bmw,
 ) {
-  cancel = jest.fn(answer);
+  cancel = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       { provide: CarsService, useValue: { carSaleControllerCancel: cancel } },

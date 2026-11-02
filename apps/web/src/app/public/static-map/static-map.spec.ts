@@ -38,7 +38,7 @@ let box = { height: 500, width: 390 };
 let fixture: ComponentFixture<StaticMap>;
 const element = () => fixture.nativeElement as HTMLElement;
 const image = () => element().querySelector('img');
-const activated = jest.fn();
+const activated = vi.fn();
 
 async function render({
   platform = 'browser',
@@ -66,7 +66,7 @@ beforeEach(() => {
   reduced = false;
   box = { height: 500, width: 390 };
   activated.mockClear();
-  view.matchMedia = jest.fn((query: string) => ({
+  view.matchMedia = vi.fn((query: string) => ({
     addEventListener: (
       _: string,
       follow: (e: { matches: boolean }) => void,
@@ -76,19 +76,19 @@ beforeEach(() => {
     matches:
       (dark && query === '(prefers-color-scheme: dark)') ||
       (reduced && query === '(prefers-reduced-motion: reduce)'),
-    removeEventListener: jest.fn(),
+    removeEventListener: vi.fn(),
   }));
-  jest
-    .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-    .mockImplementation(() => box.width);
-  jest
-    .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-    .mockImplementation(() => box.height);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(
+    () => box.width,
+  );
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(
+    () => box.height,
+  );
 });
 
 afterEach(() => {
   delete view.matchMedia;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 1196-FR-013
@@ -182,7 +182,7 @@ describe('StaticMap, the image', () => {
 describe('StaticMap, telling its host the image failed', () => {
   it('says so once when the image fails, and never while it shows', async () => {
     await render();
-    const failed = jest.fn();
+    const failed = vi.fn();
     fixture.componentInstance.failed.subscribe(failed);
     fixture.detectChanges();
 

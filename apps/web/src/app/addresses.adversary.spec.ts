@@ -70,7 +70,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('language addresses under hostile input', () => {
@@ -152,7 +152,7 @@ describe('language addresses under hostile input', () => {
   });
 
   it('still renders the address language when storage cannot be written', async () => {
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');
     });
 
@@ -164,7 +164,7 @@ describe('language addresses under hostile input', () => {
   });
 
   it('moves / to Romanian when storage cannot be read', async () => {
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
 

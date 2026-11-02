@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PasswordChangeDialog } from './password-change-dialog';
 import { Session } from '../../session';
@@ -22,7 +23,7 @@ const problem = (
     status,
   });
 
-let changePassword: jest.Mock;
+let changePassword: Mock;
 let result: Promise<OverlayResult<'changed' | 'sign-in'>>;
 
 async function settle() {
@@ -33,7 +34,7 @@ async function settle() {
 }
 
 async function open(hasPassword = true, language: 'ro' | 'en' = 'ro') {
-  changePassword = jest.fn(async () => undefined);
+  changePassword = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [{ provide: Session, useValue: { changePassword } }],
   });

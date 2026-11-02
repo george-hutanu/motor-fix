@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { SignIn } from './sign-in';
 import { Session } from '../dashboard/session';
@@ -14,7 +15,7 @@ class Host {
 const problem = (status: number, body: unknown) =>
   new HttpErrorResponse({ error: body, status });
 
-let signIn: jest.Mock;
+let signIn: Mock;
 let result: Promise<OverlayResult<'signed-in'>>;
 let online = true;
 
@@ -26,7 +27,7 @@ async function settle() {
 }
 
 async function open() {
-  signIn = jest.fn(async () => ({ landing: '/app/driver' }));
+  signIn = vi.fn(async () => ({ landing: '/app/driver' }));
   TestBed.configureTestingModule({
     providers: [{ provide: Session, useValue: { signIn } }],
   });
@@ -74,14 +75,14 @@ async function submit(email: string, password: string) {
 
 beforeEach(() => {
   online = true;
-  jest.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
+  vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
 });
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the sign-in dialog under hostile input', () => {
@@ -222,7 +223,7 @@ describe('the sign-in dialog under hostile input', () => {
   it('does not navigate or resolve when the answer is a refusal', async () => {
     await open();
     signIn.mockRejectedValueOnce(problem(503, { code: 'maintenance' }));
-    const settled = jest.fn();
+    const settled = vi.fn();
     result.then(settled);
 
     await submit('andrei@example.ro', 'parola');
@@ -233,7 +234,7 @@ describe('the sign-in dialog under hostile input', () => {
   it('shows the generic message and stays open when the sign-in finishes without an account', async () => {
     await open();
     signIn.mockResolvedValueOnce(null);
-    const settled = jest.fn();
+    const settled = vi.fn();
     result.then(settled);
 
     await submit('andrei@example.ro', 'parola');

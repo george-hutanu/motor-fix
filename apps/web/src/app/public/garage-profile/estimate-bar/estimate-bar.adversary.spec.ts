@@ -69,14 +69,14 @@ async function render({
     providers: [
       provideRouter([]),
       { provide: PLATFORM_ID, useValue: platform },
-      { provide: Overlays, useValue: { open: jest.fn(async () => undefined) } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn(async () => undefined) } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       {
         provide: Session,
         useValue: {
           current: signal(null),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: role,
         },
       },

@@ -1,6 +1,6 @@
 ---
 capability: harness
-updated: 2026-10-24
+updated: 2026-11-02
 features:
   - 1359-red-first-harden-precision
   - 1362-lap-verdict-merge
@@ -11,6 +11,7 @@ features:
   - 448-merge-gate-graphql
   - 471-crlf-harness-tidy
   - 1378-fixed-after-qa-sources
+  - 1332-angular-vitest
 ---
 
 # Capability: Spec-kit harness
@@ -19,9 +20,9 @@ The spec-kit harness itself: the edit-time and stop gates in `.claude/hooks/`, t
 
 ## Requirements
 
-### 1359-FR-001 — `post-edit-check.sh` MUST, after Biome passes and before any Jest run, classify an edited spec as red-first when both hold: the file is absent at the merge-base of the branch with `SPECKIT_BASE_REF` when set, else `origin/main` (or `main`), and at least one relative import in it (a `./` or `../` literal in `from`, `import(`, `require(`, `jest.mock(`, `jest.requireActual(`; not `import type`) resolves to no file (trying the literal path, its `.ts`/`.tsx` sibling and a directory `index.ts`). A red-first spec gets a `hookSpecificOutput.additionalContext` note naming the file and the unresolved specifier and saying it was left unrun as red-first, and the hook exits 0. Path, name or directory alone MUST never decide; Biome stays first and unconditional.
+### 1332-FR-015 — `post-edit-check.sh` MUST run an edited `*.spec.ts` under one of the five projects on Vitest (and a spec under any other project on its own `vitest.config.mts`, Jest only for a spec no Vitest config claims), keeping its exit codes, its 5-second skip note and its red-first classification; `stop-test-gate.sh` MUST run the specs related to uncommitted changes on the runner of their project, and MUST still refuse the turn on a red run.
 
-_From 1359-red-first-harden-precision._
+_From 1332-angular-vitest._
 
 ### 1359-FR-002 — `.claude/evals/cases/post-edit-check.json` MUST gain two cases: a new spec with an unresolvable relative import (absent at the fixture's first commit, named through the case's `env.SPECKIT_BASE_REF`) expects exit 0 and the note on stdout; an existing spec (present at the base commit) whose stub Jest fails still expects exit 2 with "Affected tests failed". The eval pass rate stays at 1 and the hook's registry fingerprint is re-blessed.
 
@@ -198,6 +199,10 @@ _From 471-crlf-harness-tidy._
 
 _From 471-crlf-harness-tidy._
 
+### 1332-FR-016 — Every gate-script edit MUST be followed by `node .claude/scripts/doctor.mjs --bless-hooks` after its diff is read; `npm run test:harness`, `node .claude/scripts/doctor.mjs --check` and `node .claude/scripts/harness-eval.mjs --check` MUST stay green, with the eval pass rate at 1 and the eval cases updated where a gate's command changed.
+
+_From 1332-angular-vitest._
+
 ## Retired
 
 - `1359-FR-007` — superseded by `1363-FR-006` (2026-10-23)
@@ -205,3 +210,4 @@ _From 471-crlf-harness-tidy._
 - `1362-FR-005` — superseded by `1363-FR-010` (2026-10-23)
 - `1362-FR-008` — superseded by `448-FR-008` (2026-10-24)
 - `1362-FR-007` — superseded by `1378-FR-001` (2026-10-24)
+- `1359-FR-001` — superseded by `1332-FR-015` (2026-11-02)

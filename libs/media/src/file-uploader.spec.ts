@@ -1,4 +1,5 @@
 // @traces 1191-FR-006
+
 import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -6,6 +7,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { crc32Base64 } from './crc32';
 import {
@@ -29,12 +31,12 @@ describe('FileUploader', () => {
   let uploader: FileUploader;
   let events: UploadEvent<string>[];
   let failure: unknown;
-  let ask: jest.Mock;
-  let confirm: jest.Mock;
+  let ask: Mock;
+  let confirm: Mock;
   const file = new Blob(['jpeg bytes'], { type: 'image/jpeg' });
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -43,13 +45,13 @@ describe('FileUploader', () => {
     events = [];
     failure = undefined;
     let asked = 0;
-    ask = jest.fn(() => of(address(++asked)));
-    confirm = jest.fn((key: string) => of(`final:${key}`));
+    ask = vi.fn(() => of(address(++asked)));
+    confirm = vi.fn((key: string) => of(`final:${key}`));
   });
 
   afterEach(() => {
     http.verify();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   // The checksum is read from the blob before the address is asked for.
@@ -60,7 +62,7 @@ describe('FileUploader', () => {
       },
       next: (e) => events.push(e),
     });
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
   }
 
   const dropConnection = (n: number) =>
@@ -121,7 +123,7 @@ describe('FileUploader', () => {
     await start();
 
     dropConnection(1);
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     http
       .expectOne(address(1).url)
       .flush(null, { status: 200, statusText: 'OK' });
@@ -137,13 +139,13 @@ describe('FileUploader', () => {
     await start();
 
     dropConnection(1);
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     dropConnection(1);
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
     dropConnection(1);
-    jest.advanceTimersByTime(4000);
+    vi.advanceTimersByTime(4000);
     dropConnection(1);
-    jest.advanceTimersByTime(10_000);
+    vi.advanceTimersByTime(10_000);
 
     http.expectNone(address(1).url);
     expect(failure).toMatchObject({ status: 0 });
@@ -154,7 +156,7 @@ describe('FileUploader', () => {
     await start({ retries: 0 });
 
     dropConnection(1);
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     http.expectNone(address(1).url);
     expect(failure).toMatchObject({ status: 0 });
@@ -203,7 +205,7 @@ describe('FileUploader', () => {
     await start();
 
     refuse(1, 400);
-    jest.advanceTimersByTime(10_000);
+    vi.advanceTimersByTime(10_000);
 
     http.expectNone(address(1).url);
     expect(ask).toHaveBeenCalledTimes(1);

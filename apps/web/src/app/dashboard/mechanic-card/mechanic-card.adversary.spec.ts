@@ -13,10 +13,9 @@ import { toast } from '@motor-fix/ui-cockpit';
 import { MechanicCard, type MechanicCardData } from './mechanic-card';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({ template: '' })
 class Host {
@@ -175,7 +174,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.mocked(toast).mockReset();
+  vi.mocked(toast).mockReset();
   TestBed.resetTestingModule();
 });
 

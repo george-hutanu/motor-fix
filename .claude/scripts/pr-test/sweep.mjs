@@ -330,12 +330,18 @@ export async function openPage(page, url) {
 // wait, bounded, until no canvas changes across STABLE_FRAMES frames `interval` ms apart and none is
 // still blank (Chart.js draws its first frame only once the canvas is sized). Three frames, not two:
 // an easing tail can repeat one frame before the bars reach their height. A page with no canvas
-// returns at once; one that cannot be read, or never settles, is shot as it is (false).
+// returns at once; one that cannot be read, or never settles, is shot as it is (false). Each read waits
+// for two animation frames first: on a loaded machine the page can paint nothing for a few hundred ms,
+// and three equal reads of a stalled chart are not a settled one (run 41402756230 shot a bar halfway).
 export const CANVAS_SETTLE_MS = 3000;
 const STABLE_FRAMES = 3;
 export async function settleCanvases(page, { timeout = CANVAS_SETTLE_MS, interval = 100 } = {}) {
   const frame = () =>
-    page.evaluate(() => {
+    page.evaluate(async () => {
+      await Promise.race([
+        new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        new Promise((resolve) => setTimeout(resolve, 500)),
+      ]);
       let blank = false;
       const sig = [...document.querySelectorAll("canvas")]
         .map((canvas) => {

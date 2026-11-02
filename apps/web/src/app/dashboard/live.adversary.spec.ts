@@ -6,6 +6,7 @@ import {
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
+import type { Mock } from 'vitest';
 
 import { Live } from './live';
 import { Session } from './session';
@@ -47,9 +48,9 @@ class Body {
 }
 
 let bodies: Body[];
-let fetchMock: jest.Mock;
+let fetchMock: Mock;
 let tokens: string[];
-let renew: jest.Mock;
+let renew: Mock;
 
 const flush = async () => {
   for (let i = 0; i < 20; i++) await Promise.resolve();
@@ -58,11 +59,11 @@ const flush = async () => {
 function setUp(response?: (body: Body) => unknown) {
   bodies = [];
   tokens = ['token-1', 'token-2', 'token-3', 'token-4'];
-  renew = jest.fn(async () => {
+  renew = vi.fn(async () => {
     tokens.shift();
     return true;
   });
-  fetchMock = jest.fn(async () => {
+  fetchMock = vi.fn(async () => {
     const body = new Body();
     bodies.push(body);
     return (
@@ -93,12 +94,12 @@ const bye = (reason: string) => event('bye', { reason });
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 describe('Live reconnecting', () => {
   it('reconnects after every expiry, so a dashboard open for an hour stays live', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
@@ -107,7 +108,7 @@ describe('Live reconnecting', () => {
       bodies[round - 1]?.send(bye('expired'));
       bodies[round - 1]?.end();
       await flush();
-      jest.advanceTimersByTime(3_000);
+      vi.advanceTimersByTime(3_000);
       await flush();
     }
 
@@ -116,7 +117,7 @@ describe('Live reconnecting', () => {
   });
 
   it('renews once when the stream ends twice after bye', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
@@ -125,7 +126,7 @@ describe('Live reconnecting', () => {
     bodies[0]?.end();
     bodies[0]?.end();
     await flush();
-    jest.advanceTimersByTime(3_000);
+    vi.advanceTimersByTime(3_000);
     await flush();
 
     expect(renew).toHaveBeenCalledTimes(1);
@@ -133,39 +134,39 @@ describe('Live reconnecting', () => {
   });
 
   it('reconnects on its backoff, without renewing, when the stream drops without a bye', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
 
     bodies[0]?.send(event('hello'));
     bodies[0]?.end();
-    await jest.advanceTimersByTimeAsync(800);
+    await vi.advanceTimersByTimeAsync(800);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    await jest.advanceTimersByTimeAsync(400);
+    await vi.advanceTimersByTimeAsync(400);
 
     expect(renew).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('reconnects on its backoff, without renewing, after a bye with a reason it does not know', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
 
     bodies[0]?.send(bye('banned'));
     bodies[0]?.end();
-    await jest.advanceTimersByTimeAsync(800);
+    await vi.advanceTimersByTimeAsync(800);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    await jest.advanceTimersByTimeAsync(400);
+    await vi.advanceTimersByTimeAsync(400);
 
     expect(renew).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('does not reconnect when closed while the renewal is still running', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     let finish: (ok: boolean) => void = () => undefined;
     renew.mockImplementationOnce(
@@ -183,14 +184,14 @@ describe('Live reconnecting', () => {
     live.close();
     finish(true);
     await flush();
-    jest.advanceTimersByTime(10_000);
+    vi.advanceTimersByTime(10_000);
     await flush();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('aborts the stream it reconnected and opens no other when closed after a reconnect', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
@@ -200,7 +201,7 @@ describe('Live reconnecting', () => {
 
     live.close();
     bodies.at(-1)?.end();
-    jest.advanceTimersByTime(10_000);
+    vi.advanceTimersByTime(10_000);
     await flush();
 
     const calls = fetchMock.mock.calls as [string, RequestInit][];
@@ -223,14 +224,14 @@ describe('Live reconnecting', () => {
   });
 
   it('keeps delivering events from the new stream to the same subscribers', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live, seen } = setUp();
     live.open();
     await flush();
     bodies[0]?.send(bye('shutdown'));
     bodies[0]?.end();
     await flush();
-    jest.advanceTimersByTime(3_000);
+    vi.advanceTimersByTime(3_000);
     await flush();
 
     bodies[1]?.send(event('live.test', {}, 'e-9'));
@@ -240,14 +241,14 @@ describe('Live reconnecting', () => {
   });
 
   it('opens the reconnect with a stream that is not already aborted', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
     bodies[0]?.send(bye('expired'));
     bodies[0]?.end();
     await flush();
-    jest.advanceTimersByTime(3_000);
+    vi.advanceTimersByTime(3_000);
     await flush();
 
     const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
@@ -257,14 +258,14 @@ describe('Live reconnecting', () => {
 
 describe('Live failing connections', () => {
   it('does not throw, and tries again on its backoff, when the request rejects', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { live } = setUp();
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     expect(() => live.open()).not.toThrow();
-    await jest.advanceTimersByTimeAsync(800);
+    await vi.advanceTimersByTimeAsync(800);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    await jest.advanceTimersByTimeAsync(400);
+    await vi.advanceTimersByTimeAsync(400);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(renew).not.toHaveBeenCalled();
@@ -273,7 +274,7 @@ describe('Live failing connections', () => {
   it.each([403, 500])(
     'emits nothing and tries again on its backoff on a %s answer',
     async (status) => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const { live, seen } = setUp((body) => ({
         body: { getReader: () => body.reader },
         ok: false,
@@ -281,9 +282,9 @@ describe('Live failing connections', () => {
       }));
 
       live.open();
-      await jest.advanceTimersByTimeAsync(800);
+      await vi.advanceTimersByTimeAsync(800);
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      await jest.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(400);
 
       expect(seen).toEqual([]);
       expect(renew).not.toHaveBeenCalled();
@@ -348,12 +349,12 @@ describe('Live closing', () => {
 
   it('never opens a connection when closed and asked to open on the server', async () => {
     bodies = [];
-    fetchMock = jest.fn();
+    fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     TestBed.configureTestingModule({
       providers: [
         { provide: PLATFORM_ID, useValue: 'server' },
-        { provide: Session, useValue: { renew: jest.fn(), token: () => 'x' } },
+        { provide: Session, useValue: { renew: vi.fn(), token: () => 'x' } },
       ],
     });
     const live = TestBed.inject(Live);

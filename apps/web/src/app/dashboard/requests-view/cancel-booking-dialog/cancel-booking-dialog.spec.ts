@@ -5,6 +5,7 @@ import { BookingsService } from '@motor-fix/data-access';
 import { formatSlot, I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   type CancelBookingData,
@@ -12,10 +13,9 @@ import {
   type CancelBookingResult,
 } from './cancel-booking-dialog';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({ template: '' })
 class Host {
@@ -25,7 +25,7 @@ class Host {
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 
-let cancel: jest.Mock;
+let cancel: Mock;
 let result: Promise<CancelBookingResult | 'cancelled'>;
 let data: CancelBookingData;
 
@@ -43,7 +43,7 @@ async function open({
   language?: 'ro' | 'en';
   startsIn?: number;
 } = {}) {
-  cancel = jest.fn(async () => ({ status: 'cancelled' }));
+  cancel = vi.fn(async () => ({ status: 'cancelled' }));
   data = {
     bookingId: 'booking-1',
     garage: 'Service Auto Militari',
@@ -116,9 +116,9 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
-  jest.restoreAllMocks();
-  jest.useRealTimers();
+  (toast as unknown as Mock).mockClear();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 
@@ -222,11 +222,11 @@ describe('the cancel booking dialog: the late warning', () => {
   });
 
   it('says nothing at exactly two hours before, then warns once the minute passes', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
+    vi.useFakeTimers({
       now: new Date('2026-10-20T08:00:00.000Z'),
+      shouldAdvanceTime: true,
     });
-    cancel = jest.fn();
+    cancel = vi.fn();
     data = {
       bookingId: 'booking-1',
       garage: 'Service Auto Militari',
@@ -251,7 +251,7 @@ describe('the cancel booking dialog: the late warning', () => {
 
     expect(warning()).toBeUndefined();
 
-    jest.advanceTimersByTime(MINUTE);
+    vi.advanceTimersByTime(MINUTE);
     await settle();
 
     expect(warning()).toBeDefined();
@@ -376,7 +376,7 @@ describe('the cancel booking dialog: cancelling', () => {
   });
 
   it('disables the confirm offline with the shared offline line', async () => {
-    const online = jest.spyOn(navigator, 'onLine', 'get');
+    const online = vi.spyOn(navigator, 'onLine', 'get');
     online.mockReturnValue(false);
     await open();
     await pick('Altceva');

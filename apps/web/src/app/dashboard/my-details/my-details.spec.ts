@@ -5,6 +5,7 @@ import { type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { EmailChangeDialog } from './email-change-dialog/email-change-dialog';
 import { MyDetails } from './my-details';
@@ -13,10 +14,9 @@ import { PhoneChangeDialog } from './phone-change-dialog/phone-change-dialog';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const ANDREI: MeDto = {
   capabilities: [],
@@ -38,10 +38,10 @@ const ANDREI: MeDto = {
 } as unknown as MeDto;
 
 let current: ReturnType<typeof signal<MeDto | null>>;
-let update: jest.Mock;
-let askAgain: jest.Mock;
-let open: jest.Mock;
-let gate: jest.Mock;
+let update: Mock;
+let askAgain: Mock;
+let open: Mock;
+let gate: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -59,10 +59,10 @@ async function render(
   }),
 ) {
   current = signal<MeDto | null>({ ...ANDREI, ...me } as MeDto);
-  update = jest.fn(({ body }: { body: unknown }) => answer(body));
-  askAgain = jest.fn(async () => undefined);
-  open = jest.fn(async () => 'cancelled');
-  gate = jest.fn(async () => true);
+  update = vi.fn(({ body }: { body: unknown }) => answer(body));
+  askAgain = vi.fn(async () => undefined);
+  open = vi.fn(async () => 'cancelled');
+  gate = vi.fn(async () => true);
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { current } },
@@ -113,7 +113,9 @@ function type(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-beforeEach(() => jest.mocked(toast).mockClear());
+beforeEach(() => {
+  vi.mocked(toast).mockClear();
+});
 
 // @traces 139-FR-001
 describe('the details panel', () => {

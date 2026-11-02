@@ -11,6 +11,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { PricesView } from './prices-view';
 import { Live } from '../live';
@@ -58,8 +59,8 @@ const me = {
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let read: jest.Mock;
-let setRange: jest.Mock;
+let read: Mock;
+let setRange: Mock;
 
 const text = (element: Element | null) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -85,8 +86,8 @@ function deferred<T>() {
 async function editing(answer: () => Promise<PriceListDto>) {
   events = new Subject();
   resync = new Subject();
-  read = jest.fn(answer);
-  setRange = jest.fn(async () => ({}));
+  read = vi.fn(answer);
+  setRange = vi.fn(async () => ({}));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -97,7 +98,7 @@ async function editing(answer: () => Promise<PriceListDto>) {
         },
       },
       { provide: Session, useValue: { shown: signal(me) } },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       {
         provide: Live,
         useValue: {

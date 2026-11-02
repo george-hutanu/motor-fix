@@ -5,6 +5,7 @@ import {
 
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { Mock } from 'vitest';
 
 import { Live, liveResource } from './live';
 import { Session } from './session';
@@ -49,12 +50,12 @@ type Answer = 'open' | 'fail' | 401 | 503;
 
 let bodies: Body[];
 let answers: Answer[];
-let fetchMock: jest.Mock;
-let renew: jest.Mock;
+let fetchMock: Mock;
+let renew: Mock;
 let random: number;
 
-const settle = () => jest.advanceTimersByTimeAsync(0);
-const elapse = (ms: number) => jest.advanceTimersByTimeAsync(ms);
+const settle = () => vi.advanceTimersByTimeAsync(0);
+const elapse = (ms: number) => vi.advanceTimersByTimeAsync(ms);
 
 const event = (kind: string, extra: Record<string, string> = {}) =>
   `event: ${kind}\ndata: ${JSON.stringify({ at: '2026-10-05T12:00:00.000Z', id: 'e-1', kind, ...extra })}\n\n`;
@@ -64,9 +65,9 @@ function setUp() {
   bodies = [];
   answers = [];
   random = 0.5;
-  jest.spyOn(Math, 'random').mockImplementation(() => random);
-  renew = jest.fn(async () => true);
-  fetchMock = jest.fn(async () => {
+  vi.spyOn(Math, 'random').mockImplementation(() => random);
+  renew = vi.fn(async () => true);
+  fetchMock = vi.fn(async () => {
     const answer = answers.shift() ?? 'open';
     if (answer === 'fail') throw new TypeError('Failed to fetch');
     const body = new Body();
@@ -99,14 +100,14 @@ function show(state: DocumentVisibilityState) {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   visibility = 'visible';
 });
 afterEach(() => {
   TestBed.inject(Live).close();
   TestBed.resetTestingModule();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('the connection state', () => {

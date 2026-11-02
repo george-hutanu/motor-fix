@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { type AcceptanceDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { Reaccept } from './reaccept';
 import { Session } from '../../dashboard/session';
@@ -19,9 +20,9 @@ const VERSIONS: AcceptanceDto = {
   termsVersion: '2026-10-12',
 };
 
-let accept: jest.Mock;
-let signOut: jest.Mock;
-let navigateByUrl: jest.Mock;
+let accept: Mock;
+let signOut: Mock;
+let navigateByUrl: Mock;
 let result: Promise<OverlayResult<'accepted' | 'signed-out'>>;
 
 async function settle() {
@@ -32,9 +33,9 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  accept = jest.fn(async () => undefined);
-  signOut = jest.fn(async () => undefined);
-  navigateByUrl = jest.fn(async () => true);
+  accept = vi.fn(async () => undefined);
+  signOut = vi.fn(async () => undefined);
+  navigateByUrl = vi.fn(async () => true);
   TestBed.configureTestingModule({
     providers: [
       { provide: MeService, useValue: { acceptanceControllerAccept: accept } },

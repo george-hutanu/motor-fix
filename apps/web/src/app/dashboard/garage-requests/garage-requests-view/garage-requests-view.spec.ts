@@ -13,6 +13,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { GarageRequestsView } from './garage-requests-view';
 import { Live } from '../../live';
@@ -54,8 +55,8 @@ class FakeObserver {
 }
 
 let live: ReturnType<typeof fakeLive>;
-let list: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let open: Mock;
 
 const page = (from: number, count: number) =>
   Array.from({ length: count }, (_, i) =>
@@ -83,12 +84,12 @@ async function render(
   closedWith: string | undefined = 'cancelled',
 ) {
   observers = [];
-  open = jest.fn(async () => closedWith);
+  open = vi.fn(async () => closedWith);
   (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver =
     FakeObserver;
   live = fakeLive();
   let first = 0;
-  list = jest.fn(
+  list = vi.fn(
     async ({ cursor, status }: { cursor?: string; status: string }) => {
       if (status === 'closed') return closed;
       if (cursor) return pages[cursor];
@@ -518,7 +519,7 @@ describe('a request opened from the Cereri de ofertă view', () => {
       });
       const { router, settle } = await render();
       const feed = TestBed.inject(GarageRequestsFeed);
-      const spy = jest.spyOn(feed, call).mockImplementation(() => undefined);
+      const spy = vi.spyOn(feed, call).mockImplementation(() => undefined);
       open.mockReturnValueOnce(answered);
       await router.navigateByUrl('/app/garage');
       await router.navigateByUrl('/app/garage/requests/req-2', {

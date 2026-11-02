@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { GaragesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   RemoveJob,
@@ -18,7 +19,7 @@ class Host {
 
 const DATA: RemoveJobData = { garageId: 'garage-1', priceId: 'price-brakes' };
 
-let remove: jest.Mock;
+let remove: Mock;
 let result: Promise<RemoveJobResult | 'cancelled'>;
 
 async function settle() {
@@ -29,7 +30,7 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  remove = jest.fn(async () => undefined);
+  remove = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       {

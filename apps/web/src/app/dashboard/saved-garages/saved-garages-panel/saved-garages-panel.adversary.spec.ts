@@ -10,6 +10,7 @@ import {
   SavedGaragesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { SavedGaragesPanel } from './saved-garages-panel';
 import { SavedGarages } from '../../../public/saved-garages/saved-garages';
@@ -24,7 +25,7 @@ import {
   savedItems,
 } from '../saved-garages.testing';
 
-let list: jest.Mock;
+let list: Mock;
 let saved: ReturnType<typeof fakeSavedGarages>;
 
 async function render({
@@ -43,7 +44,7 @@ async function render({
   const live = fakeLive();
   saved = fakeSavedGarages();
   let call = 0;
-  list = jest.fn(async () => {
+  list = vi.fn(async () => {
     const answer = answers[Math.min(call++, answers.length - 1)];
     if (answer instanceof Error) throw answer;
     return answer;

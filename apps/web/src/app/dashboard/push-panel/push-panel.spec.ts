@@ -2,36 +2,36 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { PushPanel } from './push-panel';
 import { PushDevice, type PushState } from '../push-device';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 let state: ReturnType<typeof signal<PushState>>;
 let device: {
   busy: ReturnType<typeof signal<boolean>>;
-  disable: jest.Mock;
-  enable: jest.Mock;
+  disable: Mock;
+  enable: Mock;
   failed: ReturnType<typeof signal<boolean>>;
-  refresh: jest.Mock;
+  refresh: Mock;
   state: typeof state;
-  test: jest.Mock;
+  test: Mock;
 };
 
 async function render(initial: PushState, language: 'ro' | 'en' = 'ro') {
   state = signal<PushState>(initial);
   device = {
     busy: signal(false),
-    disable: jest.fn(async () => undefined),
-    enable: jest.fn(async () => undefined),
+    disable: vi.fn(async () => undefined),
+    enable: vi.fn(async () => undefined),
     failed: signal(false),
-    refresh: jest.fn(async () => undefined),
+    refresh: vi.fn(async () => undefined),
     state,
-    test: jest.fn(async () => true),
+    test: vi.fn(async () => true),
   };
   TestBed.configureTestingModule({
     providers: [{ provide: PushDevice, useValue: device }],
@@ -76,7 +76,7 @@ describe('PushPanel', () => {
   it('does not say the test was sent when it was not', async () => {
     const { element, fixture } = await render('on');
     device.test.mockResolvedValue(false);
-    jest.mocked(toast).mockClear();
+    vi.mocked(toast).mockClear();
     element.querySelectorAll('button')[1].click();
     await fixture.whenStable();
     expect(toast).not.toHaveBeenCalled();

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { CarsService, type SoldCarDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { SoldCars } from './sold-cars';
 
@@ -13,12 +14,12 @@ const sold = (id: string, model = id): SoldCarDto => ({
   year: 2015,
 });
 
-async function render(cars: SoldCarDto[], history?: jest.Mock) {
+async function render(cars: SoldCarDto[], history?: Mock) {
   TestBed.configureTestingModule({
     providers: [
       {
         provide: CarsService,
-        useValue: { carHistoryControllerSoldRepairs: history ?? jest.fn() },
+        useValue: { carHistoryControllerSoldRepairs: history ?? vi.fn() },
       },
     ],
   });
@@ -62,11 +63,11 @@ describe('the sold cars under odd lists', () => {
   });
 
   it('tells once when the car whose history was opened is gone', async () => {
-    const history = jest.fn(async () => {
+    const history = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 404 });
     });
     const { element, fixture } = await render([sold('a'), sold('b')], history);
-    const gone = jest.fn();
+    const gone = vi.fn();
     fixture.componentInstance.gone.subscribe(gone);
 
     element.querySelector<HTMLButtonElement>('button[aria-expanded]')?.click();

@@ -4,28 +4,17 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
+import { CockpitSamplePage } from '@motor-fix/ui-cockpit/sample';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
 import { routes } from '../../app.routes';
 import { Session } from '../../dashboard/session';
 
-// The bar only cares that /cockpit is outside the public frame. The real
-// sample page renders the whole kit, which takes longer than a test's 5 s on
-// a loaded CI runner.
-jest.mock('@motor-fix/ui-cockpit/sample', () => {
-  const { Component } = jest.requireActual('@angular/core');
-  return {
-    CockpitSamplePage: Component({
-      selector: 'mf-cockpit-sample',
-      template: '',
-    })(class {}),
-  };
-});
-
 // Each case boots the whole router and lazy-loads its first page; on a loaded
 // machine that alone passes 5 s.
-jest.setTimeout(20_000);
+vi.setConfig({ testTimeout: 20_000 });
 
 const ORIGIN = 'https://motorfix.ro';
 const GARAGES = 'Service‑uri';
@@ -44,13 +33,13 @@ const DRIVER = {
 } as unknown as MeDto;
 
 let answers: Array<MeDto | null>;
-let load: jest.Mock;
+let load: Mock;
 let harness: RouterTestingHarness | undefined;
 
 function setUp(...replies: Array<MeDto | null>) {
   answers = replies;
   const current = signal<MeDto | null>(null);
-  load = jest.fn(async () => {
+  load = vi.fn(async () => {
     const next = answers.length > 1 ? answers.shift() : answers[0];
     current.set(next ?? null);
     return next ?? null;
@@ -72,6 +61,12 @@ function setUp(...replies: Array<MeDto | null>) {
         },
       },
     ],
+  });
+  // The bar only cares that /cockpit is outside the public frame. The real
+  // sample page renders the whole kit, which takes longer than a test's 5 s
+  // on a loaded CI runner.
+  TestBed.overrideComponent(CockpitSamplePage, {
+    set: { imports: [], template: '' },
   });
 }
 

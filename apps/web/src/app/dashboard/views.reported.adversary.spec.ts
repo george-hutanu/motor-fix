@@ -1,3 +1,4 @@
+import { AdminReviews } from './admin-reviews/admin-reviews';
 import { DASHBOARDS } from './views';
 
 // @traces 1389-FR-001
@@ -19,7 +20,7 @@ describe('the reported reviews view of the admin dashboard', () => {
     const body = await reviews()?.load?.();
 
     expect(body).toBeDefined();
-    expect((body as { name: string }).name).toBe('AdminReviews');
+    expect(body).toBe(AdminReviews);
   });
 
   it('appears once only in the admin views', () => {

@@ -5,6 +5,7 @@ import { type MeDto, SupportService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock, MockInstance } from 'vitest';
 
 import { DeleteAccount } from './delete-account';
 import { DeleteAccountDialog } from '../delete-account-dialog/delete-account-dialog';
@@ -12,10 +13,9 @@ import { Live } from '../live';
 import { PushDevice } from '../push-device';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const DRIVER = {
   email: 'andrei@example.ro',
@@ -30,11 +30,11 @@ const OWNER = {
   role: 'garage',
 } as unknown as MeDto;
 
-let open: jest.Mock;
-let close: jest.Mock;
-let dropped: jest.Mock;
-let revoked: jest.Mock;
-let navigate: jest.SpyInstance;
+let open: Mock;
+let close: Mock;
+let dropped: Mock;
+let revoked: Mock;
+let navigate: MockInstance;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -49,11 +49,11 @@ async function render(
   email: string | null = 'ajutor@example.ro',
   answer: true | 'cancelled' = 'cancelled',
 ) {
-  open = jest.fn(async () => answer);
-  close = jest.fn();
-  dropped = jest.fn(async () => undefined);
-  revoked = jest.fn();
-  jest.mocked(toast).mockClear();
+  open = vi.fn(async () => answer);
+  close = vi.fn();
+  dropped = vi.fn(async () => undefined);
+  revoked = vi.fn();
+  vi.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -67,7 +67,7 @@ async function render(
       },
     ],
   });
-  navigate = jest
+  navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   if (language === 'en') await TestBed.inject(I18n).use('en');
@@ -150,7 +150,7 @@ describe('the delete-account row in Setări', () => {
     expect(revoked).toHaveBeenCalledTimes(1);
     expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
     expect(revoked.mock.invocationCallOrder[0]).toBeLessThan(
-      jest.mocked(toast).mock.invocationCallOrder[0],
+      vi.mocked(toast).mock.invocationCallOrder[0],
     );
   });
 
@@ -221,7 +221,7 @@ describe('the delete-account row inside the account panel', () => {
       providers: [
         provideRouter([]),
         { provide: Session, useValue: { current: signal(DRIVER) } },
-        { provide: Overlays, useValue: { open: jest.fn() } },
+        { provide: Overlays, useValue: { open: vi.fn() } },
         {
           provide: SupportService,
           useValue: { supportContactControllerContact: async () => ({}) },

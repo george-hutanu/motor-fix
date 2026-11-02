@@ -10,6 +10,7 @@ import {
   type MeDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { TransferPage } from './transfer';
 import { Consent } from '../../consent/consent';
@@ -34,17 +35,17 @@ const offer = (over: Partial<CarTransferLinkDto> = {}): CarTransferLinkDto => ({
   ...over,
 });
 
-let accept: jest.Mock;
-let gate: jest.Mock;
-let track: jest.Mock;
-let load: jest.Mock;
+let accept: Mock;
+let gate: Mock;
+let track: Mock;
+let load: Mock;
 let current: ReturnType<typeof signal<MeDto | null>>;
 let session: {
   current: typeof current;
   roleHint: ReturnType<typeof signal<MeDto['role'] | null>>;
-  load: jest.Mock;
-  reload: jest.Mock;
-  switchRole: jest.Mock;
+  load: Mock;
+  reload: Mock;
+  switchRole: Mock;
 };
 let harness: RouterTestingHarness;
 
@@ -74,19 +75,19 @@ async function open(
     loaded,
   }: Options = {},
 ) {
-  const read = jest.fn((_params, context) => answer(!context));
-  accept = jest.fn(accepted);
-  gate = jest.fn(signIn);
-  track = jest.fn();
+  const read = vi.fn((_params, context) => answer(!context));
+  accept = vi.fn(accepted);
+  gate = vi.fn(signIn);
+  track = vi.fn();
   current = signal<MeDto | null>(me);
-  load = jest.fn(loaded ?? (async () => current()));
+  load = vi.fn(loaded ?? (async () => current()));
   session = {
     current,
     load,
-    reload: jest.fn(async () => undefined),
+    reload: vi.fn(async () => undefined),
     // A browser that saw nobody signed in: the page asks for no session.
     roleHint: signal<MeDto['role'] | null>(null),
-    switchRole: jest.fn(async (role: MeDto['role']) => {
+    switchRole: vi.fn(async (role: MeDto['role']) => {
       current.set({ ...(current() as MeDto), role });
       return current();
     }),

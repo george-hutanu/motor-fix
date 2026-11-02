@@ -7,6 +7,7 @@ import {
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
+import type { Mock } from 'vitest';
 
 import { ProfilePrefetch } from './profile-prefetch';
 import { sendMeasurementsTo } from '../../telemetry/browser/measure/measure';
@@ -36,9 +37,9 @@ const PATH = /\/api\/v1\/garages\//;
 
 let http: HttpTestingController;
 let prefetch: ProfilePrefetch;
-let preload: jest.Mock;
+let preload: Mock;
 let seen: TestRequest[] = [];
-const measured = jest.fn();
+const measured = vi.fn();
 let connection: Record<string, unknown> | undefined;
 // Wider than the DOM typing, which has no prerender.
 let visibility: string;
@@ -53,10 +54,11 @@ function setUp(platform: 'browser' | 'server' = 'browser') {
   });
   http = TestBed.inject(HttpTestingController);
   seen = [];
-  preload = jest.fn(() => Promise.resolve());
-  jest
-    .spyOn(ProfilePrefetch.prototype as never, 'preload' as never)
-    .mockImplementation(preload as never);
+  preload = vi.fn(() => Promise.resolve());
+  vi.spyOn(
+    ProfilePrefetch.prototype as unknown as { preload: () => Promise<void> },
+    'preload',
+  ).mockImplementation(preload);
   prefetch = TestBed.inject(ProfilePrefetch);
 }
 
@@ -97,32 +99,32 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   sendMeasurementsTo(undefined);
 });
 
 // @traces 1169-FR-008
 describe('the age of a pre-fetched profile', () => {
   it('serves an entry 119.999 s old and drops one exactly 120 s old', () => {
-    jest.useFakeTimers({ now: 1_000_000 });
+    vi.useFakeTimers({ now: 1_000_000 });
     setUp();
     prefetch.want('a', 'bmw');
     settle('a', garageOf('a'));
 
-    jest.setSystemTime(1_000_000 + 119_999);
+    vi.setSystemTime(1_000_000 + 119_999);
     expect(prefetch.take('a', 'bmw')?.slug).toBe('a');
 
-    jest.setSystemTime(1_000_000 + 120_000);
+    vi.setSystemTime(1_000_000 + 120_000);
     expect(prefetch.take('a', 'bmw')).toBeUndefined();
   });
 
   it('reports an expiry once and then knows nothing of the entry', () => {
-    jest.useFakeTimers({ now: 1_000_000 });
+    vi.useFakeTimers({ now: 1_000_000 });
     setUp();
     prefetch.want('a', undefined);
     settle('a', garageOf('a'));
-    jest.setSystemTime(1_000_000 + 500_000);
+    vi.setSystemTime(1_000_000 + 500_000);
 
     expect(prefetch.take('a', undefined)).toBeUndefined();
     expect(prefetch.take('a', undefined)).toBeUndefined();
@@ -136,7 +138,7 @@ describe('a profile that is not found or gone', () => {
   it.each([404, 410])(
     'is not read again within 120 s after a %s and is read again after',
     (status) => {
-      jest.useFakeTimers({ now: 1_000_000 });
+      vi.useFakeTimers({ now: 1_000_000 });
       setUp();
       prefetch.want('gone', 'bmw');
       settle('gone', null, { status, statusText: 'x' });
@@ -146,7 +148,7 @@ describe('a profile that is not found or gone', () => {
       expect(prefetch.take('gone', 'bmw')).toBeUndefined();
       expect(reported()).not.toContain('hit');
 
-      jest.setSystemTime(1_000_000 + 120_001);
+      vi.setSystemTime(1_000_000 + 120_001);
       prefetch.want('gone', 'bmw');
       expect(urls()).toHaveLength(1);
     },

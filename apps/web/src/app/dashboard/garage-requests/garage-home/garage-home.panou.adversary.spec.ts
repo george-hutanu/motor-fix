@@ -19,6 +19,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { GarageHome } from './garage-home';
 import { staffPage } from '../../garage-reviews/garage-reviews.testing';
@@ -96,12 +97,12 @@ async function render(
 ) {
   const me = signal(account(role, status, features, permissions));
   const live = fakeLive();
-  const open = jest.fn(async () => 'done');
+  const open = vi.fn(async () => 'done');
   const api = {
-    dashboardLayoutsControllerRead: jest.fn(
+    dashboardLayoutsControllerRead: vi.fn(
       read ?? (async () => answer(layoutOf(), role)),
     ),
-    dashboardLayoutsControllerSave: jest.fn(
+    dashboardLayoutsControllerSave: vi.fn(
       save ??
         (async ({ body }: { body: { panels: DashboardPanelDto[] } }) =>
           answer(body.panels, role)),
@@ -183,7 +184,7 @@ type Data = {
   rows: () => { key: string; position: number; shown: boolean }[];
   toggle: (key: string, shown: boolean) => Promise<boolean>;
 };
-const dataOf = (open: jest.Mock) =>
+const dataOf = (open: Mock) =>
   (open.mock.calls[0] as unknown as [unknown, { data: Data }])[1].data;
 
 // @traces 011-FR-003

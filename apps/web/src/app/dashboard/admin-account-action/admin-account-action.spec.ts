@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type AccountAction,
@@ -21,7 +22,7 @@ class Host {
 const TODAY = '2026-10-24';
 const NAME = 'Andrei <b>Pop</b>';
 
-let api: Record<string, jest.Mock>;
+let api: Record<string, Mock>;
 let result: Promise<OverlayResult<AccountActionResult>>;
 
 async function settle() {
@@ -33,10 +34,10 @@ async function settle() {
 
 async function open(action: AccountAction, language: 'ro' | 'en' = 'ro') {
   api = {
-    accountControllerDeleteOnRequest: jest.fn(async () => undefined),
-    accountControllerResetAccess: jest.fn(async () => ({ email: 'sent' })),
-    accountControllerRestore: jest.fn(async () => ({})),
-    accountControllerSuspend: jest.fn(async () => ({})),
+    accountControllerDeleteOnRequest: vi.fn(async () => undefined),
+    accountControllerResetAccess: vi.fn(async () => ({ email: 'sent' })),
+    accountControllerRestore: vi.fn(async () => ({})),
+    accountControllerSuspend: vi.fn(async () => ({})),
   };
   TestBed.configureTestingModule({
     providers: [{ provide: AdminService, useValue: api }],

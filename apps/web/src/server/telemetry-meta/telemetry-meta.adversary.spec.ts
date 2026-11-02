@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { withTelemetryMeta } from './telemetry-meta';
 
 const collector = {

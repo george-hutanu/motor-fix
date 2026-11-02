@@ -39,8 +39,8 @@ let current: ReturnType<typeof signal<MeDto | null>>;
 let live: ReturnType<typeof fakeLive>;
 
 beforeEach(() => {
-  jest.useFakeTimers();
-  jest.setSystemTime(new Date('2026-10-30T09:00:00.000Z'));
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-10-30T09:00:00.000Z'));
   current = signal<MeDto | null>(A);
   live = fakeLive();
   TestBed.configureTestingModule({
@@ -53,7 +53,7 @@ beforeEach(() => {
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 // A view on the store; close() leaves as a destroyed view does.
@@ -72,8 +72,8 @@ function open<K extends keyof Held>(
   return { close: () => injector.destroy(), view };
 }
 
-const settle = () => jest.advanceTimersByTimeAsync(0);
-const later = (ms: number) => jest.advanceTimersByTimeAsync(ms);
+const settle = () => vi.advanceTimersByTimeAsync(0);
+const later = (ms: number) => vi.advanceTimersByTimeAsync(ms);
 
 // Opens a view of the type, lets its first read answer, and leaves.
 async function visit<K extends keyof Held>(
@@ -105,7 +105,7 @@ describe('a first visit', () => {
 // @traces 1316-FR-001 1316-FR-002 1316-FR-010
 describe('a return', () => {
   it('within the stale time shows the held value at once and reads nothing', async () => {
-    const load = jest.fn(async () => [car('car-1')]);
+    const load = vi.fn(async () => [car('car-1')]);
     await visit('cars', load);
     await later(299_999);
 
@@ -124,8 +124,8 @@ describe('a return', () => {
     '%s the stale time shows the held value and reads once, the answer replacing it in place',
     async (_, age) => {
       const kept = car('car-1');
-      const load = jest
-        .fn<Promise<CarDto[]>, []>()
+      const load = vi
+        .fn<() => Promise<CarDto[]>>()
         .mockResolvedValueOnce([kept])
         .mockResolvedValueOnce([car('car-1'), car('car-2', 'Duster')]);
       await visit('cars', load);
@@ -143,8 +143,8 @@ describe('a return', () => {
   );
 
   it('goes by each type’s own stale time', async () => {
-    const loadCars = jest.fn(async () => [car('car-1')]);
-    const loadRequests = jest.fn(async () => requests('req-1'));
+    const loadCars = vi.fn(async () => [car('car-1')]);
+    const loadRequests = vi.fn(async () => requests('req-1'));
     await visit('cars', loadCars);
     await visit('requests', loadRequests);
     await later(30_000);
@@ -159,8 +159,8 @@ describe('a return', () => {
 
   // @traces 1316-FR-003
   it('keeps the held value with no error when its read fails, and reads again after 60 s', async () => {
-    const load = jest
-      .fn<Promise<RequestListDto>, []>()
+    const load = vi
+      .fn<() => Promise<RequestListDto>>()
       .mockResolvedValueOnce(requests('req-1'))
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce(requests('req-1', 'req-2'));
@@ -183,7 +183,7 @@ describe('a return', () => {
 
   it('joins a read already running instead of starting another', async () => {
     const answer = deferred<CarDto[]>();
-    const load = jest.fn(() => answer.promise);
+    const load = vi.fn(() => answer.promise);
     const first = open('cars', load);
     const second = open('cars', load);
 
@@ -200,7 +200,7 @@ describe('a return', () => {
 describe('a re-read', () => {
   it('follows a live event, a resync and a reload whatever the age, and every open view shows its answer', async () => {
     let n = 0;
-    const load = jest.fn(async () => requests(`req-${++n}`));
+    const load = vi.fn(async () => requests(`req-${++n}`));
     const watching = open('requests', load, ['quote.accepted']);
     await settle();
     const other = open('requests', load);
@@ -224,7 +224,7 @@ describe('a re-read', () => {
   });
 
   it('restarts the stale time', async () => {
-    const load = jest.fn(async () => [car('car-1')]);
+    const load = vi.fn(async () => [car('car-1')]);
     const { view } = open('cars', load);
     await settle();
     await later(200_000);
@@ -241,8 +241,8 @@ describe('a re-read', () => {
 // @traces 1316-FR-009 1316-FR-010
 describe('the copy the store keeps', () => {
   it('stays in the page’s memory: no storage, cookie or database is written', async () => {
-    const setItem = jest.spyOn(Storage.prototype, 'setItem');
-    const database = { open: jest.fn() };
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const database = { open: vi.fn() };
     Object.defineProperty(globalThis, 'indexedDB', {
       configurable: true,
       value: database,
@@ -267,7 +267,7 @@ describe('the copy the store keeps', () => {
 // @traces 1316-FR-005 1316-FR-010
 describe('a change the person makes', () => {
   it('replaces the held value at once and keeps its age', async () => {
-    const load = jest.fn(async () => [car('car-1')]);
+    const load = vi.fn(async () => [car('car-1')]);
     await visit('cars', load);
     await later(200_000);
 
@@ -300,9 +300,9 @@ describe('a change the person makes', () => {
   });
 
   it('changes nothing while nothing is held, so the next view reads as on a first visit', async () => {
-    const update = jest.fn((cars: CarDto[]) => [car('car-2'), ...cars]);
+    const update = vi.fn((cars: CarDto[]) => [car('car-2'), ...cars]);
     TestBed.inject(Resources).update('cars', update);
-    const load = jest.fn(async () => [car('car-1')]);
+    const load = vi.fn(async () => [car('car-1')]);
 
     const { view } = open('cars', load);
 
@@ -315,7 +315,7 @@ describe('a change the person makes', () => {
   it('changes nothing after a failed first read', async () => {
     await visit('cars', () => Promise.reject(new Error('offline')));
     TestBed.inject(Resources).update('cars', (cars) => [car('car-2'), ...cars]);
-    const load = jest.fn(async () => [car('car-1')]);
+    const load = vi.fn(async () => [car('car-1')]);
 
     const { view } = open('cars', load);
 
@@ -384,7 +384,7 @@ describe('another account', () => {
     await settle();
 
     expect(aView.view.value()).toBeUndefined();
-    const loadB = jest.fn(() => new Promise<never>(() => undefined));
+    const loadB = vi.fn(() => new Promise<never>(() => undefined));
     const bView = open('cars', loadB);
     expect(bView.view.value()).toBeUndefined();
     await settle();
@@ -395,7 +395,7 @@ describe('another account', () => {
     await visit('cars', async () => [car('car-a')]);
     current.set(B);
 
-    const update = jest.fn((cars: CarDto[]) => cars);
+    const update = vi.fn((cars: CarDto[]) => cars);
     TestBed.inject(Resources).update('cars', update);
 
     expect(update).not.toHaveBeenCalled();
@@ -406,7 +406,7 @@ describe('another account', () => {
 describe('the sold cars', () => {
   it('are read once, then again when a car is taken over', async () => {
     let n = 0;
-    const load = jest.fn(async () => ({
+    const load = vi.fn(async () => ({
       items: Array.from({ length: n++ }, (_, i) => ({ id: `sold-${i}` })),
     }));
     const watching = open('soldCars', load as never, ['car_transfer.accepted']);

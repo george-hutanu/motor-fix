@@ -7,6 +7,7 @@ import {
   type SoldCarDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { SoldCar } from './sold-car';
 
@@ -36,13 +37,13 @@ const repair = (over: Partial<CarRepairDto> = {}): CarRepairDto => ({
   ...over,
 });
 
-let repairs: jest.Mock;
+let repairs: Mock;
 
 async function render(
   answer: (params: { id: string }) => Promise<CarRepairListDto>,
   car: SoldCarDto = sold(),
 ) {
-  repairs = jest.fn(answer);
+  repairs = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -160,7 +161,7 @@ describe('a sold car under odd cars and answers', () => {
     const { element, fixture, settle } = await render(async () => {
       throw new HttpErrorResponse({ status: 500 });
     });
-    const gone = jest.fn();
+    const gone = vi.fn();
     fixture.componentInstance.gone.subscribe(gone);
 
     toggle(element)?.click();

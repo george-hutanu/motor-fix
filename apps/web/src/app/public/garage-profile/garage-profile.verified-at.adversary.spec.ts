@@ -60,10 +60,10 @@ type Read = {
 };
 let reads: Read[];
 const api = {
-  profileViewsControllerRecord: jest.fn(
+  profileViewsControllerRecord: vi.fn(
     (_: { id: string; body: { source?: string } }) => Promise.resolve(),
   ),
-  publicGaragesControllerBySlug: jest.fn(
+  publicGaragesControllerBySlug: vi.fn(
     (query: { slug: string; brand?: string }) =>
       new Promise<PublicGarageDto>((resolve, reject) => {
         reads.push({
@@ -83,11 +83,11 @@ const api = {
 
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
-const leave = jest.fn();
+const leave = vi.fn();
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn((_view: { garage?: string; brand?: string }) => leave),
+  register: vi.fn((_view: { garage?: string; brand?: string }) => leave),
   resync,
 };
 
@@ -127,7 +127,7 @@ beforeEach(async () => {
   harness = await RouterTestingHarness.create();
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 async function open(url: string) {
   await harness.navigateByUrl(url);
@@ -141,7 +141,7 @@ const send = (kind: string) =>
 
 async function burst(kind = 'garage.updated') {
   send(kind);
-  jest.advanceTimersByTime(300);
+  vi.advanceTimersByTime(300);
   await settle();
 }
 
@@ -185,7 +185,7 @@ describe('the verification line and a recorded re-check', () => {
 
   // @traces 1353-FR-003
   it('reads again once when a re-check is recorded and shows the new date', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer({
       ...FIXED,
@@ -205,14 +205,14 @@ describe('the verification line and a recorded re-check', () => {
 
   // @traces 1353-FR-003
   it('reads once for a re-check and a suspension arriving together', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
     send('recheck.recorded');
     send('garage.suspended');
     send('price_list.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(2);
@@ -220,7 +220,7 @@ describe('the verification line and a recorded re-check', () => {
 
   // @traces 1353-FR-003
   it('keeps the last answer when the re-read after a re-check fails with a server error', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer({
       ...FIXED,
@@ -235,7 +235,7 @@ describe('the verification line and a recorded re-check', () => {
 
   // @traces 1353-FR-003
   it("does not read again for kinds that are not the garage's own", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
@@ -255,7 +255,7 @@ describe('the verification line and a recorded re-check', () => {
 
   // @traces 1353-FR-003
   it('reads each of two re-checks a moment apart and keeps the newest date', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer({
       ...FIXED,
@@ -278,7 +278,7 @@ describe('the verification line and a recorded re-check', () => {
 
   // @traces 1353-FR-003
   it('reads nothing after the page is left when a re-check is recorded', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
     await harness.navigateByUrl('/ro');

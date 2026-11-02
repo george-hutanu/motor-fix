@@ -1,16 +1,17 @@
 import { EVENT_SESSION_START, STORAGE_KEY } from '@grafana/faro-web-sdk';
+import type { Mock } from 'vitest';
 
 import { sessionSync } from './session';
 
-let api: { pushEvent: jest.Mock; setSession: jest.Mock };
+let api: { pushEvent: Mock; setSession: Mock };
 
 beforeEach(() => {
   sessionStorage.clear();
   localStorage.clear();
-  api = { pushEvent: jest.fn(), setSession: jest.fn() };
+  api = { pushEvent: vi.fn(), setSession: vi.fn() };
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const stored = () => sessionStorage.getItem(STORAGE_KEY);
 const ID = /^[A-Za-z0-9]{1,32}$/;

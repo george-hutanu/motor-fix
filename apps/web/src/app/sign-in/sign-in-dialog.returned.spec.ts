@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ProviderSignUp } from './provider-sign-up/provider-sign-up';
 import { SignIn } from './sign-in';
@@ -13,7 +14,7 @@ const DRIVER = { landing: '/app/driver' } as MeDto;
 
 function setup(...answers: unknown[]) {
   const current = signal<MeDto | null>(null);
-  const open = jest.fn(async (..._: unknown[]) => {
+  const open = vi.fn(async (..._: unknown[]) => {
     const answer = answers.shift() ?? 'cancelled';
     if (answer === 'signed-in') current.set(DRIVER);
     return answer;
@@ -23,16 +24,16 @@ function setup(...answers: unknown[]) {
       provideRouter([]),
       {
         provide: Session,
-        useValue: { current, load: jest.fn(async () => current()) },
+        useValue: { current, load: vi.fn(async () => current()) },
       },
       { provide: Overlays, useValue: { open } },
     ],
   });
-  jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   return { dialog: TestBed.inject(SignInDialog), open };
 }
 
-const loaded = (open: jest.Mock, call: number) =>
+const loaded = (open: Mock, call: number) =>
   (open.mock.calls[call][0] as () => Promise<unknown>)();
 
 describe('the sign-in dialog after a provider', () => {

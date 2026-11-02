@@ -3,6 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { BrandsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { BrandsStep } from './brands-step';
 
@@ -28,7 +29,7 @@ const page = (items: ReturnType<typeof brand>[]) => ({
 
 type Fixture = Awaited<ReturnType<typeof open>>['fixture'];
 
-async function open(search: jest.Mock) {
+async function open(search: Mock) {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -83,7 +84,7 @@ async function tap(fixture: Fixture, step: HTMLElement, name: string, n = 1) {
 }
 
 const catalogue = () =>
-  jest.fn(async (params?: { q?: string }) =>
+  vi.fn(async (params?: { q?: string }) =>
     !params?.q
       ? page(POPULAR)
       : page(
@@ -115,7 +116,7 @@ describe('step 2 under hostile use', () => {
     const slow = new Promise((resolve) => {
       release = resolve;
     });
-    const search = jest.fn(async (params?: { q?: string }) => {
+    const search = vi.fn(async (params?: { q?: string }) => {
       if (!params?.q) return page(POPULAR);
       if (params.q === 'lad') return slow;
       return page([]);
@@ -166,14 +167,14 @@ describe('step 2 under hostile use', () => {
   });
 
   it('survives an empty catalogue and a catalogue of one', async () => {
-    const empty = await open(jest.fn(async () => page([])));
+    const empty = await open(vi.fn(async () => page([])));
     expect(chips(empty.step)).toHaveLength(0);
     expect(text(empty.step.querySelector('[aria-live="polite"]'))).toBe(
       '0 primite · 0 refuzate',
     );
     TestBed.resetTestingModule();
 
-    const one = await open(jest.fn(async () => page([POPULAR[0]])));
+    const one = await open(vi.fn(async () => page([POPULAR[0]])));
     expect(chips(one.step).map(text)).toEqual(['BMW']);
   });
 
@@ -239,7 +240,7 @@ describe('step 2 under hostile use', () => {
 
   it('uses "de" in the counter from twenty marked brands on', async () => {
     const many = Array.from({ length: 25 }, (_, i) => brand(`Marca${i}`, i, i));
-    const { fixture, step } = await open(jest.fn(async () => page(many)));
+    const { fixture, step } = await open(vi.fn(async () => page(many)));
     fixture.componentRef.setInput('value', {
       brands: many
         .slice(0, 20)

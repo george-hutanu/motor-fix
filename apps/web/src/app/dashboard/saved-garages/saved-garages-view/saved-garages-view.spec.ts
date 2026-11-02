@@ -12,6 +12,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { SavedGaragesView } from './saved-garages-view';
 import { Consent } from '../../../consent/consent';
@@ -34,7 +35,7 @@ import {
 
 type Answer = SavedGaragesPageDto | Error | Promise<never>;
 
-let list: jest.Mock;
+let list: Mock;
 let live: ReturnType<typeof fakeLive>;
 let saved: ReturnType<typeof fakeSavedGarages>;
 let observers: ReturnType<typeof fakeObservers>;
@@ -54,7 +55,7 @@ async function render({
   live = fakeLive();
   saved = fakeSavedGarages();
   let call = 0;
-  list = jest.fn(async ({ cursor }: { cursor?: string }) => {
+  list = vi.fn(async ({ cursor }: { cursor?: string }) => {
     const answer = cursor
       ? pages[cursor]
       : answers[Math.min(call++, answers.length - 1)];
@@ -92,10 +93,10 @@ async function render({
       },
       {
         provide: GaragesService,
-        useValue: { publicGaragesControllerBySlug: jest.fn() },
+        useValue: { publicGaragesControllerBySlug: vi.fn() },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       { provide: Voice, useValue: { voice: 1 } },
     ],
   });

@@ -25,7 +25,7 @@ function fakeSession(token: string | null, renew: () => Promise<boolean>) {
   const session = {
     deletingAccount: () => false,
     epoch: () => 0,
-    renew: jest.fn(async () => {
+    renew: vi.fn(async () => {
       const ok = await renew();
       current = ok ? 'fresh' : null;
       return ok;
@@ -46,20 +46,18 @@ function fakeSession(token: string | null, renew: () => Promise<boolean>) {
 
 function realSession(token: string | null) {
   const api = {
-    authControllerRefresh: jest.fn(() =>
+    authControllerRefresh: vi.fn(() =>
       Promise.resolve({ accessToken: 'fresh' }),
     ),
-    authControllerSignIn: jest.fn(() =>
-      Promise.resolve({ accessToken: token }),
-    ),
-    authControllerSignOut: jest.fn(() => Promise.resolve()),
+    authControllerSignIn: vi.fn(() => Promise.resolve({ accessToken: token })),
+    authControllerSignOut: vi.fn(() => Promise.resolve()),
   };
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       { provide: AuthService, useValue: api },
-      { provide: MeService, useValue: { meControllerMe: jest.fn() } },
+      { provide: MeService, useValue: { meControllerMe: vi.fn() } },
       { provide: PlatformStatus, useValue: platformStatus },
     ],
   });

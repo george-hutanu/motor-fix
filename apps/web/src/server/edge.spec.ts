@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import {
   Agent,
   createServer,
@@ -12,6 +9,7 @@ import {
 import type { AddressInfo } from 'node:net';
 
 import express from 'express';
+import { vi } from 'vitest';
 
 import { mountEdge } from './edge';
 
@@ -242,11 +240,11 @@ describe('web edge', () => {
   // @traces 1345-FR-011
   describe('when the API drops the connection before answering', () => {
     beforeEach(() => {
-      jest.spyOn(console, 'error').mockImplementation(() => {});
-      jest.spyOn(console, 'log').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 
-    afterEach(() => jest.restoreAllMocks());
+    afterEach(() => vi.restoreAllMocks());
 
     it.each(['GET', 'HEAD'])(
       'sends a %s once more on a fresh connection and logs nothing',

@@ -14,6 +14,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { JobPicker } from './job-picker/job-picker';
 import { PriceRangeEditor } from './price-range-editor/price-range-editor';
@@ -97,9 +98,9 @@ const me = {
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let read: jest.Mock;
-let open: jest.Mock;
-let setRange: jest.Mock;
+let read: Mock;
+let open: Mock;
+let setRange: Mock;
 
 async function render(
   answer: () => Promise<PriceListDto> = async () => ({
@@ -111,9 +112,9 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  read = jest.fn(answer);
-  open = jest.fn(async () => 'saved');
-  setRange = jest.fn(async () => ({}));
+  read = vi.fn(answer);
+  open = vi.fn(async () => 'saved');
+  setRange = vi.fn(async () => ({}));
   TestBed.configureTestingModule({
     providers: [
       {

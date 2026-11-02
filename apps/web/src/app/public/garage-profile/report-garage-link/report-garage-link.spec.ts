@@ -3,10 +3,17 @@ import { TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ReportGarageLink } from './report-garage-link';
 import { Session } from '../../../dashboard/session';
 import { SignInDialog } from '../../../sign-in/sign-in-dialog';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../report-garage/report-garage');
+});
 
 type Role = 'driver' | 'garage' | 'mechanic' | 'admin';
 
@@ -16,9 +23,9 @@ const GARAGE = {
   slug: 'atelier-dinamo',
 } as PublicGarageDto;
 
-let open: jest.Mock;
-let gate: jest.Mock;
-let load: jest.Mock;
+let open: Mock;
+let gate: Mock;
+let load: Mock;
 
 async function render(
   options: {
@@ -36,13 +43,13 @@ async function render(
   const current = signal<{ role: string } | null>(
     options.role ? { role: options.role } : null,
   );
-  open = jest.fn(async () => options.answer ?? 'cancelled');
-  gate = jest.fn(async () => {
+  open = vi.fn(async () => options.answer ?? 'cancelled');
+  gate = vi.fn(async () => {
     if (!options.signsIn) return false;
     current.set({ role: options.signsIn });
     return true;
   });
-  load = jest.fn(async () => {
+  load = vi.fn(async () => {
     if (!current() && options.restores) current.set({ role: options.restores });
     return current();
   });
@@ -55,7 +62,7 @@ async function render(
         useValue: {
           current,
           load,
-          renew: jest.fn(async () => true),
+          renew: vi.fn(async () => true),
           roleHint: signal(options.hint ?? null),
         },
       },

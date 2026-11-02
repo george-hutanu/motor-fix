@@ -79,14 +79,14 @@ beforeEach(() => {
     value: undefined,
   });
   Element.prototype.setPointerCapture = () => {};
-  Element.prototype.scrollIntoView = jest.fn();
-  jest
-    .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-    .mockImplementation(() => sheetHeight);
+  Element.prototype.scrollIntoView = vi.fn();
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+    () => sheetHeight,
+  );
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   document.querySelector('.cdk-overlay-container')?.remove();
 });
 
@@ -519,8 +519,8 @@ describe('the on-screen keyboard', () => {
 
   it('leaves a dialog on a computer alone, and stops listening when the sheet closes', async () => {
     const viewport = fakeViewport(844);
-    const add = jest.spyOn(viewport, 'addEventListener');
-    const remove = jest.spyOn(viewport, 'removeEventListener');
+    const add = vi.spyOn(viewport, 'addEventListener');
+    const remove = vi.spyOn(viewport, 'removeEventListener');
     wide = true;
     await openTask();
     expect(add).not.toHaveBeenCalled();

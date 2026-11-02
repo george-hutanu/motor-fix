@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { CarsService, type ClientRepairDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type CorrectRepairData,
@@ -31,8 +32,8 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let correct: jest.Mock;
-let refresh: jest.Mock;
+let correct: Mock;
+let refresh: Mock;
 let result: Promise<OverlayResult<CorrectRepairResult>>;
 
 async function settle() {
@@ -48,9 +49,10 @@ async function open(
   now?: string,
 ) {
   if (now) {
-    jest.useRealTimers();
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useRealTimers();
+    vi.useFakeTimers({
+      now: new Date(now),
+      toNotFake: [
         'nextTick',
         'setImmediate',
         'clearImmediate',
@@ -66,13 +68,12 @@ async function open(
         'hrtime',
         'performance',
       ],
-      now: new Date(now),
     });
   }
-  correct = jest.fn(async ({ body }) =>
+  correct = vi.fn(async ({ body }) =>
     repair({ ...body, correctedAt: '2026-10-30T09:00:00.000Z', version: 'v2' }),
   );
-  refresh = jest.fn(async () => undefined);
+  refresh = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -135,8 +136,10 @@ async function save() {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    // 30 Oct 2026, 23:30 in Bucharest: still the 30th there.
+    now: new Date('2026-10-30T21:30:00Z'),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -152,13 +155,11 @@ beforeEach(() => {
       'hrtime',
       'performance',
     ],
-    // 30 Oct 2026, 23:30 in Bucharest: still the 30th there.
-    now: new Date('2026-10-30T21:30:00Z'),
   });
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });

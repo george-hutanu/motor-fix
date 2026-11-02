@@ -5,6 +5,7 @@ import { PLATFORM_ID } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mocked } from 'vitest';
 
 import type { MapEvents } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
@@ -32,9 +33,9 @@ const PINS: GaragePinsDto = {
 };
 const BRAND = { id: 'b-1', name: 'BMW', slug: 'bmw' };
 
-let view: jest.Mocked<ResultsMapView>;
+let view: Mocked<ResultsMapView>;
 let opened: (value: ResultsMapView) => void;
-const open = jest.fn(
+const open = vi.fn(
   (_host: HTMLElement, _on: MapEvents) =>
     new Promise<ResultsMapView>((resolve) => {
       opened = resolve;
@@ -72,12 +73,12 @@ const card = () => element().querySelector<HTMLElement>('mf-map-card');
 beforeEach(() => {
   open.mockClear();
   view = {
-    destroy: jest.fn(),
-    fit: jest.fn(),
-    light: jest.fn(),
-    mark: jest.fn(),
-    show: jest.fn(),
-    spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 80 })),
+    destroy: vi.fn(),
+    fit: vi.fn(),
+    light: vi.fn(),
+    mark: vi.fn(),
+    show: vi.fn(),
+    spot: vi.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 80 })),
   };
 });
 

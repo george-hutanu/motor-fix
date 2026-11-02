@@ -1,15 +1,15 @@
 // A stand-in for maplibre-gl in the place-map specs: no canvas, no WebGL.
-// A spec routes the module here and reads the state through `jest.requireMock`:
-//   jest.mock('maplibre-gl', () => jest.requireActual('./place-step.testing'));
-//   const { fake } = jest.requireMock<MapFake>('maplibre-gl');
+// A spec routes the module here and reads the state from this module itself:
+//   vi.mock('maplibre-gl', () => import('./place-step.testing'));
+//   import { fake } from './place-step.testing';
 
 type Listener = (payload?: unknown) => void;
 
 class FakeMap {
-  readonly data = jest.fn();
-  readonly fitBounds = jest.fn();
-  readonly jumpTo = jest.fn();
-  readonly remove = jest.fn();
+  readonly data = vi.fn();
+  readonly fitBounds = vi.fn();
+  readonly jumpTo = vi.fn();
+  readonly remove = vi.fn();
   constructor(readonly options?: Record<string, unknown>) {
     fake.map = this;
   }
@@ -48,7 +48,7 @@ class FakeMap {
 }
 
 class FakeMarker {
-  readonly remove = jest.fn();
+  readonly remove = vi.fn();
   constructor(readonly options?: Record<string, unknown>) {
     fake.marker = this;
   }

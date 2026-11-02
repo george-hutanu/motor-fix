@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ProposedJobApprove } from './proposed-job-approve';
 
@@ -22,7 +23,7 @@ const JOB = {
 const RAR = [{ code: 'mechanics', nameEn: 'mechanics', nameRo: 'mecanică' }];
 const EMOJI = '\u{1F600}';
 
-let send: jest.Mock;
+let send: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -32,7 +33,7 @@ async function settle() {
 }
 
 async function open() {
-  send = jest.fn(async () => ({ id: 'job-1', status: 'approved' }));
+  send = vi.fn(async () => ({ id: 'job-1', status: 'approved' }));
   TestBed.configureTestingModule({
     providers: [
       {

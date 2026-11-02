@@ -9,6 +9,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { RequestsView } from './requests-view';
 import { Live } from '../live';
@@ -33,10 +34,10 @@ const row = (id: string): RequestSummaryDto => ({
   status: 'sent',
 });
 
-let scrolled: jest.Mock;
+let scrolled: Mock;
 
 async function open(url: string, answer: () => Promise<unknown>) {
-  scrolled = jest.fn();
+  scrolled = vi.fn();
   Element.prototype.scrollIntoView = scrolled;
   const events = new Subject<LiveMessage>();
   TestBed.configureTestingModule({
@@ -51,7 +52,7 @@ async function open(url: string, answer: () => Promise<unknown>) {
         provide: RequestsService,
         useValue: {
           activeRequestControllerGet: () => new Promise<never>(() => undefined),
-          requestsControllerList: jest.fn(answer),
+          requestsControllerList: vi.fn(answer),
         },
       },
       {

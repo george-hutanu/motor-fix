@@ -38,7 +38,7 @@ async function open(
   const rows = signal<readonly PanelRow[]>(initial);
   await TestBed.inject(I18n).enter('garage');
   const host = TestBed.createComponent(Host);
-  const spy = jest.fn(toggle);
+  const spy = vi.fn(toggle);
   result = host.componentInstance.overlays.open<'done', SectionsPanelData>(
     DashboardSectionsPanel,
     {

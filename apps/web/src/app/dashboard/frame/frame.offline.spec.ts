@@ -27,14 +27,14 @@ const me = {
 } as unknown as MeDto;
 
 async function render(language: 'ro' | 'en' = 'ro') {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const live = {
-    close: jest.fn(),
+    close: vi.fn(),
     events: new Subject<LiveMessage>(),
     offline: signal(false),
     // The views under the frame listen too; this spec sends them nothing.
     on: () => new Subject<LiveMessage>(),
-    open: jest.fn(),
+    open: vi.fn(),
     resync: new Subject<void>(),
   };
   const current = signal<MeDto | null>(me);
@@ -42,9 +42,9 @@ async function render(language: 'ro' | 'en' = 'ro') {
     current,
     ended: new Subject<void>(),
     garageGone: () => false,
-    reload: jest.fn(async () => undefined),
+    reload: vi.fn(async () => undefined),
     shown: current,
-    signOut: jest.fn(),
+    signOut: vi.fn(),
     token: () => 'access',
   };
   TestBed.configureTestingModule({
@@ -58,7 +58,7 @@ async function render(language: 'ro' | 'en' = 'ro') {
       ]),
       { provide: Session, useValue: session },
       { provide: Live, useValue: live },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
     ],
   });
   await TestBed.inject(I18n).use(language);

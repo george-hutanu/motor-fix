@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import {
   createServer,

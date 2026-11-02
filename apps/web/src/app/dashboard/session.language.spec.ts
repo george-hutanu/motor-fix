@@ -12,7 +12,7 @@ interface Pending {
 // Each save waits until the test answers it, so its order can be checked.
 function savingSetup(signedIn: MeDto | null) {
   const pending: Pending[] = [];
-  const meControllerUpdate = jest.fn(
+  const meControllerUpdate = vi.fn(
     ({ body }: { body: { language: string } }) =>
       new Promise<MeDto>((resolve, reject) =>
         pending.push({ language: body.language, reject, resolve }),
@@ -26,7 +26,7 @@ function savingSetup(signedIn: MeDto | null) {
           : Promise.reject(new Error('401')),
     },
     me: {
-      meControllerMe: jest.fn(() =>
+      meControllerMe: vi.fn(() =>
         signedIn ? Promise.resolve(signedIn) : Promise.reject(new Error('401')),
       ),
       meControllerUpdate,
@@ -194,19 +194,19 @@ describe('saving the language on the account', () => {
     const { choice, session } = await signedInAs('ro');
 
     await choice.pick('en');
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       let done = false;
       const signingOut = session.signOut().then(() => {
         done = true;
       });
-      await jest.advanceTimersByTimeAsync(2_999);
+      await vi.advanceTimersByTimeAsync(2_999);
       expect(done).toBe(false);
-      await jest.advanceTimersByTimeAsync(1);
+      await vi.advanceTimersByTimeAsync(1);
       await signingOut;
       expect(session.current()).toBeNull();
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -234,9 +234,9 @@ describe('saving the language on the account', () => {
 
     await choice.pick('en');
     session.current.set(null);
-    jest
-      .mocked(TestBed.inject(MeService).meControllerMe)
-      .mockResolvedValueOnce(account({ language: 'ro' }));
+    vi.mocked(TestBed.inject(MeService).meControllerMe).mockResolvedValueOnce(
+      account({ language: 'ro' }),
+    );
     await session.load();
     await settle();
     expect(i18n.language()).toBe('ro');

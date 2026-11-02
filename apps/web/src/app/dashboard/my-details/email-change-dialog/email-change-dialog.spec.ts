@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { EmailChangeDialog } from './email-change-dialog';
 
@@ -15,7 +16,7 @@ class Host {
 const problem = (status: number, code: string) =>
   new HttpErrorResponse({ error: { code, status }, status });
 
-let request: jest.Mock;
+let request: Mock;
 let result: Promise<OverlayResult<{ pendingEmail: string }>>;
 
 async function settle() {
@@ -26,7 +27,7 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  request = jest.fn(async ({ body }: { body: { email: string } }) => ({
+  request = vi.fn(async ({ body }: { body: { email: string } }) => ({
     pendingEmail: body.email,
   }));
   TestBed.configureTestingModule({

@@ -1,12 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
+import type { Mock } from 'vitest';
 
 import { PLACE_MAP, type PlaceMap, viewFor } from './place-map';
 import type { MapFake } from './place-step.testing';
+// The fake itself, not the mocked module: the bundle cannot hand a hoisted mock its exports.
+import * as maplibre from './place-step.testing';
 import { circleBounds, type LatLng } from '../map-libre/map-libre';
 
-jest.mock('maplibre-gl', () => jest.requireActual('./place-step.testing'));
-const { fake } = jest.requireMock<MapFake>('maplibre-gl');
+vi.mock('maplibre-gl', () => import('./place-step.testing'));
+const { fake } = maplibre as unknown as MapFake;
 
 const SEAT: LatLng = { lat: 44.4512, lng: 26.1207 };
 const FAR: LatLng = { lat: 47.1585, lng: 27.6014 };
@@ -271,7 +274,7 @@ describe('the place map under repeated and awkward sequences', () => {
 
 describe('the place map when the map raises errors around load', () => {
   const BOOM = new Error('tile failed');
-  let failed: jest.Mock;
+  let failed: Mock;
 
   const open = () =>
     TestBed.inject(PLACE_MAP)(document.createElement('div'), {
@@ -293,7 +296,7 @@ describe('the place map when the map raises errors around load', () => {
   };
 
   beforeEach(() => {
-    failed = jest.fn();
+    failed = vi.fn();
     fake.inView = true;
     fake.manualLoad = true;
   });

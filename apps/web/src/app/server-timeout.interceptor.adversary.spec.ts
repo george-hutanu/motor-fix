@@ -48,7 +48,7 @@ function get(http: HttpClient, url = 'http://api.internal:3000/api/v1/x') {
 }
 
 const delayed = (ms: number, make: () => Response) =>
-  jest.fn(
+  vi.fn(
     (_u: string, init: RequestInit) =>
       new Promise<Response>((resolve, reject) => {
         const timer = setTimeout(() => resolve(make()), ms);
@@ -89,9 +89,9 @@ const json =
     } as unknown as Response;
   };
 
-beforeEach(() => jest.useFakeTimers());
+beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 
@@ -101,13 +101,13 @@ describe('the server-side cap on API calls, hostile cases', () => {
     const http = setup('server', delayed(2999, json({ ok: 1 })));
     const outcome = get(http);
 
-    await jest.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(3000);
     expect(outcome.error).toBeUndefined();
     expect(outcome.body).toEqual({ ok: 1 });
   });
 
   it('ends a call whose headers arrive but whose body never finishes, within 3 s', async () => {
-    const stalled = jest.fn(async (_u: string, init: RequestInit) => {
+    const stalled = vi.fn(async (_u: string, init: RequestInit) => {
       const body = new ReadableStream({
         start(controller) {
           controller.enqueue(new TextEncoder().encode('{"a":'));
@@ -127,7 +127,7 @@ describe('the server-side cap on API calls, hostile cases', () => {
     }) as unknown as typeof fetch;
     const outcome = get(setup('server', stalled));
 
-    await jest.advanceTimersByTimeAsync(3100);
+    await vi.advanceTimersByTimeAsync(3100);
     expect(outcome.settled).toBe(true);
     expect(outcome.error?.status).toBe(0);
   });
@@ -137,29 +137,29 @@ describe('the server-side cap on API calls, hostile cases', () => {
       setup('server', delayed(10, json({ message: 'boom' }, 500))),
     );
 
-    await jest.advanceTimersByTimeAsync(10);
+    await vi.advanceTimersByTimeAsync(10);
     expect(outcome.error?.status).toBe(500);
   });
 
   it('passes a fast connection failure through as a failed call', async () => {
-    const refused = jest.fn(() =>
+    const refused = vi.fn(() =>
       Promise.reject(new TypeError('fetch failed')),
     ) as unknown as typeof fetch;
     const outcome = get(setup('server', refused));
 
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
     expect(outcome.error).toBeInstanceOf(HttpErrorResponse);
     expect(outcome.error?.status).toBe(0);
   });
 
   it('leaves no more pending timers after a successful server call than a browser call does', async () => {
     const timersAfter = async (platform: string) => {
-      jest.clearAllTimers();
+      vi.clearAllTimers();
       TestBed.resetTestingModule();
       const outcome = get(setup(platform, delayed(5, json({ ok: 1 }))));
-      await jest.advanceTimersByTimeAsync(5);
+      await vi.advanceTimersByTimeAsync(5);
       expect(outcome.body).toEqual({ ok: 1 });
-      return jest.getTimerCount();
+      return vi.getTimerCount();
     };
     const browser = await timersAfter('browser');
 
@@ -168,19 +168,19 @@ describe('the server-side cap on API calls, hostile cases', () => {
 
   it('aborts the underlying fetch when the caller unsubscribes', async () => {
     let signal: AbortSignal | undefined;
-    const never = jest.fn((_u: string, init: RequestInit) => {
+    const never = vi.fn((_u: string, init: RequestInit) => {
       signal = init.signal ?? undefined;
       return new Promise<Response>(() => undefined);
     }) as unknown as typeof fetch;
     const outcome = get(setup('server', never));
 
-    await jest.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(100);
     outcome.unsubscribe();
     expect(signal?.aborted).toBe(true);
   });
 
   it('gives each of many concurrent calls its own 3 s', async () => {
-    const never = jest.fn(
+    const never = vi.fn(
       (_u: string, init: RequestInit) =>
         new Promise<Response>((_r, reject) =>
           init.signal?.addEventListener('abort', () =>
@@ -191,12 +191,12 @@ describe('the server-side cap on API calls, hostile cases', () => {
     const http = setup('server', never);
     const calls = Array.from({ length: 200 }, () => get(http));
 
-    await jest.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(3000);
     expect(calls.filter((c) => c.error?.status === 0)).toHaveLength(200);
   });
 
   it('starts a fresh 3 s on a second call made after the first timed out', async () => {
-    const never = jest.fn(
+    const never = vi.fn(
       (_u: string, init: RequestInit) =>
         new Promise<Response>((_r, reject) =>
           init.signal?.addEventListener('abort', () =>
@@ -206,24 +206,24 @@ describe('the server-side cap on API calls, hostile cases', () => {
     ) as unknown as typeof fetch;
     const http = setup('server', never);
     get(http);
-    await jest.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(3000);
     const second = get(http);
 
-    await jest.advanceTimersByTimeAsync(2999);
+    await vi.advanceTimersByTimeAsync(2999);
     expect(second.settled).toBe(false);
-    await jest.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1);
     expect(second.error?.status).toBe(0);
   });
 
   it('applies no cap for an unrecognised platform id other than server', async () => {
     const outcome = get(setup('browser', delayed(10_000, json({ ok: 1 }))));
 
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(outcome.body).toEqual({ ok: 1 });
   });
 
   it('caps a call to a non-ASCII url on the server as well', async () => {
-    const never = jest.fn(
+    const never = vi.fn(
       (_u: string, init: RequestInit) =>
         new Promise<Response>((_r, reject) =>
           init.signal?.addEventListener('abort', () =>
@@ -236,7 +236,7 @@ describe('the server-side cap on API calls, hostile cases', () => {
       'http://api.internal:3000/api/v1/garages/ăâîșț?q=%F0%9F%9A%97',
     );
 
-    await jest.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(3000);
     expect(outcome.error?.status).toBe(0);
   });
 });

@@ -8,6 +8,7 @@ import {
 import { ConsentsService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ANALYTICS, CONSENT_KEY, Consent, type StoredChoice } from './consent';
 import { Session } from '../dashboard/session';
@@ -26,7 +27,7 @@ const choice = (overrides: Partial<StoredChoice> = {}): StoredChoice => ({
   ...overrides,
 });
 
-let analytics: { event: jest.Mock; load: jest.Mock; pageview: jest.Mock };
+let analytics: { event: Mock; load: Mock; pageview: Mock };
 
 const keep = (value: StoredChoice) =>
   localStorage.setItem(CONSENT_KEY, JSON.stringify(value));
@@ -50,19 +51,19 @@ function withMeta(domain: string | null) {
 
 async function start(platform = 'browser') {
   withMeta('motorfix.ro');
-  analytics = { event: jest.fn(), load: jest.fn(), pageview: jest.fn() };
+  analytics = { event: vi.fn(), load: vi.fn(), pageview: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       { provide: PLATFORM_ID, useValue: platform },
       {
         provide: ConsentsService,
         useValue: {
-          consentsControllerMine: jest.fn(async () => ({
+          consentsControllerMine: vi.fn(async () => ({
             accepted: [],
             analytics: null,
           })),
-          consentsControllerRecord: jest.fn(async () => ({ id: 'r1' })),
-          consentsControllerRecordMine: jest.fn(async () => ({ id: 'r2' })),
+          consentsControllerRecord: vi.fn(async () => ({ id: 'r1' })),
+          consentsControllerRecordMine: vi.fn(async () => ({ id: 'r2' })),
         },
       },
       { provide: ANALYTICS, useValue: analytics },
@@ -98,7 +99,7 @@ async function start(platform = 'browser') {
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   withMeta(null);
 });
 

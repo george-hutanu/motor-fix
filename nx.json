@@ -25,6 +25,7 @@
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/vitest*.config.ts",
       "!{projectRoot}/vitest.config.mts",
       "!{projectRoot}/src/test-setup.[jt]s",
       "!{projectRoot}/test-setup.[jt]s"
@@ -65,6 +66,27 @@
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
     },
+    "@angular/build:unit-test": {
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/vitest.shared.ts",
+        {
+          "externalDependencies": [
+            "vitest",
+            "@angular/build",
+            "@analogjs/vite-plugin-angular",
+            "jsdom"
+          ]
+        },
+        {
+          "dependentTasksOutputFiles": "**/*.d.ts",
+          "transitive": true
+        }
+      ],
+      "outputs": []
+    },
     "@nx/esbuild:esbuild": {
       "cache": true,
       "dependsOn": ["^build"],
@@ -87,13 +109,7 @@
           "env": "TEST_SUITE"
         },
         {
-          "externalDependencies": [
-            "jest",
-            "@nx/jest",
-            "ts-jest",
-            "jest-preset-angular",
-            "vitest"
-          ]
+          "externalDependencies": ["jest", "@nx/jest", "ts-jest", "vitest"]
         },
         {
           "dependentTasksOutputFiles": "**/*.d.ts",

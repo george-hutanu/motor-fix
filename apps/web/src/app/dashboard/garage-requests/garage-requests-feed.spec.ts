@@ -13,6 +13,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   fakeLive,
@@ -25,17 +26,16 @@ import { GarageRequestsFeed } from './garage-requests-feed';
 import { Live } from '../live';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const OWNER = ['garage.requests', 'garage.schedule', 'garage.team'];
 
 type Answer = GarageRequestListDto | Error | HttpErrorResponse;
 
 let live: ReturnType<typeof fakeLive>;
-let list: jest.Mock;
+let list: Mock;
 let me: ReturnType<typeof signal<MeDto | null>>;
 
 const account = (capabilities: string[]) =>
@@ -67,7 +67,7 @@ async function start(
   me = signal<MeDto | null>(account(capabilities));
   const answers = { closed, quoted, waiting };
   const calls = { closed: 0, quoted: 0, waiting: 0 };
-  list = jest.fn(
+  list = vi.fn(
     async ({ cursor, status }: { cursor?: string; status: Filter }) => {
       if (cursor) return listOf([quotedRow({ id: `after-${cursor}` })]);
       const answer =
@@ -114,7 +114,7 @@ const visibility = (state: DocumentVisibilityState) =>
   });
 
 beforeEach(() => {
-  (toast as unknown as jest.Mock).mockClear();
+  (toast as unknown as Mock).mockClear();
   visibility('visible');
 });
 afterEach(() => TestBed.resetTestingModule());
@@ -567,7 +567,7 @@ describe('GarageRequestsFeed: opened again', () => {
 
   it('reads each list again once past 30 s, showing the held rows meanwhile', async () => {
     const begun = Date.now();
-    const clock = jest.spyOn(Date, 'now').mockReturnValue(begun);
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(begun);
     try {
       await lists();
       clock.mockReturnValue(begun + 30_000);

@@ -34,7 +34,7 @@ describe('openLiveTabs', () => {
   });
 
   it('reads the name only where the browser can share a stream', () => {
-    const name = jest.fn(() => 'a1:driver');
+    const name = vi.fn(() => 'a1:driver');
 
     openLiveTabs(name);
 

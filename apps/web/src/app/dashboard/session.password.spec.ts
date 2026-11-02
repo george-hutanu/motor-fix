@@ -5,8 +5,8 @@ function passwordSetup() {
   let refuse: (error: unknown) => void = () => undefined;
   const { auth, session } = setup({
     auth: {
-      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-      passwordChangeControllerChange: jest.fn(
+      authControllerRefresh: vi.fn(() => Promise.reject(new Error('401'))),
+      passwordChangeControllerChange: vi.fn(
         () =>
           new Promise((resolve, reject) => {
             answer = resolve;
@@ -14,7 +14,7 @@ function passwordSetup() {
           }),
       ),
     },
-    me: { meControllerMe: jest.fn() },
+    me: { meControllerMe: vi.fn() },
   });
   return {
     answer: () => answer(),
@@ -26,7 +26,7 @@ function passwordSetup() {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // @traces 139-FR-014
 describe('changing the password from this tab', () => {
@@ -46,7 +46,7 @@ describe('changing the password from this tab', () => {
   });
 
   it('keeps this tab signed in through the sign-out it sends the others, while it is sent and for a while after', async () => {
-    jest.useFakeTimers({ now: 0 });
+    vi.useFakeTimers({ now: 0 });
     const { answer, session } = passwordSetup();
     expect(session.keepsThroughRevoke()).toBe(false);
 
@@ -56,7 +56,7 @@ describe('changing the password from this tab', () => {
     await done;
     expect(session.keepsThroughRevoke()).toBe(true);
 
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     expect(session.keepsThroughRevoke()).toBe(false);
   });
 

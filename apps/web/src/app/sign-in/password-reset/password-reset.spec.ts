@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { AuthService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PasswordReset } from './password-reset';
 import type { AuthSwitch } from '../sign-in';
@@ -13,7 +14,7 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let ask: jest.Mock;
+let ask: Mock;
 let result: Promise<OverlayResult<AuthSwitch>>;
 
 async function settle() {
@@ -24,7 +25,7 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro', email = '') {
-  ask = jest.fn(async () => undefined);
+  ask = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       { provide: AuthService, useValue: { passwordResetControllerAsk: ask } },
@@ -73,7 +74,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 127-FR-010

@@ -6,6 +6,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PlaceDialog } from './place-dialog';
 import { placesAnswered } from '../../../public/address-field/address-field.testing';
@@ -35,7 +36,7 @@ type Located = {
   options?: PositionOptions;
 };
 let located: Located[];
-let search: jest.Mock;
+let search: Mock;
 let result: Promise<OverlayResult<Place>>;
 let closed: OverlayResult<Place> | undefined;
 
@@ -44,7 +45,7 @@ function geolocation(available = true) {
     configurable: true,
     value: available
       ? {
-          getCurrentPosition: jest.fn(
+          getCurrentPosition: vi.fn(
             (
               ok: PositionCallback,
               fail: PositionErrorCallback,
@@ -132,7 +133,7 @@ const refusal = (code: number) =>
 
 beforeEach(() => {
   located = [];
-  search = jest.fn(async () => ({ items: [CLUJ] }));
+  search = vi.fn(async () => ({ items: [CLUJ] }));
   geolocation();
 });
 

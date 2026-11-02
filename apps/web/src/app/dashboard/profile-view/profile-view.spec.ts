@@ -20,9 +20,12 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock, MockInstance } from 'vitest';
 
 import { ProfileView } from './profile-view';
+import { BrandsEditDialog } from '../brands-edit-dialog/brands-edit-dialog';
 import { Live } from '../live';
+import { ProfileEditDialog } from '../profile-edit-dialog/profile-edit-dialog';
 import { Session } from '../session';
 
 const GARAGE = 'garage-1';
@@ -120,10 +123,10 @@ let me = OWNER;
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let read: jest.Mock;
-let legal: jest.Mock;
-let weekly: jest.Mock;
-let navigate: jest.SpyInstance;
+let read: Mock;
+let legal: Mock;
+let weekly: Mock;
+let navigate: MockInstance;
 // Every GaragesService member the view touches beyond the two reads.
 let touched: string[];
 
@@ -134,9 +137,9 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  read = jest.fn(load);
-  legal = jest.fn(legalLoad);
-  weekly = jest.fn(async () => ({ weeks: [] }));
+  read = vi.fn(load);
+  legal = vi.fn(legalLoad);
+  weekly = vi.fn(async () => ({ weeks: [] }));
   touched = [];
   const reads: Record<string, unknown> = {
     garageProfileControllerRead: read,
@@ -162,7 +165,7 @@ async function render(
           },
         }),
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       { provide: Session, useValue: { shown: signal(me) } },
       provideRouter([]),
       {
@@ -178,7 +181,7 @@ async function render(
       },
     ],
   });
-  navigate = jest
+  navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const i18n = TestBed.inject(I18n);
@@ -368,7 +371,7 @@ describe('Profilul service-ului: the owner edits in place', () => {
   it('opens the hours dialog with the profile as read, asking nothing on a cancel', async () => {
     const { element, settle } = await render();
     await settle();
-    const open = TestBed.inject(Overlays).open as jest.Mock;
+    const open = TestBed.inject(Overlays).open as Mock;
     open.mockResolvedValueOnce('cancelled');
 
     editOf(element, 'hours').click();
@@ -376,7 +379,7 @@ describe('Profilul service-ului: the owner edits in place', () => {
 
     expect(open).toHaveBeenCalledTimes(1);
     const [source, options] = open.mock.calls[0];
-    expect(source.name).toBe('ProfileEditDialog');
+    expect(source).toBe(ProfileEditDialog);
     expect(options).toEqual({
       confirmDiscard: false,
       data: { garageId: GARAGE, group: 'hours', profile: answer() },
@@ -396,7 +399,7 @@ describe('Profilul service-ului: the owner edits in place', () => {
       hours: { ...answer().hours, sat: [['10:00', '12:00']] },
       version: '1',
     });
-    (TestBed.inject(Overlays).open as jest.Mock).mockResolvedValueOnce(saved);
+    (TestBed.inject(Overlays).open as Mock).mockResolvedValueOnce(saved);
 
     editOf(element, 'hours').click();
     await settle();
@@ -421,7 +424,7 @@ describe('Profilul service-ului: the owner edits in place', () => {
   it('opens the next dialog with the saved stamp', async () => {
     const { element, settle } = await render();
     await settle();
-    const open = TestBed.inject(Overlays).open as jest.Mock;
+    const open = TestBed.inject(Overlays).open as Mock;
     open.mockResolvedValueOnce(answer({ version: '1' }));
 
     editOf(element, 'hours').click();
@@ -472,7 +475,7 @@ describe('Profilul service-ului: the owner edits the name and description', () =
   it('opens the texts dialog and shows the saved name at once', async () => {
     const { element, settle } = await render();
     await settle();
-    const open = TestBed.inject(Overlays).open as jest.Mock;
+    const open = TestBed.inject(Overlays).open as Mock;
     open.mockResolvedValueOnce(
       answer({ description: 'Nou', name: 'Service Militari', version: '1' }),
     );
@@ -542,7 +545,7 @@ describe('Profilul service-ului: the owner edits the phone and the service area'
       }),
     );
     await settle();
-    (TestBed.inject(Overlays).open as jest.Mock).mockResolvedValueOnce(
+    (TestBed.inject(Overlays).open as Mock).mockResolvedValueOnce(
       answer({
         address: undefined,
         businessKind: 'mobile',
@@ -671,7 +674,7 @@ describe('Profilul service-ului: the owner edits the brands', () => {
   it('opens the brands dialog through a lazy import, the garage named, and reads nothing on a cancel', async () => {
     const { element, settle } = await render();
     await settle();
-    const open = TestBed.inject(Overlays).open as jest.Mock;
+    const open = TestBed.inject(Overlays).open as Mock;
     open.mockResolvedValueOnce('cancelled');
 
     editOf(element, 'brands').click();
@@ -679,9 +682,9 @@ describe('Profilul service-ului: the owner edits the brands', () => {
 
     expect(open).toHaveBeenCalledTimes(1);
     const [source, options] = open.mock.calls[0];
-    expect(source.name).not.toBe('BrandsEditDialog');
+    expect(source).not.toBe(BrandsEditDialog);
     const loaded = await source();
-    expect(loaded.name).toBe('BrandsEditDialog');
+    expect(loaded).toBe(BrandsEditDialog);
     expect(options).toEqual({
       confirmDiscard: false,
       data: { garageId: GARAGE },
@@ -695,7 +698,7 @@ describe('Profilul service-ului: the owner edits the brands', () => {
   it('keeps the control after a dialog closed with no answer, and a second press opens it again', async () => {
     const { element, settle } = await render();
     await settle();
-    const open = TestBed.inject(Overlays).open as jest.Mock;
+    const open = TestBed.inject(Overlays).open as Mock;
     open.mockResolvedValueOnce('cancelled').mockResolvedValueOnce('cancelled');
 
     editOf(element, 'brands').click();
@@ -709,7 +712,7 @@ describe('Profilul service-ului: the owner edits the brands', () => {
   it('shows the saved brands at once, fuel lines and note included, until the next garage.updated read', async () => {
     const { element, settle } = await render();
     await settle();
-    (TestBed.inject(Overlays).open as jest.Mock).mockResolvedValueOnce({
+    (TestBed.inject(Overlays).open as Mock).mockResolvedValueOnce({
       brandNote: 'Doar germane',
       doesNotTake: [{ id: 'lada', name: 'Lada', slug: 'lada' }],
       refusalPhrase: null,

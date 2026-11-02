@@ -8,10 +8,17 @@ import {
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { RequestQuoteButton } from './request-quote-button';
 import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../request-quote/request-quote');
+});
 
 const GARAGE: PublicGarageDto = {
   brand: { id: 'b-1', name: 'Dacia', slug: 'dacia', stance: 'works_on' },
@@ -35,8 +42,8 @@ const GARAGE: PublicGarageDto = {
   worksOn: [],
 };
 
-let open: jest.Mock;
-let track: jest.Mock;
+let open: Mock;
+let track: Mock;
 
 async function render(
   options: {
@@ -46,8 +53,8 @@ async function render(
     textKey?: string;
   } = {},
 ) {
-  open = jest.fn(async () => 'cancelled');
-  track = jest.fn();
+  open = vi.fn(async () => 'cancelled');
+  track = vi.fn();
   const role = options.role ?? null;
   TestBed.configureTestingModule({
     providers: [
@@ -58,8 +65,8 @@ async function render(
         provide: Session,
         useValue: {
           current: signal(role ? { role } : null),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: signal(null),
         },
       },

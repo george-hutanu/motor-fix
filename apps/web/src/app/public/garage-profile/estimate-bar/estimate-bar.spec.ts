@@ -11,12 +11,19 @@ import {
 import type { MeDto, PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { EstimateBar } from './estimate-bar';
 import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
 import { EstimateSheet } from '../estimate-sheet/estimate-sheet';
 import { PriceSelection } from '../price-selection/price-selection';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../request-quote/request-quote');
+});
 
 const row = (jobTypeId: string, nameRo: string, from: number, to: number) => ({
   fromBani: from,
@@ -62,8 +69,8 @@ class Host {
 }
 
 let fixture: ComponentFixture<Host>;
-let open: jest.Mock;
-let track: jest.Mock;
+let open: Mock;
+let track: Mock;
 
 async function render({
   garage = GARAGE,
@@ -71,8 +78,8 @@ async function render({
   platform = 'browser',
   sync = true,
 } = {}) {
-  open = jest.fn(async () => undefined);
-  track = jest.fn();
+  open = vi.fn(async () => undefined);
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -83,8 +90,8 @@ async function render({
         provide: Session,
         useValue: {
           current: signal(role === null ? null : { role }),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: signal(role),
         },
       },

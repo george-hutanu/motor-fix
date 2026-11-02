@@ -9,6 +9,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayOptions, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { AdminAccountRepairs } from './admin-account-repairs';
 import type { AdminRepairData } from '../../admin-repair-dialog/admin-repair-dialog';
@@ -51,11 +52,7 @@ async function settle() {
   }
 }
 
-async function mount(services: {
-  list: jest.Mock;
-  open?: jest.Mock;
-  overlay?: jest.Mock;
-}) {
+async function mount(services: { list: Mock; open?: Mock; overlay?: Mock }) {
   TestBed.configureTestingModule({
     providers: [
       {
@@ -63,13 +60,13 @@ async function mount(services: {
         useValue: {
           adminRepairsControllerList: services.list,
           adminRepairsControllerOpen:
-            services.open ?? jest.fn(async ({ id }) => repair({ id })),
+            services.open ?? vi.fn(async ({ id }) => repair({ id })),
         },
       },
       {
         provide: Overlays,
         useValue: {
-          open: services.overlay ?? jest.fn(async () => 'cancelled'),
+          open: services.overlay ?? vi.fn(async () => 'cancelled'),
         },
       },
     ],
@@ -99,7 +96,7 @@ describe('the account repairs section under hostile input', () => {
     const items = Array.from({ length: 1000 }, (_, i) =>
       row(`r-${i}`, '2025-03-12'),
     );
-    await mount({ list: jest.fn(async () => ({ items, truncated: true })) });
+    await mount({ list: vi.fn(async () => ({ items, truncated: true })) });
 
     expect(element.querySelectorAll('li')).toHaveLength(1000);
     expect(text()).toContain('și altele');
@@ -107,7 +104,7 @@ describe('the account repairs section under hostile input', () => {
 
   it('shows the empty state, not the more line, for an empty cut list', async () => {
     await mount({
-      list: jest.fn(async () => ({ items: [], truncated: true })),
+      list: vi.fn(async () => ({ items: [], truncated: true })),
     });
 
     expect(text()).toContain('Nicio reparație adăugată de acest cont');
@@ -115,7 +112,7 @@ describe('the account repairs section under hostile input', () => {
 
   it('shows brand and model markup as plain text', async () => {
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [
           row('r-1', '2025-03-12', {
             brandName: '<img src=x onerror=alert(1)>',
@@ -132,7 +129,7 @@ describe('the account repairs section under hostile input', () => {
   });
 
   it('reads the list of the new account when the account changes', async () => {
-    const list = jest.fn(async ({ id }: { id: string }) => ({
+    const list = vi.fn(async ({ id }: { id: string }) => ({
       items: [row(`${id}-r`, id === 'acc-1' ? '2025-03-12' : '2024-11-02')],
       truncated: false,
     }));
@@ -147,7 +144,7 @@ describe('the account repairs section under hostile input', () => {
 
   it('shows the latest account when an earlier read answers last', async () => {
     const resolvers: Record<string, (v: unknown) => void> = {};
-    const list = jest.fn(
+    const list = vi.fn(
       ({ id }: { id: string }) =>
         new Promise((resolve) => {
           resolvers[id] = resolve;
@@ -172,14 +169,14 @@ describe('the account repairs section under hostile input', () => {
   });
 
   it('does not add a row when the dialog saves a repair the list does not hold', async () => {
-    const overlay = jest.fn(
+    const overlay = vi.fn(
       async (_s: unknown, options: OverlayOptions<AdminRepairData>) => {
         options.data?.saved(repair({ doneOn: '2020-01-01', id: 'stranger' }));
         return 'cancelled';
       },
     );
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [row('r-1', '2025-03-12')],
         truncated: false,
       })),
@@ -194,11 +191,11 @@ describe('the account repairs section under hostile input', () => {
 
   it('shows the empty state once the last row has gone', async () => {
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [row('r-1', '2025-03-12')],
         truncated: false,
       })),
-      overlay: jest.fn(async () => 'gone'),
+      overlay: vi.fn(async () => 'gone'),
     });
 
     openButtons()[0].click();
@@ -210,11 +207,11 @@ describe('the account repairs section under hostile input', () => {
 
   it('keeps the more line after a row is removed from a cut list', async () => {
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [row('r-1', '2025-03-12'), row('r-2', '2024-11-02')],
         truncated: true,
       })),
-      overlay: jest.fn(async () => 'gone'),
+      overlay: vi.fn(async () => 'gone'),
     });
 
     openButtons()[0].click();
@@ -225,13 +222,13 @@ describe('the account repairs section under hostile input', () => {
   });
 
   it('opens again after a failed open read', async () => {
-    const open = jest
+    const open = vi
       .fn()
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 503 }))
       .mockResolvedValueOnce(repair());
-    const overlay = jest.fn(async () => 'cancelled');
+    const overlay = vi.fn(async () => 'cancelled');
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [row('r-1', '2025-03-12')],
         truncated: false,
       })),
@@ -248,12 +245,12 @@ describe('the account repairs section under hostile input', () => {
   });
 
   it('clears the open error line once a later open succeeds', async () => {
-    const open = jest
+    const open = vi
       .fn()
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 503 }))
       .mockResolvedValueOnce(repair());
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [row('r-1', '2025-03-12')],
         truncated: false,
       })),
@@ -269,13 +266,13 @@ describe('the account repairs section under hostile input', () => {
   });
 
   it('keeps the rows and says the open failed on a 403', async () => {
-    const overlay = jest.fn();
+    const overlay = vi.fn();
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [row('r-1', '2025-03-12')],
         truncated: false,
       })),
-      open: jest.fn(async () => {
+      open: vi.fn(async () => {
         throw new HttpErrorResponse({ status: 403 });
       }),
       overlay,
@@ -293,7 +290,7 @@ describe('the account repairs section under hostile input', () => {
 
   it('shows the list failure line, not the empty state, when the read fails', async () => {
     await mount({
-      list: jest.fn(async () => {
+      list: vi.fn(async () => {
         throw new HttpErrorResponse({ status: 0 });
       }),
     });
@@ -303,7 +300,7 @@ describe('the account repairs section under hostile input', () => {
   });
 
   it('keeps showing the failure when Reîncearcă fails again, and recovers after', async () => {
-    const list = jest
+    const list = vi
       .fn()
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }))
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }))
@@ -328,7 +325,7 @@ describe('the account repairs section under hostile input', () => {
 
   it('sorts nothing: rows stay in the answered order even when dates run oldest first', async () => {
     await mount({
-      list: jest.fn(async () => ({
+      list: vi.fn(async () => ({
         items: [row('a', '2020-01-01'), row('b', '2025-01-01')],
         truncated: false,
       })),

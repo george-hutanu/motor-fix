@@ -33,7 +33,7 @@ const CITY_WAITING: Record<string, number> = {
 };
 
 export async function renderAdmin(url = '/app/admin') {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const asked: Params[] = [];
   const events = new Subject<LiveMessage>();
   const me = signal<MeDto | null>({
@@ -68,23 +68,23 @@ export async function renderAdmin(url = '/app/admin') {
           current: me,
           ended: new Subject<void>(),
           garageGone: () => false,
-          reload: jest.fn(async () => undefined),
+          reload: vi.fn(async () => undefined),
           shown: computed(() => me()),
-          signOut: jest.fn(),
+          signOut: vi.fn(),
           token: () => 'access',
         },
       },
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events,
           offline: signal(false),
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
             ),
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject<void>(),
         },
       },

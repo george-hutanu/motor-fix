@@ -1,15 +1,16 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { SearchService } from '@motor-fix/data-access';
+import type { Mock } from 'vitest';
 
 import { FilterWarm, LIFE_MS } from './filter-warm';
 import { sendMeasurementsTo } from '../../../telemetry/browser/measure/measure';
 
 const QUERY = { brand: 'bmw', near: '44.437,26.117', sort: 'rating' as const };
 
-let list: jest.Mock;
-let pins: jest.Mock;
-const measured = jest.fn();
+let list: Mock;
+let pins: Mock;
+const measured = vi.fn();
 let visibility: DocumentVisibilityState;
 let now: number;
 
@@ -41,18 +42,18 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  list = jest.fn().mockResolvedValue({});
-  pins = jest.fn().mockResolvedValue({});
+  list = vi.fn().mockResolvedValue({});
+  pins = vi.fn().mockResolvedValue({});
   visibility = 'visible';
   now = 1_000_000;
-  jest.spyOn(Date, 'now').mockImplementation(() => now);
+  vi.spyOn(Date, 'now').mockImplementation(() => now);
   measured.mockReset();
   sendMeasurementsTo(measured);
   TestBed.resetTestingModule();
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the filter warm under hostile conditions', () => {

@@ -6,6 +6,7 @@ import { ApiConfiguration } from '@motor-fix/data-access/api-configuration';
 import { AdminService } from '@motor-fix/data-access/services/admin.service';
 import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { VerificationPresence } from './verification-presence';
 import { Live } from '../live';
@@ -20,8 +21,8 @@ const MIHAI = { name: 'Mihai I.', since: '2026-10-24T08:05:00.000Z' };
 let events: Subject<LiveMessage>;
 let resyncs: Subject<void>;
 let token: string | null;
-const api = { verificationFileControllerPresence: jest.fn() };
-let fetchMock: jest.Mock;
+const api = { verificationFileControllerPresence: vi.fn() };
+let fetchMock: Mock;
 let intervals: { delay: number; run: () => void }[];
 const realSetInterval = globalThis.setInterval;
 
@@ -80,7 +81,7 @@ beforeEach(() => {
   resyncs = new Subject<void>();
   token = 'token-1';
   intervals = [];
-  jest.spyOn(globalThis, 'setInterval').mockImplementation(((
+  vi.spyOn(globalThis, 'setInterval').mockImplementation(((
     run: () => void,
     delay?: number,
   ) => {
@@ -89,7 +90,7 @@ beforeEach(() => {
     intervals.push({ delay, run });
     return realSetInterval(() => undefined, 1_000_000);
   }) as typeof setInterval);
-  fetchMock = jest.fn(async () => new Response(null, { status: 204 }));
+  fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   api.verificationFileControllerPresence
     .mockReset()
@@ -98,7 +99,7 @@ beforeEach(() => {
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the presence banner of a verification file', () => {

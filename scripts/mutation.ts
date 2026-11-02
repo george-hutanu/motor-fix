@@ -89,6 +89,34 @@ export function markInPlace(
   if (options['inPlace'] === true) env[IN_PLACE_ENV] = '1';
 }
 
+// The variable that hands a shard's spec globs to vitest.shared.ts: the Vitest
+// runner takes no include list, and Stryker loads the config file itself.
+export const MUTATION_SPECS = 'MUTATION_SPECS';
+
+// A shard's specs for an Angular project, as the environment entry
+// vitest.shared.ts reads: a named shard's globs, or for rest every spec but
+// those of the named shards.
+export function vitestSpecs(
+  project: string,
+  root: string,
+  shard: string,
+): Record<string, string> {
+  const scope = scopeOf(project, root, shard);
+  const shards = shardsOf(readShardFile(process.cwd()), project) ?? {};
+  const named = Object.keys(shards).flatMap(
+    (name) => shardScope(root, shards, name).testMatch,
+  );
+  const exclude = shard === 'rest' ? named : [];
+  return {
+    [MUTATION_SPECS]: JSON.stringify({ exclude, include: scope.testMatch }),
+  };
+}
+
+// The five Angular projects carry a vitest.config.ts (vitest.shared.ts); the
+// Nest projects on Vitest a vitest.config.mts.
+const testsOnVitest = (root: string) =>
+  existsSync(join(root, 'vitest.config.ts'));
+
 export function strykerOptions(
   project: string,
   root: string,
@@ -101,13 +129,29 @@ export function strykerOptions(
   const reports = reportsDir(project, shard);
   const scope = shard ? scopeOf(project, root, shard) : undefined;
   const vitestConfig = join(root, 'vitest.config.mts');
-  const runner = existsSync(vitestConfig)
+  const runner = testsOnVitest(root)
     ? {
+        plugins: [
+          '@stryker-mutator/vitest-runner',
+          '@stryker-mutator/typescript-checker',
+        ],
         testRunner: 'vitest',
-        vitest: { configFile: vitestConfig },
-        ...(shard && { testFiles: testFilesOf(project, root, shard) }),
+        // An Angular project's shard specs go through MUTATION_SPECS
+        // (vitestSpecs); related mode would need every spec to import its
+        // sources directly.
+        vitest: {
+          configFile: join(root, 'vitest.config.ts'),
+          dir: join(root, 'src'),
+          related: false,
+        },
       }
-    : { jest: jestOptions(root, scope), testRunner: 'jest' };
+    : existsSync(vitestConfig)
+      ? {
+          testRunner: 'vitest',
+          vitest: { configFile: vitestConfig },
+          ...(shard && { testFiles: testFilesOf(project, root, shard) }),
+        }
+      : { jest: jestOptions(root, scope), testRunner: 'jest' };
   return {
     checkers: ['typescript'],
     dryRunTimeoutMinutes: DRY_RUN_TIMEOUT_MINUTES,
@@ -272,6 +316,8 @@ async function main() {
   }
   const options = strykerOptions(project, root, incremental, only, shard);
   markInPlace(options);
+  if (shard && testsOnVitest(root))
+    Object.assign(process.env, vitestSpecs(project, root, shard));
   const floor = projectFloor(root);
   // A specifier the compiler cannot follow: the spec build resolves with node10,
   // which cannot see this ESM-only package.
@@ -286,18 +332,19 @@ async function main() {
     Date.now() - started,
   );
   writeScore(reports, record);
+  appendSummary(label, record.score, record.floor, Date.now() - started);
+}
+
+function appendSummary(
+  label: string,
+  score: number | null,
+  floor: number,
+  ms: number,
+): void {
   const summary = process.env['GITHUB_STEP_SUMMARY'];
-  if (summary)
-    appendFileSync(
-      summary,
-      summaryRows(
-        existsSync(summary) ? readFileSync(summary, 'utf8') : '',
-        label,
-        record.score,
-        record.floor,
-        Date.now() - started,
-      ),
-    );
+  if (!summary) return;
+  const before = existsSync(summary) ? readFileSync(summary, 'utf8') : '';
+  appendFileSync(summary, summaryRows(before, label, score, floor, ms));
 }
 
 if (process.argv[1]?.endsWith('mutation.ts')) {

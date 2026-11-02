@@ -40,7 +40,7 @@ const css = readFileSync(join(__dirname, 'styles/cockpit.css'), 'utf8');
   template: `
     <a hlmBtn id="link" href="/x">Link</a>
     <button hlmBtn id="dyn" [variant]="variant()">Dyn</button>
-    <button hlmBtn id="bad" variant="bogus">Bad</button>
+    <button hlmBtn id="bad" [variant]="$any('bogus')">Bad</button>
     <button hlmBtn id="dis" disabled>Dis</button>
 
     <input hlmInput id="field" [(ngModel)]="text" />
@@ -363,7 +363,7 @@ describe('helm dialog', () => {
   });
 
   it('reports nothing when its close label is given', async () => {
-    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { fixture, q } = await render();
 
     q<HTMLButtonElement>('#dtrig').click();
@@ -388,7 +388,7 @@ describe('helm dialog', () => {
       `,
     })
     class BlankLabel {}
-    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const fixture = TestBed.createComponent(BlankLabel);
     await settle(fixture);
 
@@ -418,7 +418,7 @@ describe('helm dialog', () => {
 
 describe('helm sheet', () => {
   it('opens as a dialog and, in dev mode, reports its empty close label by name', async () => {
-    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { fixture, q } = await render();
 
     q<HTMLButtonElement>('#strig').click();

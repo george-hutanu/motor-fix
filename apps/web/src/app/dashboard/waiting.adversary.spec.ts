@@ -9,22 +9,22 @@ import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { Live, type LiveState } from './live';
 import { Session } from './session';
 import { Waiting } from './waiting';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
-const toasts = toast as unknown as jest.Mock;
+const toasts = toast as unknown as Mock;
 
 let account: WritableSignal<{ id: string } | null>;
 let signedOut: Subject<string>;
 let live: {
-  catchUp: jest.Mock;
+  catchUp: Mock;
   offline: WritableSignal<boolean>;
   state: WritableSignal<LiveState>;
 };
@@ -36,11 +36,11 @@ Object.defineProperty(window.navigator, 'onLine', {
 
 const settle = async () => {
   TestBed.tick();
-  await jest.advanceTimersByTimeAsync(5);
+  await vi.advanceTimersByTimeAsync(5);
   TestBed.tick();
 };
 const elapse = async (ms: number) => {
-  await jest.advanceTimersByTimeAsync(ms);
+  await vi.advanceTimersByTimeAsync(ms);
   TestBed.tick();
 };
 
@@ -80,12 +80,12 @@ const eta = {
 };
 
 beforeEach(() => {
-  jest.useFakeTimers({ doNotFake: ['setImmediate'] });
-  jest.setSystemTime(new Date('2026-10-05T10:00:00.000Z'));
+  vi.useFakeTimers({ toNotFake: ['setImmediate'] });
+  vi.setSystemTime(new Date('2026-10-05T10:00:00.000Z'));
   account = signal({ id: 'account-1' });
   signedOut = new Subject<string>();
   live = {
-    catchUp: jest.fn(),
+    catchUp: vi.fn(),
     offline: signal(false),
     state: signal<LiveState>('open'),
   };
@@ -95,7 +95,7 @@ beforeEach(() => {
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 describe('Waiting: order and one at a time', () => {
@@ -387,7 +387,7 @@ describe('Waiting: the 24 hour limit', () => {
     await settle();
     noAnswer(take(http)[0] as TestRequest);
     await settle();
-    jest.setSystemTime(made + ms);
+    vi.setSystemTime(made + ms);
     window.dispatchEvent(new Event('online'));
     await settle();
     return { http, waiting };
@@ -419,12 +419,12 @@ describe('Waiting: the 24 hour limit', () => {
     await settle();
     noAnswer(take(http)[0] as TestRequest);
     await settle();
-    jest.setSystemTime(made + 23 * 3_600_000);
+    vi.setSystemTime(made + 23 * 3_600_000);
     await waiting.add('job.step', step(2));
     await settle();
     noAnswer(take(http)[0] as TestRequest);
     await settle();
-    jest.setSystemTime(made + 25 * 3_600_000);
+    vi.setSystemTime(made + 25 * 3_600_000);
 
     window.dispatchEvent(new Event('online'));
     await settle();
@@ -442,7 +442,7 @@ describe('Waiting: the 24 hour limit', () => {
     await settle();
     noAnswer(take(http)[0] as TestRequest);
     await settle();
-    jest.setSystemTime(Date.now() + 25 * 3_600_000);
+    vi.setSystemTime(Date.now() + 25 * 3_600_000);
 
     window.dispatchEvent(new Event('online'));
     await settle();

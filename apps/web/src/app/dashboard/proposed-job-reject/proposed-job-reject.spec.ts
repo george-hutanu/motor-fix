@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ProposedJobReject } from './proposed-job-reject';
 
@@ -29,7 +30,7 @@ const DECIDED = {
   status: 'rejected',
 };
 
-let send: jest.Mock;
+let send: Mock;
 let result: Promise<OverlayResult<unknown>>;
 
 async function settle() {
@@ -40,7 +41,7 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  send = jest.fn(async () => DECIDED);
+  send = vi.fn(async () => DECIDED);
   TestBed.configureTestingModule({
     providers: [
       {

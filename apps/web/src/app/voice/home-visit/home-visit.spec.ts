@@ -5,6 +5,7 @@ import { ANALYTICS_CONSENT_VERSION } from '@motor-fix/contracts/consent';
 import { ConsentsService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { provideHomeVisit } from './home-visit';
 import {
@@ -26,8 +27,8 @@ const granted: StoredChoice = {
   textVersion: ANALYTICS_CONSENT_VERSION,
 };
 
-let analytics: { event: jest.Mock; load: jest.Mock; pageview: jest.Mock };
-let errors: jest.Mock;
+let analytics: { event: Mock; load: Mock; pageview: Mock };
+let errors: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -51,12 +52,12 @@ async function boot(
   meta.name = 'mf-analytics';
   meta.content = 'motorfix.ro';
   document.head.append(meta);
-  analytics = { event: jest.fn(), load: jest.fn(), pageview: jest.fn() };
+  analytics = { event: vi.fn(), load: vi.fn(), pageview: vi.fn() };
   if (options.fails)
     analytics.event.mockImplementation(() => {
       throw new Error('blocked');
     });
-  errors = jest.fn();
+  errors = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideHomeVisit(),
@@ -66,12 +67,12 @@ async function boot(
       {
         provide: ConsentsService,
         useValue: {
-          consentsControllerMine: jest.fn(async () => ({
+          consentsControllerMine: vi.fn(async () => ({
             accepted: [],
             analytics: null,
           })),
-          consentsControllerRecord: jest.fn(async () => ({ id: 'r1' })),
-          consentsControllerRecordMine: jest.fn(async () => ({ id: 'r2' })),
+          consentsControllerRecord: vi.fn(async () => ({ id: 'r1' })),
+          consentsControllerRecordMine: vi.fn(async () => ({ id: 'r2' })),
         },
       },
       { provide: Session, useValue: { current: signal<MeDto | null>(null) } },

@@ -12,6 +12,7 @@ import { GaragesService } from '@motor-fix/data-access/services/garages.service'
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import { vi } from 'vitest';
 
 import { VerificationProgress } from './verification-progress';
 import { Live } from '../live';
@@ -23,8 +24,8 @@ const CORRECT = { en: 'Correct the listing', ro: 'Corectează listarea' };
 const CONTACT = { en: 'Contact MotorFix', ro: 'Contactează MotorFix' };
 
 let events: Subject<LiveMessage>;
-const api = { verificationStatusControllerRead: jest.fn() };
-const overlays = { open: jest.fn() };
+const api = { verificationStatusControllerRead: vi.fn() };
+const overlays = { open: vi.fn() };
 
 const account = (role: 'owner' | 'receptionist' | 'mechanic') =>
   ({
@@ -80,19 +81,19 @@ async function render(
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
             ),
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject<void>().asObservable(),
         },
       },
       { provide: Overlays, useValue: overlays },
       {
         provide: Session,
-        useValue: { current: me, reload: jest.fn(), shown: me },
+        useValue: { current: me, reload: vi.fn(), shown: me },
       },
     ],
   });
@@ -100,7 +101,7 @@ async function render(
   await i18n.enter('garage');
   await i18n.enter('public');
   if (language === 'en') await i18n.use('en');
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const fixture = TestBed.createComponent(VerificationProgress);

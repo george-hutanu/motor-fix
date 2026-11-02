@@ -225,11 +225,13 @@ there for one that will.
 ## CI, tests and release
 
 - Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
-  Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
-  ESM-only, so the Nest projects and libs (api, worker, mcp, contracts,
-  domain, observability, mcp-tools, scripts) run Vitest, each through its
-  `vitest.config.mts` on the root `vitest.preset.mts`; the Angular projects
-  keep Jest.
+  Tests: Vitest in every project, Playwright for end-to-end. The Nest
+  projects and libs (api, worker, mcp, contracts, domain, observability,
+  mcp-tools, scripts) run it through their `vitest.config.mts` on the root
+  `vitest.preset.mts`; the Angular projects (web, ui-cockpit, overlays,
+  i18n, media) through `@angular/build:unit-test`, their `vitest.config.ts`
+  on the root `vitest.shared.ts`, which Stryker and the hooks also run
+  directly.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
   project; the harness specs keep `npm run test:harness`. Stryker runs only
   in the Mutation workflow, never on a laptop: one job per project or per
@@ -248,8 +250,8 @@ there for one that will.
   picked from the Project like any task. A spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`;
   `npm run test:unit` leaves those out and `npm run test:integration` runs
-  only them (`TEST_SUITE` in `jest.preset.cjs` and `vitest.preset.mts`; unset
-  runs all). Integration
+  only them (`TEST_SUITE` in `vitest.preset.mts`; the Angular projects hold
+  no integration spec; unset runs all). Integration
   tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
   and `REDIS_URL` from `.env.example`. Like the end-to-end suite they run on
   demand, never per PR or per commit: `lifecycle.mjs check` sets
@@ -281,7 +283,7 @@ there for one that will.
   and its browser only on `.claude/`, `.specify/`, `.husky/`, `.github/`,
   `scripts/` or `package*.json`; a change to `ci.yml` runs all three. Integration tests
   (PostgreSQL+PostGIS and Redis services, the migrations applied) runs as
-  five shards, each on its own runner and database (domain in four Jest
+  five shards, each on its own runner and database (domain in four Vitest
   slices, every other project in the fifth; a dispatch naming spec files
   runs them in one `named specs` job instead), only
   on demand and when a caller asks for it (the `workflow_call` input

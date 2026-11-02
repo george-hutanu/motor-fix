@@ -10,6 +10,7 @@ import {
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { authInterceptor } from './auth.interceptor';
 import { Session } from './dashboard/session';
@@ -22,10 +23,10 @@ const platformStatus = { on: () => undefined };
 function setup(
   token: string | null,
   {
-    gate = jest.fn(async () => true),
+    gate = vi.fn(async () => true),
     renew = async () => false,
   }: {
-    gate?: jest.Mock<Promise<boolean>, []>;
+    gate?: Mock<(...args: []) => Promise<boolean>>;
     renew?: () => Promise<boolean>;
   } = {},
 ) {
@@ -33,7 +34,7 @@ function setup(
   const session = {
     deletingAccount: () => false,
     epoch: () => 0,
-    renew: jest.fn(async () => renew()),
+    renew: vi.fn(async () => renew()),
     token: () => current,
   };
   TestBed.configureTestingModule({
@@ -65,7 +66,7 @@ afterEach(() => controller?.verify());
 
 describe('authInterceptor sign-in gate, hostile cases', () => {
   it('hands the original refusal to the caller when the dialog fails to open', async () => {
-    const gate = jest.fn(async () => {
+    const gate = vi.fn(async () => {
       throw new Error('overlay failed');
     });
     const { http, server } = setup(null, { gate });
@@ -85,7 +86,7 @@ describe('authInterceptor sign-in gate, hostile cases', () => {
 
   it('sends an unrelated call at once while a sign-in dialog is still open', async () => {
     const { http, server } = setup(null, {
-      gate: jest.fn(() => new Promise<boolean>(() => undefined)),
+      gate: vi.fn(() => new Promise<boolean>(() => undefined)),
     });
 
     http.patch('/api/v1/me', {}).subscribe({ error: () => undefined });
@@ -99,7 +100,7 @@ describe('authInterceptor sign-in gate, hostile cases', () => {
   });
 
   it('shows the caller the error of the repeated call when it fails for another reason', async () => {
-    const gate = jest.fn(async () => true);
+    const gate = vi.fn(async () => true);
     const { http, server, setToken } = setup(null, { gate });
     gate.mockImplementation(async () => {
       setToken('signed-in');

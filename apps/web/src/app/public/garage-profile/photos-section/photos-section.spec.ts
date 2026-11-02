@@ -8,6 +8,17 @@ import { I18n } from '@motor-fix/i18n';
 
 import { PhotosSection } from './photos-section';
 
+// jsdom 30 drops an inline style value past a length cap (under 1000
+// characters), and a real preview's data URL runs to about 4000; the URL is
+// kept real and cut to a length jsdom holds, so the tile still shows it.
+vi.mock('thumbhash', async (importOriginal) => {
+  const real = await importOriginal<typeof import('thumbhash')>();
+  return Object.assign({}, real, {
+    thumbHashToDataURL: (hash: ArrayLike<number>) =>
+      real.thumbHashToDataURL(hash).slice(0, 200),
+  });
+});
+
 // @traces 310-FR-004 310-FR-005 310-FR-006 310-FR-007 310-FR-010 310-FR-011 310-FR-012
 
 const photo = (n: number) => ({

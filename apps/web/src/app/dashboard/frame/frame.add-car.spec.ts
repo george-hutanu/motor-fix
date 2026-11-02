@@ -39,9 +39,9 @@ async function render(
   role = 'garage',
   capabilities = OWNER,
 ) {
-  Element.prototype.scrollIntoView = jest.fn();
-  const overlays = { open: jest.fn(async (): Promise<unknown> => 'cancelled') };
-  const reload = jest.fn(async () => undefined);
+  Element.prototype.scrollIntoView = vi.fn();
+  const overlays = { open: vi.fn(async (): Promise<unknown> => 'cancelled') };
+  const reload = vi.fn(async () => undefined);
   const account = signal<MeDto | null>(me(role, roles, capabilities));
   TestBed.configureTestingModule({
     providers: [
@@ -66,11 +66,11 @@ async function render(
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events: new Subject<LiveMessage>(),
           offline: signal(false),
           on: () => NEVER,
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject<void>(),
           state: signal('open'),
         },

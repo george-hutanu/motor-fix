@@ -12,16 +12,16 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { NEVER, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { Frame } from './frame';
 import { Live } from '../live';
 import { Session } from '../session';
 import { dashboardRoutes } from '../views';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 type Role = 'driver' | 'garage' | 'receptionist' | 'mechanic' | 'admin';
 
@@ -52,14 +52,14 @@ async function render(
   roles: Role[],
   switchRole: (to: Role) => Promise<unknown> = async () => undefined,
 ) {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const current = signal<MeDto | null>(me(role, roles));
   const live = {
-    close: jest.fn(),
+    close: vi.fn(),
     events: new Subject<LiveMessage>(),
     offline: signal(false),
     on: () => NEVER,
-    open: jest.fn(),
+    open: vi.fn(),
     resync: new Subject<void>(),
     state: signal('open'),
   };
@@ -68,8 +68,8 @@ async function render(
     ended: new Subject<void>(),
     garageGone: () => false,
     shown: current,
-    signOut: jest.fn(async () => current.set(null)),
-    switchRole: jest.fn(async (to: Role) => {
+    signOut: vi.fn(async () => current.set(null)),
+    switchRole: vi.fn(async (to: Role) => {
       await switchRole(to);
       current.set(me(to, roles));
       return current();
@@ -132,7 +132,9 @@ const settle = async (harness: RouterTestingHarness) => {
 };
 const url = () => TestBed.inject(Router).url;
 
-beforeEach(() => (toast as unknown as jest.Mock).mockClear());
+beforeEach(() => {
+  (toast as unknown as Mock).mockClear();
+});
 
 describe('Frame, the role chips', () => {
   it('shows a chip per role of a driver and garage, the one in use pressed', async () => {
@@ -215,8 +217,7 @@ describe('Frame, the role chips', () => {
 
     expect(session.switchRole).toHaveBeenCalledWith('driver');
     // Left open: the last call reopens it after the last close.
-    const last = (mock: jest.Mock) =>
-      Math.max(...mock.mock.invocationCallOrder);
+    const last = (mock: Mock) => Math.max(...mock.mock.invocationCallOrder);
     expect(live.close).toHaveBeenCalled();
     expect(last(live.open)).toBeGreaterThan(last(live.close));
     expect(url()).toBe('/app/driver');

@@ -6,6 +6,7 @@ import { AdminService, type RecheckDueRowDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { AdminRecheckForm } from './admin-recheck-form';
 import en from '../../../../../../libs/i18n/src/admin/en.json';
@@ -13,10 +14,9 @@ import ro from '../../../../../../libs/i18n/src/admin/ro.json';
 
 // @traces 1351-FR-011
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({ template: '' })
 class Host {
@@ -48,8 +48,8 @@ const RECORDED = {
 const CONFIRMATION =
   'Service‑ul va fi suspendat și scos de pe hartă. Programările viitoare se anulează și șoferii sunt anunțați.';
 
-let record: jest.Mock;
-let stale: jest.Mock;
+let record: Mock;
+let stale: Mock;
 let result: Promise<OverlayResult<'recorded' | 'cancelled'>>;
 
 async function settle() {
@@ -60,9 +60,9 @@ async function settle() {
 }
 
 async function open(row: RecheckDueRowDto = ROW, language: 'ro' | 'en' = 'ro') {
-  record = jest.fn(async () => RECORDED);
-  stale = jest.fn();
-  jest.mocked(toast).mockClear();
+  record = vi.fn(async () => RECORDED);
+  stale = vi.fn();
+  vi.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
       { provide: AdminService, useValue: { recheckControllerRecord: record } },
@@ -153,7 +153,7 @@ describe('the record dialog', () => {
   });
 
   it('links the RAR register in a new tab and copies the number as it opens', async () => {
-    const writeText = jest.fn(async () => undefined);
+    const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },

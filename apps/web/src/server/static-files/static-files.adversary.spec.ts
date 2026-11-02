@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, request, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';

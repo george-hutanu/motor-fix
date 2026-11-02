@@ -1,5 +1,6 @@
 import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
 import type { Map as MapLibre, Marker } from 'maplibre-gl';
+import type { Mock } from 'vitest';
 
 import { drawPins } from './pins-map';
 import { ring } from '../../map-libre/map-libre';
@@ -39,7 +40,7 @@ const answer = (pins: GaragePinDto[]): GaragePinsDto => ({
   total: pins.length,
 });
 
-type Source = { setData: jest.Mock; getClusterExpansionZoom: jest.Mock };
+type Source = { setData: Mock; getClusterExpansionZoom: Mock };
 type Hit = {
   geometry?: { coordinates: number[] };
   properties: Record<string, unknown>;
@@ -48,34 +49,34 @@ function mapFake() {
   const sources = new Map<string, Source>();
   const canvas = document.createElement('canvas');
   return {
-    addLayer: jest.fn(),
-    addSource: jest.fn((id: string, _spec: { cluster?: boolean }) => {
+    addLayer: vi.fn(),
+    addSource: vi.fn((id: string, _spec: { cluster?: boolean }) => {
       sources.set(id, {
-        getClusterExpansionZoom: jest.fn(async () => 13),
-        setData: jest.fn(),
+        getClusterExpansionZoom: vi.fn(async () => 13),
+        setData: vi.fn(),
       });
     }),
-    easeTo: jest.fn(),
-    fitBounds: jest.fn(),
-    getBounds: jest.fn(() => ({
+    easeTo: vi.fn(),
+    fitBounds: vi.fn(),
+    getBounds: vi.fn(() => ({
       getEast: () => shown.east,
       getNorth: () => shown.north,
       getSouth: () => shown.south,
       getWest: () => shown.west,
     })),
     getCanvas: () => canvas,
-    getLayer: jest.fn(() => ({})),
-    getSource: jest.fn((id: string) => sources.get(id)),
-    jumpTo: jest.fn(),
-    on: jest.fn(),
-    project: jest.fn(([lng, lat]: [number, number]) => ({
+    getLayer: vi.fn(() => ({})),
+    getSource: vi.fn((id: string) => sources.get(id)),
+    jumpTo: vi.fn(),
+    on: vi.fn(),
+    project: vi.fn(([lng, lat]: [number, number]) => ({
       x: lng * 10,
       y: lat * 10,
     })),
-    queryRenderedFeatures: jest.fn((): Hit[] => []),
-    removeLayer: jest.fn(),
-    removeSource: jest.fn((id: string) => sources.delete(id)),
-    setFilter: jest.fn(),
+    queryRenderedFeatures: vi.fn((): Hit[] => []),
+    removeLayer: vi.fn(),
+    removeSource: vi.fn((id: string) => sources.delete(id)),
+    setFilter: vi.fn(),
     sources,
   };
 }
@@ -83,9 +84,9 @@ function mapFake() {
 let map: ReturnType<typeof mapFake>;
 let host: HTMLElement;
 let shown = { east: 26.2, north: 44.5, south: 44.4, west: 26 };
-const moved = jest.fn();
-const picked = jest.fn();
-const shifted = jest.fn();
+const moved = vi.fn();
+const picked = vi.fn();
+const shifted = vi.fn();
 
 beforeEach(() => {
   map = mapFake();
@@ -109,9 +110,9 @@ afterEach(() => host.remove());
 
 // The "you are here" marker MapLibre places on the map.
 const here = {
-  addTo: jest.fn().mockReturnThis(),
-  remove: jest.fn().mockReturnThis(),
-  setLngLat: jest.fn().mockReturnThis(),
+  addTo: vi.fn().mockReturnThis(),
+  remove: vi.fn().mockReturnThis(),
+  setLngLat: vi.fn().mockReturnThis(),
 };
 const draw = () =>
   drawPins(
@@ -432,20 +433,20 @@ describe('a move of the map by the driver', () => {
   const drag = () => fire('moveend', { originalEvent: new MouseEvent('up') });
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     shown = { east: 26.20049, north: 44.50012, south: 44.40041, west: 26.0 };
     draw();
   });
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('gives the box it shows once the map has been still for 400 ms, rounded to 3 decimals', () => {
     drag();
-    jest.advanceTimersByTime(399);
+    vi.advanceTimersByTime(399);
 
     expect(moved).not.toHaveBeenCalled();
 
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
 
     expect(moved).toHaveBeenCalledTimes(1);
     expect(moved).toHaveBeenCalledWith({ bbox: '44.4,26,44.5,26.2' });
@@ -453,30 +454,30 @@ describe('a move of the map by the driver', () => {
 
   it('waits for the last of several moves', () => {
     drag();
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     shown = { ...shown, east: 26.3 };
     drag();
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
 
     expect(moved).not.toHaveBeenCalled();
 
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
 
     expect(moved.mock.calls).toEqual([[{ bbox: '44.4,26,44.5,26.3' }]]);
   });
 
   it('gives nothing while the map moves again within the 400 ms', () => {
     drag();
-    jest.advanceTimersByTime(200);
+    vi.advanceTimersByTime(200);
     fire('movestart', { originalEvent: new MouseEvent('down') });
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
 
     expect(moved).not.toHaveBeenCalled();
   });
 
   it("gives nothing after the page's own fit", () => {
     fire('moveend', {});
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
 
     expect(moved).not.toHaveBeenCalled();
   });
@@ -484,7 +485,7 @@ describe('a move of the map by the driver', () => {
   it('clamps the box to Romania', () => {
     shown = { east: 30.4, north: 48.9, south: 48.0, west: 29.5 };
     drag();
-    jest.advanceTimersByTime(400);
+    vi.advanceTimersByTime(400);
 
     expect(moved).toHaveBeenCalledWith({ bbox: '48,29.5,48.4,29.8' });
   });
@@ -492,7 +493,7 @@ describe('a move of the map by the driver', () => {
   it('gives nothing for a box wholly outside Romania', () => {
     shown = { east: 19.5, north: 47.6, south: 47.4, west: 19.0 };
     drag();
-    jest.advanceTimersByTime(400);
+    vi.advanceTimersByTime(400);
 
     expect(moved).not.toHaveBeenCalled();
   });
@@ -500,7 +501,7 @@ describe('a move of the map by the driver', () => {
   it('says the box is too wide past 100 km on its longer side', () => {
     shown = { east: 26.4, north: 45.1, south: 44.9, west: 25.0 };
     drag();
-    jest.advanceTimersByTime(400);
+    vi.advanceTimersByTime(400);
 
     expect(moved).toHaveBeenCalledWith({ tooWide: true });
   });
@@ -508,7 +509,7 @@ describe('a move of the map by the driver', () => {
   it('measures the box after clamping it', () => {
     shown = { east: 21.0, north: 46.0, south: 45.6, west: 19.0 };
     drag();
-    jest.advanceTimersByTime(400);
+    vi.advanceTimersByTime(400);
 
     expect(moved).toHaveBeenCalledWith({ bbox: '45.6,20.2,46,21' });
   });
@@ -516,7 +517,7 @@ describe('a move of the map by the driver', () => {
   it('gives nothing once the map is gone', () => {
     drag();
     fire('remove');
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
 
     expect(moved).not.toHaveBeenCalled();
     expect(map.getBounds).not.toHaveBeenCalled();

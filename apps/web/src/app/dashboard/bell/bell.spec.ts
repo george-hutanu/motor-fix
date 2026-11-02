@@ -12,15 +12,15 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { Bell, BellStore } from './bell';
 import { Live } from '../live';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const row = (id: string, overrides: Partial<NotificationDto> = {}) =>
   ({
@@ -34,26 +34,26 @@ const row = (id: string, overrides: Partial<NotificationDto> = {}) =>
   }) as NotificationDto;
 
 let api: {
-  bellControllerList: jest.Mock;
-  bellControllerRead: jest.Mock;
-  bellControllerReadAll: jest.Mock;
-  bellControllerUnreadCount: jest.Mock;
+  bellControllerList: Mock;
+  bellControllerRead: Mock;
+  bellControllerReadAll: Mock;
+  bellControllerUnreadCount: Mock;
 };
 let events: Subject<LiveMessage>;
-let open: jest.Mock;
+let open: Mock;
 let token: string | null;
 
 function setup(count = 0, items: NotificationDto[] = []) {
   api = {
-    bellControllerList: jest.fn(async () => ({ items, nextCursor: null })),
-    bellControllerRead: jest.fn(async ({ id }: { id: string }) =>
+    bellControllerList: vi.fn(async () => ({ items, nextCursor: null })),
+    bellControllerRead: vi.fn(async ({ id }: { id: string }) =>
       row(id, { readAt: '2026-10-05T09:00:00.000Z' }),
     ),
-    bellControllerReadAll: jest.fn(async () => undefined),
-    bellControllerUnreadCount: jest.fn(async () => ({ count })),
+    bellControllerReadAll: vi.fn(async () => undefined),
+    bellControllerUnreadCount: vi.fn(async () => ({ count })),
   };
   events = new Subject();
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -86,10 +86,10 @@ async function render(count = 0, items: NotificationDto[] = []) {
 }
 
 beforeEach(() => {
-  jest.mocked(toast).mockClear();
+  vi.mocked(toast).mockClear();
   token = 'access';
 });
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 describe('Bell', () => {
   // A count over the icon is a caption: a <small> keeps it out of the phone
@@ -165,7 +165,7 @@ describe('Bell', () => {
   // @traces 032-FR-001 032-FR-003
   it('goes to the view the list closed on, once the close has settled', async () => {
     const { button, fixture } = await render(1, [row('a')]);
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigateByUrl')
       .mockResolvedValue(true);
     open.mockResolvedValueOnce('/app/driver/cars/c1');
@@ -179,7 +179,7 @@ describe('Bell', () => {
   // @traces 032-FR-002
   it('stays where it is when the list is dismissed', async () => {
     const { button, fixture } = await render(1, [row('a')]);
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
     button.click();
     await settle(fixture);
@@ -299,17 +299,17 @@ describe('Bell', () => {
   });
 
   it('refreshes the count every 60 seconds', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { fixture } = await render(0);
     api.bellControllerUnreadCount.mockClear();
 
-    jest.advanceTimersByTime(59_000);
+    vi.advanceTimersByTime(59_000);
     expect(api.bellControllerUnreadCount).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(1_000);
+    vi.advanceTimersByTime(1_000);
     expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
 
     fixture.destroy();
-    jest.advanceTimersByTime(120_000);
+    vi.advanceTimersByTime(120_000);
     expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
   });
 
@@ -740,16 +740,16 @@ describe('BellStore', () => {
 // @traces 1345-FR-006
 describe('BellStore without a session', () => {
   it('asks for no count on start or on the minute tick, and asks again once a token is held', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     token = null;
     const { store } = await render(2);
 
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     expect(await store.refreshCount()).toBeNull();
     expect(api.bellControllerUnreadCount).not.toHaveBeenCalled();
 
     token = 'access';
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
   });
 });

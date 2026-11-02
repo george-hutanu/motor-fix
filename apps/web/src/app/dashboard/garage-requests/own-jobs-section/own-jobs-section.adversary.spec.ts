@@ -59,8 +59,9 @@ const job = (id: string, over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
 });
 
 const frozen = (now: string) =>
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date(now),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -76,7 +77,6 @@ const frozen = (now: string) =>
       'hrtime',
       'performance',
     ],
-    now: new Date(now),
   });
 
 async function render(
@@ -97,7 +97,7 @@ async function render(
               : { items, nextCursor: null, total: items.length },
         },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       {
         provide: Live,
         useValue: {
@@ -129,7 +129,7 @@ const ids = (el: HTMLElement) =>
   );
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 

@@ -65,6 +65,7 @@
     "web-push": "3.6.7"
   },
   "devDependencies": {
+    "@analogjs/vite-plugin-angular": "2.9.2",
     "@angular-devkit/core": "22.2.5",
     "@angular-devkit/schematics": "22.2.3",
     "@angular/build": "22.2.3",
@@ -96,10 +97,9 @@
     "fake-indexeddb": "^6.2.5",
     "husky": "^9.1.7",
     "jest": "30.5.2",
-    "jest-environment-jsdom": "30.5.2",
     "jest-environment-node": "30.5.2",
-    "jest-preset-angular": "17.0.1",
     "jest-util": "30.5.1",
+    "jsdom": "30.1.3",
     "ng-openapi-gen": "1.1.0",
     "nx": "24.0.0",
     "pg": "8.23.1",
@@ -134,11 +134,11 @@
     "prepare": "husky && sh .husky/identity.sh apply && node .claude/scripts/specs-repo.mjs ensure --soft",
     "test": "TZ=UTC nx run-many -t test",
     "test:harness": "vitest run --config .claude/vitest.config.ts",
-    "test:integration": "TEST_SUITE=integration TZ=UTC nx run-many -t test --passWithNoTests",
+    "test:integration": "TEST_SUITE=integration TZ=UTC nx run-many -t test --exclude web,ui-cockpit,overlays,i18n,media --passWithNoTests",
     "test:mods": "npx -y @anthropic-ai/claude-code@2.1.295 plugin validate --strict .claude/plugins/motorfix-chief && npx -y @anthropic-ai/claude-code@2.1.295 plugin test .claude/plugins/motorfix-chief",
     "test:mutation": "nx run-many -t test:mutation --parallel=1",
     "test:mutation:affected": "nx affected -t test:mutation --parallel=1",
-    "test:unit": "TEST_SUITE=unit TZ=UTC nx run-many -t test --passWithNoTests",
+    "test:unit": "TEST_SUITE=unit TZ=UTC nx run-many -t test",
     "typecheck": "nx run-many -t typecheck"
   },
   "type": "module",

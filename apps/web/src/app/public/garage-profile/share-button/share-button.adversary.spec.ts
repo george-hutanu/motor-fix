@@ -5,10 +5,9 @@ import { toast } from '@motor-fix/ui-cockpit';
 import { ShareButton } from './share-button';
 import { SITE_ORIGIN } from '../../../addresses';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const ORIGIN = 'https://motorfix.ro';
 
@@ -19,7 +18,7 @@ function offer(property: 'share' | 'clipboard', value: unknown): void {
 }
 
 beforeEach(async () => {
-  jest.mocked(toast).mockReset();
+  vi.mocked(toast).mockReset();
   offer('share', undefined);
   offer('clipboard', undefined);
   TestBed.configureTestingModule({
@@ -68,7 +67,7 @@ describe('the share button with hostile browsers and inputs', () => {
     offer('share', () => {
       throw new TypeError('not allowed');
     });
-    const writeText = jest.fn(() => Promise.resolve());
+    const writeText = vi.fn(() => Promise.resolve());
     offer('clipboard', { writeText });
     const host = await render();
 
@@ -98,7 +97,7 @@ describe('the share button with hostile browsers and inputs', () => {
 
   it('falls back to the copy when the menu rejects with a plain error', async () => {
     offer('share', () => Promise.reject(new Error('boom')));
-    const writeText = jest.fn(() => Promise.resolve());
+    const writeText = vi.fn(() => Promise.resolve());
     offer('clipboard', { writeText });
     const host = await render();
 
@@ -112,7 +111,7 @@ describe('the share button with hostile browsers and inputs', () => {
     const dismissed = new Error('dismissed');
     dismissed.name = 'AbortError';
     offer('share', () => Promise.reject(dismissed));
-    const writeText = jest.fn(() => Promise.resolve());
+    const writeText = vi.fn(() => Promise.resolve());
     offer('clipboard', { writeText });
     const host = await render();
 
@@ -124,7 +123,7 @@ describe('the share button with hostile browsers and inputs', () => {
   });
 
   it('leaves out an empty brand', async () => {
-    const share = jest.fn(() => Promise.resolve());
+    const share = vi.fn(() => Promise.resolve());
     offer('share', share);
     const host = await render({ brand: '' });
 
@@ -137,7 +136,7 @@ describe('the share button with hostile browsers and inputs', () => {
   });
 
   it('keeps the brand and the marker as the only parameters and in that order', async () => {
-    const share = jest.fn(() => Promise.resolve());
+    const share = vi.fn(() => Promise.resolve());
     offer('share', share);
     const host = await render({ brand: 'alfa-romeo' });
 
@@ -148,7 +147,7 @@ describe('the share button with hostile browsers and inputs', () => {
   });
 
   it('encodes a brand that would otherwise add a parameter', async () => {
-    const share = jest.fn(() => Promise.resolve());
+    const share = vi.fn(() => Promise.resolve());
     offer('share', share);
     const host = await render({ brand: 'a&src=evil' });
 
@@ -161,7 +160,7 @@ describe('the share button with hostile browsers and inputs', () => {
   });
 
   it('passes a name with quotes, accents and emoji to the menu untouched', async () => {
-    const share = jest.fn(() => Promise.resolve());
+    const share = vi.fn(() => Promise.resolve());
     offer('share', share);
     const name = 'Ștefan & "Fiii" Auto 🚗 <b>';
     const host = await render({ name });
@@ -177,7 +176,7 @@ describe('the share button with hostile browsers and inputs', () => {
   });
 
   it('uses the language the page is in at the moment of the press', async () => {
-    const share = jest.fn(() => Promise.resolve());
+    const share = vi.fn(() => Promise.resolve());
     offer('share', share);
     const host = await render();
     await TestBed.inject(I18n).use('en');
@@ -190,7 +189,7 @@ describe('the share button with hostile browsers and inputs', () => {
   });
 
   it('keeps one field when pressed again after the copy was refused', async () => {
-    const writeText = jest.fn(() => Promise.reject(new Error('no')));
+    const writeText = vi.fn(() => Promise.reject(new Error('no')));
     offer('clipboard', { writeText });
     const host = await render();
 
@@ -219,7 +218,7 @@ describe('the share button with hostile browsers and inputs', () => {
       providers: [{ provide: SITE_ORIGIN, useValue: `${ORIGIN}/` }],
     });
     await TestBed.inject(I18n).enter('public');
-    const share = jest.fn(() => Promise.resolve());
+    const share = vi.fn(() => Promise.resolve());
     offer('share', share);
     const host = await render();
 
