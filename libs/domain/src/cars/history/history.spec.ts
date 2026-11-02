@@ -2,7 +2,7 @@
 // @traces 061-FR-008
 import type { ReviewRefusal } from '@motor-fix/contracts';
 
-import { jobNames, reviewStateOf, reviewsOf } from './history';
+import { jobNames, reviewsOf } from './history';
 import type { Actor } from '../../auth/policy';
 
 const quoted = (position: number, nameRo: string, nameEn: string) => ({
@@ -30,6 +30,24 @@ describe('the jobs a MotorFix repair names', () => {
 
 // @traces 026-FR-002 026-FR-003 026-FR-005 026-FR-008
 describe('the review state of a MotorFix repair', () => {
+  const actor = { accountId: 'andrei' } as Actor;
+  const reasons = [
+    null,
+    'email_not_confirmed',
+    'already_reviewed',
+    'review_removed',
+    'job_not_done',
+    'own_garage',
+    'not_found',
+  ] as const;
+  const stateFor = async (reason: ReviewRefusal | null) => {
+    const judge = vi
+      .fn()
+      .mockResolvedValue([{ jobId: 'a', reason, review: null }]);
+    return (await reviewsOf({ judge }, actor, [{ jobId: 'a' }])).get('a')
+      ?.state;
+  };
+
   it.each([
     [null, 'can_write'],
     ['email_not_confirmed', 'can_write'],
@@ -38,22 +56,14 @@ describe('the review state of a MotorFix repair', () => {
     ['job_not_done', 'none'],
     ['own_garage', 'none'],
     ['not_found', 'none'],
-  ] as const)('answers %s with %s', (reason, state) => {
-    expect(reviewStateOf(reason)).toBe(state);
+  ] as const)('answers %s with %s', async (reason, state) => {
+    expect(await stateFor(reason)).toBe(state);
   });
 
-  it('reaches expired from no reason the eligibility gives today', () => {
-    const reasons = [
-      null,
-      'not_found',
-      'job_not_done',
-      'own_garage',
-      'already_reviewed',
-      'review_removed',
-      'email_not_confirmed',
-    ] as const;
+  it('reaches expired from no reason the eligibility gives today', async () => {
+    const states = await Promise.all(reasons.map(stateFor));
 
-    expect(reasons.map(reviewStateOf)).not.toContain('expired');
+    expect(states).not.toContain('expired');
   });
 });
 

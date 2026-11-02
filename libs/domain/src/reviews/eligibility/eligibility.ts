@@ -37,7 +37,7 @@ export function reasonOf(facts: EligibilityFacts): ReviewRefusal | null {
   return null;
 }
 
-export const offerOf = (reason: ReviewRefusal | null) =>
+const offerOf = (reason: ReviewRefusal | null) =>
   reason === null || reason === 'email_not_confirmed';
 
 export type Verdict = ReviewEligibilityDto & {

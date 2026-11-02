@@ -1,4 +1,6 @@
-import { offerOf, reasonOf } from './eligibility';
+import { ReviewEligibility, reasonOf } from './eligibility';
+import type { Actor } from '../../auth/policy';
+import type { PrismaClient } from '../../generated/prisma/client';
 
 const allowed = {
   emailConfirmed: true,
@@ -45,15 +47,59 @@ describe('whether a driver may review a job', () => {
     ).toBeNull();
   });
 
-  it.each([
-    [null, true],
-    ['email_not_confirmed', true],
-    ['not_found', false],
-    ['job_not_done', false],
-    ['own_garage', false],
-    ['already_reviewed', false],
-    ['review_removed', false],
-  ] as const)('offers the button for %p: %p', (reason, offer) => {
-    expect(offerOf(reason)).toBe(offer);
+  // One job per reason, judged through the eligibility with its reads stubbed.
+  const judged = async (emailVerifiedAt: Date | null = new Date()) => {
+    const job = (id: string, status: string, garageId = 'g1') => ({
+      garageId,
+      id,
+      status,
+    });
+    const prisma = {
+      account: {
+        findUnique: vi.fn().mockResolvedValue({
+          email: 'a@b.ro',
+          emailVerifiedAt,
+          mechanic: null,
+          memberships: [{ garageId: 'own' }],
+        }),
+      },
+      job: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            job('free', 'done'),
+            job('open', 'in_work'),
+            job('staff', 'done', 'own'),
+            job('reviewed', 'done'),
+            job('removed', 'done'),
+          ]),
+      },
+      review: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 'r1', jobId: 'reviewed', rating: 5, status: 'published' },
+          { id: 'r2', jobId: 'removed', rating: 1, status: 'removed' },
+        ]),
+      },
+    } as unknown as PrismaClient;
+    const verdicts = await new ReviewEligibility(prisma).judge(
+      { accountId: 'andrei' } as Actor,
+      ['free', 'missing', 'open', 'staff', 'reviewed', 'removed'],
+    );
+    return verdicts.map(({ offer, reason }) => [reason, offer]);
+  };
+
+  it('offers the button only to a reviewable job', async () => {
+    expect(await judged()).toEqual([
+      [null, true],
+      ['not_found', false],
+      ['job_not_done', false],
+      ['own_garage', false],
+      ['already_reviewed', false],
+      ['review_removed', false],
+    ]);
+  });
+
+  it('still offers the button to a driver whose e-mail is unconfirmed', async () => {
+    expect((await judged(null))[0]).toEqual(['email_not_confirmed', true]);
   });
 });

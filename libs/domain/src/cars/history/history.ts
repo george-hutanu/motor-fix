@@ -161,7 +161,7 @@ const REVIEW_STATE: Record<ReviewRefusal | 'null', RepairReviewState> = {
   review_removed: 'removed',
 };
 
-export const reviewStateOf = (reason: ReviewRefusal | null) =>
+const reviewStateOf = (reason: ReviewRefusal | null) =>
   REVIEW_STATE[reason ?? 'null'];
 
 // The review of each MotorFix repair on a page, by job: one judgement for

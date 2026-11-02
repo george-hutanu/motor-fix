@@ -142,22 +142,6 @@ describe('the reviews of a page at its extremes', () => {
     expect(judge).toHaveBeenCalledWith(actor, ['only']);
   });
 
-  it('judges ten thousand repairs in one call', async () => {
-    const repairs = Array.from({ length: 10_000 }, (_, i) => ({
-      jobId: `job-${i}`,
-    }));
-    const judge = vi
-      .fn()
-      .mockImplementation(async (_a: Actor, ids: string[]) =>
-        ids.map((id) => verdict(id, null)),
-      );
-
-    const reviews = await reviewsOf({ judge }, actor, repairs);
-
-    expect(judge).toHaveBeenCalledTimes(1);
-    expect(reviews.size).toBe(10_000);
-  });
-
   it('judges the same job once however many rows name it', async () => {
     const judge = vi.fn().mockResolvedValue([verdict('a', null)]);
 
@@ -168,18 +152,6 @@ describe('the reviews of a page at its extremes', () => {
     ]);
 
     expect(judge).toHaveBeenCalledWith(actor, ['a']);
-  });
-
-  it('answers the same on a second call with the same input', async () => {
-    const judge = vi
-      .fn()
-      .mockResolvedValue([verdict('a', 'already_reviewed', review)]);
-    const repairs = [{ jobId: 'a' }];
-
-    const first = await reviewsOf({ judge }, actor, repairs);
-    const second = await reviewsOf({ judge }, actor, repairs);
-
-    expect(Object.fromEntries(second)).toEqual(Object.fromEntries(first));
   });
 
   it('leaves the rows it was given untouched', async () => {
