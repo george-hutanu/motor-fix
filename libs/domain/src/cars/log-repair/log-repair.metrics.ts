@@ -4,7 +4,7 @@ import { metrics } from '@opentelemetry/api';
 // is registered would stay a no-op for the life of the process.
 const meter = () => metrics.getMeter('motorfix');
 
-export type LoggedOutcome =
+type LoggedOutcome =
   | 'saved'
   | 'check_needed'
   | 'date_before_car_year'
