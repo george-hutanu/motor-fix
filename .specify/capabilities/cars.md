@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-31
+updated: 2026-11-01
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -24,6 +24,7 @@ features:
   - 061-repair-list
   - 1394-car-transfer-accept-web
   - 293-save-garage-suggest
+  - 093-coming-up-across-cars
 ---
 
 # Capability: Cars
@@ -44,9 +45,9 @@ _From 094-itp-reminders._
 
 _From 089-add-a-car._
 
-### 089-FR-005 — The save MUST be idempotent: the request carries the key the form-saving helper issues per dialog (159-FR-004) in the `Idempotency-Key` header (as 255-FR-007 and `apps/web/src/app/dashboard/waiting.ts:227` do); a second request with the same key from the same account answers the car the first created, 201 again, and creates nothing. The key is stored on the car itself, unique per owner (`owner_id`, `idempotency_key`), in PostgreSQL (never only in Redis, Principle VI); cars are never hard-deleted, so the key lives as long as the car. A request without the header, or with a key of 0 or more than 64 characters, answers 400 `validation_failed` on the field `idempotency-key` and creates nothing.
+### 093-FR-010 — (#631) Replaying a create `Idempotency-Key` whose car has been removed MUST answer 404 `not_found` and create nothing: the replay lookup takes `removedAt: null` into account, and the account's car count is unchanged; an integration test covers it.
 
-_From 089-add-a-car._
+_From 093-coming-up-across-cars._
 
 ### 1265-FR-002 — Adding a car (089) MUST open its `owner` ownership row in the same transaction as the car, the audit entry and `car.added` (089-FR-007 unchanged in what it writes; this row joins it).
 
@@ -667,6 +668,54 @@ _From 1394-car-transfer-accept-web._
 
 _From 1394-car-transfer-accept-web._
 
+### 093-FR-001 — The system MUST answer `GET /api/v1/cars/due-items` (capability `driver.cars`, the same refusals as `GET /api/v1/cars`: 401 without a session, 404 `not_found` for an account not acting as a driver, as `ActorGuard` answers a missing capability) with the due items of the caller's own cars that are not removed, in the `cars` module, one answer with no paging.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-002 — The answer MUST carry `items`, already ordered (FR-005), and the subtitle's counts: `carCount`, the caller's active cars, and `dueSoonCount`, the rows whose state is red or amber (for a date row: passed or due within 60 days of today, today and day 60 included; for the oil row: kilometres reached or its estimated day within 60 days; grey and green never count).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-003 — Each item MUST carry: `kind` (`itp` or `oil` today; the kind list grows with #275 and #344), `carId`, `carName` (brand name and model, "BMW 320d"; never the plate), `dueOn` (the ITP date, or the oil service's estimated day; null when there is none), `daysLeft` (whole calendar days in Europe/Bucharest from today to `dueOn`, negative when passed; null without a date), `passed` (true when the date is behind, or the oil service's kilometres are reached: `kmLeft <= 0`), `dueKm` and `kmLeft` (the oil row only: the next service's kilometres and what is left, negative when over; null on a date row), and `state` (`red`, `amber`, `green` or `grey`).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-004 — The state MUST follow the card lines' rule: grey without a date; red at 7 days or fewer, 0 and every passed date included; amber from 8 to 60; green above 60 (090-FR-003); the oil row is red once no kilometres are left, and otherwise judged by the days to its estimated day (1386-FR-003), the day computed as the car answer's `serviceDueOn` (091).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-005 — Items MUST be ordered: passed date items first, most overdue first (`daysLeft` ascending); then passed oil rows, most kilometres over first (`kmLeft` ascending; kilometres are never converted to days); then dated items by `dueOn`, soonest first; then undated items. Equal days (or both undated) are ordered by `carName`, then by kind in the order ITP, RCA, rovinietă, oil service, tyres, then by `carId`, so two reads give one order.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-006 — A car with no ITP date MUST get an undated grey ITP row; a car with no next oil service gets no oil row; a removed car gets no row and is not counted; another account's cars never appear.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-007 — The response DTO MUST come from the contracts library, the route MUST be in `apps/api/openapi.json` and the generated client regenerated (`npx nx run data-access:generate`), never edited by hand (Constitution V); the read sends no cache header beyond the API's default and is not part of the session warm (1169-FR-003).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-008 — The read MUST be answered with one query for the cars (with their readings, as the car list reads them) and no query per car.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-009 — The route MUST be listed in `infra/observability/inventory.json` with the cars module's existing metrics, logs and traces (no new service, queue, outside call or dashboard), and `scripts/observability-inventory.ts` MUST pass.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-011 — (#1215) In `specs/092-edit-remove-car/tasks.md`, T009 and T013 MUST say `car.updated` carries `carId`, `ownerId` and `changed`, with no mention of the three dates (a specs-repo change, committed through `specs-repo.mjs`).
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-012 — (#1214) The QA seed (`libs/domain/src/seed.ts`) MUST give the sweep's driver (`sofer@example.test`) at least one car with ITP, RCA and rovinietă dates (and a next oil service, so the list of title 2 shows two kinds), idempotent on re-seed as the requester's car is; the end-to-end and QA checks that expected that driver to have no car MUST sign in as a driver the seed leaves without one, and the sweep's `/app/driver` screenshots MUST show the car card.
+
+_From 093-coming-up-across-cars._
+
+### 093-FR-013 — Tests MUST cover, in Vitest on real PostgreSQL and Valkey with a fixed Bucharest clock: the order for passed, dated, estimated and undated rows across cars, with ties on the day, the name and the kind; the state at 61, 60, 8, 7, 0 and −1 days and for no date; the oil row with kilometres left and with none; the 60-day count including a passed item and excluding day 61 and undated rows; removed cars excluded from rows and counts; only the caller's cars; the 404 for a non-driver; the 404 of the replayed key after removal; and the seed's car with its dates.
+
+_From 093-coming-up-across-cars._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
@@ -698,3 +747,4 @@ _From 1394-car-transfer-accept-web._
 - `092-FR-011` — superseded by `1392-FR-001` (2026-10-31)
 - `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)
 - `1392-FR-005` — superseded by `1394-FR-001` (2026-10-31)
+- `089-FR-005` — superseded by `093-FR-010` (2026-11-01)

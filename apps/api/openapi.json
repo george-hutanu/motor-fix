@@ -3262,7 +3262,7 @@
             "description": "sign_in_required"
           },
           "404": {
-            "description": "not_found: this account adds no car"
+            "description": "not_found: this account adds no car, or the key replays a removed car"
           },
           "409": {
             "description": "car_limit: 20 cars already"
@@ -3305,6 +3305,39 @@
           }
         ],
         "summary": "The caller's cars, newest first",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/cars/due-items": {
+      "get": {
+        "operationId": "CarsController_dueItems",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DueItemsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What is coming up across the caller's cars: ordered, with each row's state",
         "tags": [
           "cars"
         ]
@@ -16946,6 +16979,104 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "DueItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "itp",
+              "oil"
+            ]
+          },
+          "carId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "carName": {
+            "type": "string",
+            "description": "Brand and model",
+            "example": "BMW 320d"
+          },
+          "dueOn": {
+            "type": "string",
+            "description": "The ITP date, or the oil service's estimated day; null when there is none",
+            "example": "2026-11-13",
+            "format": "date",
+            "nullable": true
+          },
+          "daysLeft": {
+            "type": "integer",
+            "description": "Whole days in Europe/Bucharest from today to dueOn, negative when passed",
+            "example": 36,
+            "nullable": true
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "The date is behind, or the oil service's kilometres are reached"
+          },
+          "dueKm": {
+            "type": "integer",
+            "description": "The oil service only: the kilometres it is due at",
+            "example": 152000,
+            "nullable": true
+          },
+          "kmLeft": {
+            "type": "integer",
+            "description": "The oil service only: kilometres left, negative when over",
+            "example": 3800,
+            "nullable": true
+          },
+          "state": {
+            "type": "string",
+            "description": "red at 7 days or fewer or passed, amber to 60, green beyond, grey without a date",
+            "enum": [
+              "red",
+              "amber",
+              "green",
+              "grey"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "carId",
+          "carName",
+          "dueOn",
+          "daysLeft",
+          "passed",
+          "dueKm",
+          "kmLeft",
+          "state"
+        ]
+      },
+      "DueItemsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Passed first, then soonest; undated last",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DueItemDto"
+            }
+          },
+          "carCount": {
+            "type": "integer",
+            "description": "The driver's active cars",
+            "example": 2
+          },
+          "dueSoonCount": {
+            "type": "integer",
+            "description": "The items whose state is red or amber",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "carCount",
+          "dueSoonCount"
         ]
       },
       "UpdateCarDto": {

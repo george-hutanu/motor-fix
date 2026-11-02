@@ -2,6 +2,7 @@ import {
   CarDto,
   CarListDto,
   CreateCarDto,
+  DueItemsDto,
   UpdateCarDto,
 } from '@motor-fix/contracts';
 import {
@@ -65,7 +66,10 @@ export class CarsController {
       'validation_failed: a bad field, unknown_brand, too_far_ahead, next_service_not_above_odometer, next_service_too_far or a missing key',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
-  @ApiNotFoundResponse({ description: 'not_found: this account adds no car' })
+  @ApiNotFoundResponse({
+    description:
+      'not_found: this account adds no car, or the key replays a removed car',
+  })
   @ApiConflictResponse({ description: 'car_limit: 20 cars already' })
   create(
     @CurrentActor() actor: Actor,
@@ -97,6 +101,19 @@ export class CarsController {
           )
         : undefined;
     return warmed ?? this.cars.list(actor);
+  }
+
+  @Get('due-items')
+  @Requires('driver.cars')
+  @ApiOperation({
+    summary:
+      "What is coming up across the caller's cars: ordered, with each row's state",
+  })
+  @ApiOkResponse({ type: DueItemsDto })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiNotFoundResponse({ description: 'not_found: not a driver' })
+  dueItems(@CurrentActor() actor: Actor): Promise<DueItemsDto> {
+    return this.cars.dueItems(actor.accountId);
   }
 
   @Patch(':id')

@@ -357,3 +357,88 @@ export class CarListDto {
   @ApiProperty({ description: 'Newest first', type: [CarDto] })
   items!: CarDto[];
 }
+
+const DUE_KINDS = ['itp', 'oil'] as const;
+const DUE_STATES = ['red', 'amber', 'green', 'grey'] as const;
+
+// One thing coming up for one of the driver's cars.
+export class DueItemDto {
+  @ApiProperty({ enum: DUE_KINDS })
+  kind!: (typeof DUE_KINDS)[number];
+
+  @ApiProperty({ format: 'uuid' })
+  carId!: string;
+
+  @ApiProperty({ description: 'Brand and model', example: 'BMW 320d' })
+  carName!: string;
+
+  @ApiProperty({
+    description:
+      "The ITP date, or the oil service's estimated day; null when there is none",
+    example: '2026-11-13',
+    format: 'date',
+    nullable: true,
+    type: String,
+  })
+  dueOn!: string | null;
+
+  @ApiProperty({
+    description:
+      'Whole days in Europe/Bucharest from today to dueOn, negative when passed',
+    example: 36,
+    nullable: true,
+    type: 'integer',
+  })
+  daysLeft!: number | null;
+
+  @ApiProperty({
+    description:
+      "The date is behind, or the oil service's kilometres are reached",
+  })
+  passed!: boolean;
+
+  @ApiProperty({
+    description: 'The oil service only: the kilometres it is due at',
+    example: 152000,
+    nullable: true,
+    type: 'integer',
+  })
+  dueKm!: number | null;
+
+  @ApiProperty({
+    description: 'The oil service only: kilometres left, negative when over',
+    example: 3800,
+    nullable: true,
+    type: 'integer',
+  })
+  kmLeft!: number | null;
+
+  @ApiProperty({
+    description:
+      'red at 7 days or fewer or passed, amber to 60, green beyond, grey without a date',
+    enum: DUE_STATES,
+  })
+  state!: (typeof DUE_STATES)[number];
+}
+
+export class DueItemsDto {
+  @ApiProperty({
+    description: 'Passed first, then soonest; undated last',
+    type: [DueItemDto],
+  })
+  items!: DueItemDto[];
+
+  @ApiProperty({
+    description: "The driver's active cars",
+    example: 2,
+    type: 'integer',
+  })
+  carCount!: number;
+
+  @ApiProperty({
+    description: 'The items whose state is red or amber',
+    example: 1,
+    type: 'integer',
+  })
+  dueSoonCount!: number;
+}

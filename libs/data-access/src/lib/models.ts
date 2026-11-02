@@ -149,6 +149,8 @@ export type { DraftDocumentDto } from './models/draft-document-dto';
 export type { DriverBookingDto } from './models/driver-booking-dto';
 export type { DriverNameDto } from './models/driver-name-dto';
 export type { DriverRowBookingDto } from './models/driver-row-booking-dto';
+export type { DueItemDto } from './models/due-item-dto';
+export type { DueItemsDto } from './models/due-items-dto';
 export type { EmailChangeDto } from './models/email-change-dto';
 export type { FacilitiesGroupDto } from './models/facilities-group-dto';
 export type { FieldProblemDto } from './models/field-problem-dto';
