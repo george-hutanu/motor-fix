@@ -3,6 +3,7 @@ import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import type {
   GarageRequestListDto,
   GarageRequestSummaryDto,
+  TodayFiguresDto,
 } from '@motor-fix/data-access';
 import { filter, Subject } from 'rxjs';
 
@@ -94,6 +95,24 @@ export const listOf = (
     total?: number;
   },
 ): GarageRequestListDto => ({ items, nextCursor, total });
+
+// Today's figures for Panou: 3 requests (1 yesterday), 37 bookings, two
+// free starts on Friday 30 October, 4.9 from 212 reviews, 1,529.50 lei.
+export const todayFigures = (
+  over: Partial<TodayFiguresDto> = {},
+): TodayFiguresDto => ({
+  bookingsThisWeek: 37,
+  bookingsToday: 6,
+  estimatedWorkBani: 152_950,
+  freeSlotsUnavailable: false,
+  month: '2026-10-01',
+  nextFreeSlots: { count: 2, day: '2026-10-30' },
+  rating: 4.9,
+  requestsToday: 3,
+  requestsYesterday: 1,
+  reviewCount: 212,
+  ...over,
+});
 
 // The live service as the views see it: messages are pushed by the test.
 export function fakeLive() {

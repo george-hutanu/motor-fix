@@ -13,6 +13,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { openBlockTime } from '../../block-time-dialog/open-block-time';
+import { DailyFiguresPanel } from '../../daily-figures-panel/daily-figures-panel';
 import {
   DashboardSectionsPanel,
   type PanelRow,
@@ -52,6 +53,7 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DailyFiguresPanel,
     FirstStepsCard,
     NgTemplateOutlet,
     GarageLegalCheck,

@@ -143,6 +143,8 @@ async function render(
       {
         provide: GaragesService,
         useValue: {
+          // Today's numbers have their own spec; here they wait.
+          garageTodayFigures: () => new Promise(() => undefined),
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
           verificationStatusControllerRead: () => new Promise(() => undefined),

@@ -124,6 +124,8 @@ async function render(
         // The lift schedule has its own spec; here it waits.
         useValue: {
           garageSchedule: () => new Promise(() => undefined),
+          // Today's numbers have their own spec; here they wait.
+          garageTodayFigures: () => new Promise(() => undefined),
           legalCheckControllerRead: read,
         },
       },

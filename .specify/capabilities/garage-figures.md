@@ -7,6 +7,7 @@ features:
   - 144-profile-stats-weekly
   - 1397-dashboard-weekly-views
   - 098-daily-numbers
+  - 1431-daily-numbers-panou
 ---
 
 # Capability: garage-figures
@@ -202,6 +203,38 @@ _From 098-daily-numbers._
 ### 098-FR-011 — Tests MUST exist before the code (Principle II), each test file carrying one whole-line `// @traces` comment naming this feature's ids. Unit (no database): each number at the day, week and month boundaries in Europe/Bucharest including the clock changes of March and October; the Q38 sum with and without final prices, and lapsed, cancelled and no-show bookings left out; the free-slot day and count, the null, the Sunday-night case (earliest start past Sunday → null) and the fallback mark. Integration (real PostgreSQL and Valkey): the route's answers for the owner, the receptionist, the garage's mechanic (403), another garage's owner (404), a visitor (401) and a bad id (400); the read writes nothing; the OpenAPI document carries the operation.
 
 _From 098-daily-numbers._
+
+### 1431-FR-001 — Panou's `kpi` section "Cifrele zilei" / "Today's numbers" (099-FR-001: its key, place, heading, link and access unchanged; shown to the owner and the receptionist under `garage.profile`, absent for a mechanic) MUST show, instead of its empty-state sentence, four cards in this order, each with a label, a value and a note, never a bare figure: "Cereri noi azi" / "New requests today" — `requestsToday`, the note "+N față de ieri" / "+N vs yesterday", "−N față de ieri" / "−N vs yesterday" (U+2212 minus) or "la fel ca ieri" / "same as yesterday" from `requestsToday − requestsYesterday`; "Programări săptămâna asta" / "Bookings this week" — `bookingsThisWeek`, the note "N locuri libere <weekday>" / "N free slots on <weekday>" (singular "1 loc liber <weekday>" / "1 free slot on <weekday>", the weekday of `nextFreeSlots.day` in the person's language, lower case in Romanian), "<bookingsToday> azi" / "<bookingsToday> today" when `freeSlotsUnavailable` is true, else "fără locuri libere săptămâna asta" / "no free slots this week" when `nextFreeSlots` is null; "Nota service-ului" / "Garage rating" — `rating` to one decimal with "din N recenzii" / "from N reviews" (singular "dintr-o recenzie" / "from 1 review"), or "—" with "încă nicio recenzie" / "no reviews yet" when `reviewCount` is 0 or `rating` is null; "Lucrări estimate, <month>" / "Estimated work, <month>" — `estimatedWorkBani` as whole lei rounded half up, the note "lei, din prețuri finale și oferte acceptate" / "lei, from final prices and accepted quotes". The read is sent for everyone who sees the section; a refusal lands in FR-003's error state.
+
+_From 1431-daily-numbers-panou._
+
+### 1431-FR-002 — Every number MUST be written through the shared locale formats: whole numbers grouped ("38.400" in Romanian, "38,400" in English), the rating with one decimal ("4,9" / "4.9"), the lei value with no decimals; the month name MUST come from the read's `month` in the person's language ("octombrie" / "October", lower case in Romanian) and never from the browser's clock; the weekday likewise from `nextFreeSlots.day`. A language change recomputes every text from the answer already read, with no new read.
+
+_From 1431-daily-numbers-panou._
+
+### 1431-FR-003 — The section MUST load on its own (099-FR-007): it reads `GET /api/v1/garages/{garageId}/figures/today` through the generated client in the browser once when it is created (skeletons on the server render, no read there), showing its heading and four card skeletons with the section marked busy while the first read is out; on the first read's final failure (after the interceptor's own sign-in resend; a 403 or 404 included, with no gone state; the section passes the helper no `retryAfter`, so one failed response is final and nothing retries on its own) it MUST show four cards with "—" and no note and one "Reîncearcă" / "Try again" link, announced as an alert, that reads again (the skeletons showing and the link gone while that read is out); the rest of Panou MUST be unaffected. A re-read that fails MUST keep the cards shown. The section writes nothing.
+
+_From 1431-daily-numbers-panou._
+
+### 1431-FR-004 — The section MUST read again on these events of `garage:{garageId}`: `request.created`, `quote.accepted`, `booking.confirmed`, `booking.moved`, `booking.cancelled`, `booking.lapsed`, `booking.no_show_recorded`, `booking.no_show_withdrawn`, `booking.completed`, `job.handed_over`, `job.final_price_corrected`, `rating.updated`, `garage.slots_changed`, `time_block.created`, `time_block.updated`, `time_block.deleted`, `garage.features_changed`, and on no other; at most once every 2 seconds (the first event of a window reads at once, i.e. within the shared helper's 300 ms coalescing; events inside the window produce one trailing read at its end, so the last event of a burst is never lost); once when the live channel reconnects (the shared resync); and when the Bucharest clock passes 00:00 while the section is open (one timer armed for the next Bucharest midnight, re-armed after it fires, cleared with the section); events, resync and midnight are merged into one stream before the 2-second limit, so a wake that fires several of them reads once. An event or resync arriving while a read is out causes exactly one further read once it settles, never a parallel one.
+
+_From 1431-daily-numbers-panou._
+
+### 1431-FR-005 — The cards MUST lay out phones first: at 320 px and 390 px two cards per row, each half the section's width with no minimum that overflows, no horizontal scroll, light and dark; above 900 px of viewport the four sit in one row, at 900 px and below two per row (so the QA run's 834 px tablet shows two per row and the desktop one row); the card label, value and note are each at least 12 px (MF-31's floor; the mock's 9 px label is flagged, not built); a value is never clipped, ellipsised or allowed to widen its card (it wraps), and a note wraps to as many lines as it needs with the cards of a row sharing one height; a re-read changes values in place with no announcement (no live region) and no layout shift; after a retry the keyboard focus is not lost to the page: when the read answers it moves to the first card, which is programmatically focusable but not a tab stop; each card's label is its accessible name and the value and note are read with it; the retry link is reachable and operable by keyboard with a visible focus ring and a tap target at least 44 px high on a phone; the cards' entrance motion, if any, is off under `prefers-reduced-motion: reduce`; the label, value and note meet AA contrast (4.5:1) against the card in light and dark through the Cockpit tokens; axe MUST report no violation on Panou for the owner and the receptionist.
+
+_From 1431-daily-numbers-panou._
+
+### 1431-FR-007 — No new route, event, metric, panel, alert or dependency: the section reads an existing route (ST-98 listed it in the inventory) and listens to existing events; the observability inventory and the API are unchanged; no `contracts`, `domain`, `api` or `data-access` change.
+
+_From 1431-daily-numbers-panou._
+
+### 1431-FR-008 — Tests MUST exist before the implementation (Constitution II), colocated Vitest specs for the web with a whole-line `// @traces` comment naming this feature's ids: the four skeletons and the busy mark while loading; the error state (four "—" cards, the alert, the retry link) and the retry reading again; the four cards' labels, values and notes from a stubbed answer in RO and EN, every note of FR-001 (plus, minus, same; plural, singular, none, fallback; reviews plural, singular, none; the month name) and every format of FR-002; one re-read on `booking.confirmed`; a burst of events within a second ending in at most two reads and the last answer shown; a resync re-read; the midnight timer reading at Bucharest 00:00 and cleared on destroy; a failed re-read keeping the cards; no read on an event outside FR-004's list; a mechanic's Panou without the section and without a read; the `kpi` section list entry without an empty key; the garage texts holding `garage.daily.*` and no `home.empty.kpi` in both files.
+
+_From 1431-daily-numbers-panou._
+
+### 1431-FR-009 — One Playwright flow (`@seeded`, on the PR QA run) MUST open Panou as the seeded owner at 1280 px and 390 px, in Romanian and English, and assert the four cards' labels and notes and that their values are numbers in the language's format, with the month name computed from Bucharest now and no sideways scroll; then, with no step skipped on any weekday, create a request through the API (`POST /quote-requests` with an `Idempotency-Key`) and assert that a request created through the API moves the first card by one within 5 seconds with no navigation; the booking re-read is covered by the Vitest spec on `booking.confirmed` (the brief's absolute values of ST-98's User Story 1 are asserted in the Vitest specs, FR-008); the PR QA sweep screenshots Panou at 320 px, 390 px, a tablet and a desktop, light and dark, RO and EN, with axe.
+
+_From 1431-daily-numbers-panou._
 
 ## Retired
 
