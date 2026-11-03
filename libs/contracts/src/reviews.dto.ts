@@ -824,7 +824,7 @@ const MY_REVIEW_STATES = [
   'reported',
   'removed',
 ] as const;
-export type MyReviewState = (typeof MY_REVIEW_STATES)[number];
+type MyReviewState = (typeof MY_REVIEW_STATES)[number];
 
 const MY_REVIEW_REPLY_STATUSES = ['published', 'reported'] as const;
 
