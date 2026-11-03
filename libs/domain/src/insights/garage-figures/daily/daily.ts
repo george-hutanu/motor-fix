@@ -45,7 +45,7 @@ export function dailyPeriods(now: Date) {
   };
 }
 
-export interface WonQuote {
+interface WonQuote {
   fromBani: number;
   toBani: number;
   booking: {
