@@ -1,11 +1,12 @@
 ---
 capability: garage-figures
-updated: 2026-10-30
+updated: 2026-11-03
 features:
   - 143-profile-views
   - 243-terms-privacy
   - 144-profile-stats-weekly
   - 1397-dashboard-weekly-views
+  - 098-daily-numbers
 ---
 
 # Capability: garage-figures
@@ -157,6 +158,50 @@ _From 1397-dashboard-weekly-views._
 ### 1397-FR-012 — Jest tests MUST cover the panel's states (loading, empty, error with retry, figures), the sentence and its no-views variant, Romanian and English formatting of figures, percentage and tooltip, null weeks without a bar, the latest bar's label, the panel's position in the profile view and its absence for a mechanic; a Playwright flow MUST seed eight weeks of figures, open the overview as the owner and check the two large figures, one tooltip and the sentence, then open the same garage as a mechanic and see no panel.
 
 _From 1397-dashboard-weekly-views._
+
+### 098-FR-001 — The API MUST offer `GET /api/v1/garages/{garageId}/figures/today` answering 200 with `{ requestsToday, requestsYesterday, bookingsThisWeek, nextFreeSlots, freeSlotsUnavailable, bookingsToday, rating, reviewCount, estimatedWorkBani, month }`: whole numbers for the counts and the bani sum; `rating` a number with one decimal or null; `nextFreeSlots` `{ day, count }` (the day as a calendar day, "2026-11-06") or null; `freeSlotsUnavailable` a boolean, true only in FR-006's case; `month` the first day of the current Bucharest month ("2026-11-01"). It is a live read of the garage's rows at the time of the call, never a nightly summary.
+
+_From 098-daily-numbers._
+
+### 098-FR-002 — Access MUST be the shipped figures rule (144-FR-006): the garage is the signed-in membership's and the path id is only compared with it (any other id 404 `not_found`); the owner and the receptionist (`garage.requests`) are allowed; a mechanic of the garage is answered 403 whatever her permissions; a mechanic with no garage, a driver, an admin or a visitor get the figures service's refusals (404 for the first three, 401 `sign_in_required` for a visitor). No assistant tool is added or changed.
+
+_From 098-daily-numbers._
+
+### 098-FR-003 — `requestsToday` MUST be the garage's REQUEST_RECIPIENT rows created from 00:00 Europe/Bucharest today (inclusive) to the next midnight (exclusive), whatever their status now, and `requestsYesterday` the same count over the whole of yesterday (00:00 inclusive to 24:00 exclusive, Bucharest). Both days are Bucharest calendar days, 23, 24 or 25 hours long.
+
+_From 098-daily-numbers._
+
+### 098-FR-004 — `bookingsThisWeek` MUST be the garage's BOOKING rows with status `confirmed` or `completed` whose `starts_at` falls from Monday 00:00 (inclusive) to Sunday 24:00 (exclusive) Europe/Bucharest of the current week; `bookingsToday` the same rows starting today.
+
+_From 098-daily-numbers._
+
+### 098-FR-005 — `nextFreeSlots` MUST come from the shipped free-slot engine (154-FR-004..FR-010), asked for the garage as its desk would ask: a 60-minute job, no lift, no mechanic, the default earliest start, a horizon from the earliest start's Bucharest day to this week's Sunday inclusive (at least 1 day), and the engine's maximum count (10); returned starts after Sunday are dropped, and the engine is not asked at all when the earliest start's day is already after Sunday. The answer is the first day with any remaining start and the number of remaining starts on that day, so `count` is 1 to 10; with no start left in the week it MUST be null. The engine's cache (154-FR-012) serves repeated reads.
+
+_From 098-daily-numbers._
+
+### 098-FR-006 — When the free-slot computation throws while the counts succeed (the garage's hours or lifts cannot be read, or any other error of the engine, which is called for the garage without a second actor check), the read MUST still answer 200 with `nextFreeSlots: null` and a `freeSlotsUnavailable: true` mark beside it, logging one `warn` line per failed read; the second card then shows the fallback note "<bookingsToday> azi" / "<bookingsToday> today". Without the mark, a null is "fără locuri libere săptămâna asta" / "no free slots this week".
+
+_From 098-daily-numbers._
+
+### 098-FR-007 — `rating` and `reviewCount` MUST be the garage's stored `rating` and `review_count` as the reviews stories recount them; nothing is recomputed from the reviews.
+
+_From 098-daily-numbers._
+
+### 098-FR-008 — `estimatedWorkBani` MUST be the sum, over the garage's quotes whose `accepted_at` falls in the current Bucharest calendar month (the shipped predicate, unchanged), excluding a quote whose booking is `lapsed`, `cancelled` or `no_show`, of the job's `final_price_bani` where recorded (the stored value, which a correction within 48 hours of the handover has already replaced), otherwise `(from_bani + to_bani) / 2` rounded half up to whole bani — the rule the shipped figures read already applies (Q38); the two reads MUST share one computation, so they can never disagree.
+
+_From 098-daily-numbers._
+
+### 098-FR-009 — The read MUST write nothing: no audit entry, no outbox event, no notification, no live update, no counter; its answer shape MUST be a DTO in the contracts library, the route documented in the OpenAPI document with its 200, 400 (`validation_failed`, a `garageId` that is not a UUID), 401, 403 and 404 answers, and the `data-access` client regenerated from it.
+
+_From 098-daily-numbers._
+
+### 098-FR-010 — The new route MUST be listed in `infra/observability/inventory.json` with its metrics, panel and alert, as the weekly figures route is, and the free-slot fallback (FR-006) MUST be countable: one counter of reads answered with the mark.
+
+_From 098-daily-numbers._
+
+### 098-FR-011 — Tests MUST exist before the code (Principle II), each test file carrying one whole-line `// @traces` comment naming this feature's ids. Unit (no database): each number at the day, week and month boundaries in Europe/Bucharest including the clock changes of March and October; the Q38 sum with and without final prices, and lapsed, cancelled and no-show bookings left out; the free-slot day and count, the null, the Sunday-night case (earliest start past Sunday → null) and the fallback mark. Integration (real PostgreSQL and Valkey): the route's answers for the owner, the receptionist, the garage's mechanic (403), another garage's owner (404), a visitor (401) and a bad id (400); the read writes nothing; the OpenAPI document carries the operation.
+
+_From 098-daily-numbers._
 
 ## Retired
 

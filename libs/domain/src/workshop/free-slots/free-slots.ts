@@ -10,6 +10,13 @@ const MINUTE = 60_000;
 // Starts are offered on the half hours of the Bucharest clock. Its offset is
 // a whole number of hours, so the UTC half hours are the same instants.
 const STEP = 30 * MINUTE;
+const LEAD = 60 * MINUTE;
+
+// The first start offered: the time asked, else an hour from now, never in
+// the past, on the next half hour.
+export function earliestStart(now: number, asked = now + LEAD): Date {
+  return new Date(Math.ceil(Math.max(asked, now) / STEP) * STEP);
+}
 
 // A span a booking or a time block holds a mechanic, a lift or both for.
 interface HeldSegment {
