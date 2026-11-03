@@ -89,6 +89,23 @@ article:focus-visible {
   color: var(--mf-red-ink);
   border-color: var(--mf-red-ink);
   font-weight: 700;
+  cursor: pointer;
+}
+.decided {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--mf-red-ink);
 }
 .actions button:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
@@ -108,6 +125,6 @@ article:focus-visible {
   white-space: nowrap;
   visibility: hidden;
 }
-.actions:has(button:hover, button:focus-visible) .tip {
+.actions:has(.keep:hover, .keep:focus-visible) .tip {
   visibility: visible;
 }

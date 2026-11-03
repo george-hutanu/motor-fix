@@ -25,7 +25,7 @@
       } @else {
         <ul class="list">
           @for (item of items(); track item.report.id) {
-            <li><mf-admin-review-item [item]="item" [now]="now()" /></li>
+            <li><mf-admin-review-item [item]="item" [now]="now()" [outcome]="outcome(item.report.id)" (decided)="decide(item, $event)" /></li>
           }
         </ul>
       }

@@ -1,0 +1,15 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <fieldset class="rules" [disabled]="sending()">
+    <legend>{{ 'admin.reviews.remove.rule' | t }}</legend>
+    @for (rule of rules; track rule.code) {
+      <label class="rule">
+        <input type="radio" name="rule" formControlName="rule" [value]="rule.code" />
+        <span>{{ rule.label | t }}</span>
+      </label>
+    }
+  </fieldset>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'admin.reviews.remove.cancel' | t }}</button>
+    <button hlmBtn type="submit" class="destructive" [mfTaskSubmit]="save" [disabled]="blocked()">{{ submitLabel | t }}</button>
+  </div>
+</form>

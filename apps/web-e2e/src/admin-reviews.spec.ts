@@ -193,7 +193,7 @@ test.describe('reported reviews on the admin dashboard @seeded', () => {
 
       await expect(dialog).toHaveCount(0);
       await expect(ours.getByRole('status')).toHaveText(
-        'Ștearsă. Autorul și service-ul au fost anunțați.',
+        'Ștearsă. Autorul și service‑ul au fost anunțați.',
       );
       await expect(
         ours.getByRole('button', { name: 'Șterge recenzia' }),

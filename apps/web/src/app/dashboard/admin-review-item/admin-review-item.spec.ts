@@ -487,7 +487,7 @@ describe('removing from the item', () => {
     expect(buttons(el)).toHaveLength(0);
     const status = el.querySelector('[role="status"]');
     expect(text(status)).toBe(
-      'Ștearsă. Autorul și service-ul au fost anunțați.',
+      'Ștearsă. Autorul și service‑ul au fost anunțați.',
     );
   });
 
@@ -495,7 +495,7 @@ describe('removing from the item', () => {
     const el = await decidedAs(reply(), { outcome: 'removed' });
 
     expect(text(el.querySelector('[role="status"]'))).toBe(
-      'Șters. Autorul și service-ul au fost anunțați.',
+      'Șters. Autorul și service‑ul au fost anunțați.',
     );
   });
 

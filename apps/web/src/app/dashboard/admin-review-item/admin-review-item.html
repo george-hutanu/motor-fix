@@ -27,9 +27,18 @@
       <li>{{ fact }}</li>&ngsp;
     }
   </ul>&ngsp;
-  <div class="actions">
-    <button type="button" class="keep" aria-disabled="true" [attr.aria-describedby]="tipId">{{ v.keep }}</button>&ngsp;
-    <button type="button" class="remove" aria-disabled="true" [attr.aria-describedby]="tipId">{{ v.remove }}</button>&ngsp;
-    <span class="tip" role="tooltip" [id]="tipId">{{ 'admin.reviews.actions.soon' | t }}</span>
-  </div>
+  @if (said(); as line) {
+    <p class="decided" role="status">
+      @if (outcome()?.outcome === 'removed') {
+        <span class="dot" aria-hidden="true"></span>
+      }
+      {{ line }}
+    </p>
+  } @else {
+    <div class="actions">
+      <button type="button" class="keep" aria-disabled="true" [attr.aria-describedby]="tipId">{{ v.keep }}</button>&ngsp;
+      <button type="button" class="remove" (click)="remove()">{{ v.remove }}</button>&ngsp;
+      <span class="tip" role="tooltip" [id]="tipId">{{ 'admin.reviews.actions.soon' | t }}</span>
+    </div>
+  }
 </article>

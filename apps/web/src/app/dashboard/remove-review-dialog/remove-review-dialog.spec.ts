@@ -236,9 +236,18 @@ describe('the confirmation of a review removal', () => {
     decide.mockReturnValueOnce(new Promise(() => undefined));
 
     await press();
+    const submit = panel().querySelector(
+      'button[type="submit"]',
+    ) as HTMLButtonElement;
+    submit.click();
+    await settle();
 
-    expect(button('Șterge recenzia')?.disabled).toBe(true);
-    expect(radios().every((r) => r.disabled)).toBe(true);
+    // The shared submit stays focusable and says it is busy; a second press
+    // sends nothing.
+    expect(submit.getAttribute('aria-busy')).toBe('true');
+    expect(decide).toHaveBeenCalledTimes(1);
+    expect(radios().every((r) => r.matches(':disabled'))).toBe(true);
+    expect(button('Renunță')?.matches(':disabled')).toBe(true);
   });
 
   it('reads in English', async () => {

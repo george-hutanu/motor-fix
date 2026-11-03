@@ -921,6 +921,13 @@
       "one": "{n} recenzie raportată în așteptare",
       "other": "{n} de recenzii raportate în așteptare"
     },
+    "decided": {
+      "already": "Deja decisă",
+      "alreadyBy": "Deja decisă de {name}",
+      "gone": "Raportul nu mai e în așteptare",
+      "removedReply": "Șters. Autorul și service‑ul au fost anunțați.",
+      "removedReview": "Ștearsă. Autorul și service‑ul au fost anunțați."
+    },
     "edited": "editat",
     "empty": "Nicio recenzie raportată.",
     "facts": {
@@ -957,6 +964,16 @@
       "personal_data": "Date personale",
       "promotion": "Promovarea altui service",
       "threats_or_legal_accusations": "Amenințări sau acuzații legale"
+    },
+    "remove": {
+      "cancel": "Renunță",
+      "rule": "Regula încălcată",
+      "submitReply": "Șterge răspunsul",
+      "submitReview": "Șterge recenzia",
+      "title": {
+        "reply": "Ștergi răspunsul lui {name}?",
+        "review": "Ștergi recenzia lui {name}?"
+      }
     },
     "retry": "Reîncearcă",
     "title": {

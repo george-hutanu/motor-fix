@@ -898,6 +898,13 @@
       "one": "{n} reported review pending",
       "other": "{n} reported reviews pending"
     },
+    "decided": {
+      "already": "Already decided",
+      "alreadyBy": "Already decided by {name}",
+      "gone": "The report is no longer pending",
+      "removedReply": "Removed. The author and the garage were told.",
+      "removedReview": "Removed. The author and the garage were told."
+    },
     "edited": "edited",
     "empty": "No reported reviews.",
     "facts": {
@@ -934,6 +941,16 @@
       "personal_data": "Personal data",
       "promotion": "Promoting another garage",
       "threats_or_legal_accusations": "Threats or legal accusations"
+    },
+    "remove": {
+      "cancel": "Cancel",
+      "rule": "Rule broken",
+      "submitReply": "Remove the reply",
+      "submitReview": "Remove the review",
+      "title": {
+        "reply": "Remove {name}'s reply?",
+        "review": "Remove {name}'s review?"
+      }
     },
     "retry": "Retry",
     "title": {

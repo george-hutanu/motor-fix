@@ -516,7 +516,7 @@ describe('an item this admin decided', () => {
     await remove(el);
 
     expect(decided(el)[0]).toBe(
-      'Ștearsă. Autorul și service-ul au fost anunțați.',
+      'Ștearsă. Autorul și service‑ul au fost anunțați.',
     );
     expect(items(el)[0].querySelector('button.remove')).toBeNull();
     expect(text(el.querySelector('a.all'))).toBe('Vezi toate (6)');
@@ -538,7 +538,7 @@ describe('an item this admin decided', () => {
       'Service 3 · recenzie de 2,0',
     ]);
     expect(decided(el)[1]).toBe(
-      'Ștearsă. Autorul și service-ul au fost anunțați.',
+      'Ștearsă. Autorul și service‑ul au fost anunțați.',
     );
   });
 
