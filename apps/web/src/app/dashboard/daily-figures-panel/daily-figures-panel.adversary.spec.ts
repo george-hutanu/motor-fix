@@ -646,7 +646,7 @@ describe('the garage texts', () => {
   // @traces 1431-FR-006
   it('holds no kpi empty-state text in either language', () => {
     for (const language of ['ro', 'en'] as const) {
-      expect(read(language).home.empty?.kpi).toBeUndefined();
+      expect(read(language).home['empty']?.kpi).toBeUndefined();
     }
   });
 
