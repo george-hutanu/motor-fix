@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 
+import { AdminStatus } from '../admin-status/admin-status';
 import { CopyVoices } from '../copy-voices/copy-voices';
 import { DeleteAccount } from '../delete-account/delete-account';
 import { FeatureSwitches } from '../feature-switches/feature-switches';
@@ -18,6 +19,7 @@ import { Session } from '../session';
 // bundle.
 @Component({
   imports: [
+    AdminStatus,
     CopyVoices,
     DeleteAccount,
     FeatureSwitches,
