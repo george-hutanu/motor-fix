@@ -34,6 +34,29 @@
     "truncated": "Se afișează cele mai noi 200 de reparații",
     "unshared": "Clientul nu mai partajează această reparație"
   },
+  "daily": {
+    "error": "Cifrele zilei nu s‑au putut încărca.",
+    "label": {
+      "bookings": "Programări săptămâna asta",
+      "rating": "Nota service‑ului",
+      "requests": "Cereri noi azi",
+      "work": "Lucrări estimate, {month}"
+    },
+    "note": {
+      "fewer": "−{n} față de ieri",
+      "more": "+{n} față de ieri",
+      "noReviews": "încă nicio recenzie",
+      "noSlots": "fără locuri libere săptămâna asta",
+      "review": "dintr‑o recenzie",
+      "reviews": "din {n} recenzii",
+      "same": "la fel ca ieri",
+      "slot": "1 loc liber {day}",
+      "slots": "{n} locuri libere {day}",
+      "today": "{n} azi",
+      "work": "lei, din prețuri finale și oferte acceptate"
+    },
+    "retry": "Reîncearcă"
+  },
   "features": {
     "confirm": {
       "cancel": "Renunță",
@@ -69,7 +92,6 @@
   "home": {
     "empty": {
       "brands": "Aici apar mărcile cele mai cerute luna asta.",
-      "kpi": "Aici apar cifrele zilei: cereri, programări, lucrări și încasări.",
       "load": "Aici apare încărcarea fiecărui mecanic pe ziua de azi.",
       "now": "Aici apar lucrările în curs, cu poze, video și live din atelier.",
       "sched": "Aici apare programul de azi, elevator cu elevator."

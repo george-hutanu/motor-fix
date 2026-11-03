@@ -34,6 +34,29 @@
     "truncated": "Showing the newest 200 repairs",
     "unshared": "The client no longer shares this repair"
   },
+  "daily": {
+    "error": "Today's numbers could not be loaded.",
+    "label": {
+      "bookings": "Bookings this week",
+      "rating": "Garage rating",
+      "requests": "New requests today",
+      "work": "Estimated work, {month}"
+    },
+    "note": {
+      "fewer": "−{n} vs yesterday",
+      "more": "+{n} vs yesterday",
+      "noReviews": "no reviews yet",
+      "noSlots": "no free slots this week",
+      "review": "from 1 review",
+      "reviews": "from {n} reviews",
+      "same": "same as yesterday",
+      "slot": "1 free slot on {day}",
+      "slots": "{n} free slots on {day}",
+      "today": "{n} today",
+      "work": "lei, from final prices and accepted quotes"
+    },
+    "retry": "Try again"
+  },
   "features": {
     "confirm": {
       "cancel": "Cancel",
@@ -69,7 +92,6 @@
   "home": {
     "empty": {
       "brands": "The most requested brands this month appear here.",
-      "kpi": "Today's numbers appear here: requests, bookings, jobs and takings.",
       "load": "Each mechanic's load for today appears here.",
       "now": "Jobs in progress appear here, with photos, video and live from the workshop.",
       "sched": "Today's schedule appears here, lift by lift."
