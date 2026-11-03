@@ -154,20 +154,26 @@ export class MyReviewsService {
   async read(actor: Actor, page = 1): Promise<MyReviewsPageDto> {
     const now = new Date();
     const rows = this.rows(actor.accountId, now);
-    const [[counts], ids] = await Promise.all([
-      this.prisma.$queryRaw<{ written: number; waiting: number }[]>`
-        SELECT count(*) FILTER (WHERE r.id IS NOT NULL)::int AS written,
-               count(*) FILTER (WHERE r.id IS NULL)::int AS waiting
-        ${rows}`,
-      this.prisma.$queryRaw<{ id: string }[]>`
-        SELECT j.id
-        ${rows}
-        ORDER BY (r.id IS NULL) DESC,
-                 COALESCE(j.handed_over_at, r.posted_at) DESC,
-                 j.id ASC
-        LIMIT ${MY_REVIEWS_PAGE}
-        OFFSET ${(page - 1) * MY_REVIEWS_PAGE}`,
-    ]);
+    const [counts] = await this.prisma.$queryRaw<
+      { written: number; waiting: number }[]
+    >`
+      SELECT count(*) FILTER (WHERE r.id IS NOT NULL)::int AS written,
+             count(*) FILTER (WHERE r.id IS NULL)::int AS waiting
+      ${rows}`;
+    const total = counts.written + counts.waiting;
+    // A page past the last reads nothing, so a huge page never reaches OFFSET.
+    const skip = (page - 1) * MY_REVIEWS_PAGE;
+    const ids =
+      skip < total
+        ? await this.prisma.$queryRaw<{ id: string }[]>`
+            SELECT j.id
+            ${rows}
+            ORDER BY (r.id IS NULL) DESC,
+                     COALESCE(j.handed_over_at, r.posted_at) DESC,
+                     j.id ASC
+            LIMIT ${MY_REVIEWS_PAGE}
+            OFFSET ${skip}`
+        : [];
     const items = await this.hydrate(
       actor.accountId,
       ids.map((one) => one.id),
@@ -177,7 +183,7 @@ export class MyReviewsService {
       items,
       page,
       pageSize: MY_REVIEWS_PAGE,
-      total: counts.written + counts.waiting,
+      total,
       waiting: counts.waiting,
       written: counts.written,
     };
@@ -218,8 +224,10 @@ export class MyReviewsService {
     ]);
     const mine = new Set(reported.map((one) => one.reviewId));
     const byId = new Map(jobs.map((job) => [job.id, job]));
-    return ids.map((id) => {
-      const job = byId.get(id)!;
+    // A job deleted between the two reads drops out of the page.
+    return ids.flatMap((id) => {
+      const job = byId.get(id);
+      if (!job) return [];
       const [review = null] = job.reviews;
       return rowOf(
         {
