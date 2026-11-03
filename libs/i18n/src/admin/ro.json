@@ -695,6 +695,7 @@
         "growth": "Service‑uri și șoferi, lună de lună",
         "log": "Ce s‑a întâmplat azi pe platformă",
         "numbers": "Service‑uri, cereri, programări, șoferi, recenzii",
+        "system": "Cele șase servicii ale platformei și efectul unei probleme",
         "verification": "Dosarele care așteaptă o decizie"
       },
       "done": "Gata",
@@ -708,6 +709,7 @@
         "growth": "Creștere, ultimele 12 luni",
         "log": "Jurnal",
         "numbers": "Cifrele platformei",
+        "system": "Starea sistemului",
         "verification": "Service‑uri de verificat"
       },
       "reset": "Revino la varianta implicită",
@@ -980,6 +982,24 @@
       "reply": "{garage} · răspuns la recenzia lui {author}",
       "review": "{garage} · recenzie de {score}"
     }
+  },
+  "status": {
+    "failed": "Nu am putut citi starea sistemului.",
+    "lamp": {
+      "amber": "degradat",
+      "green": "normal",
+      "red": "căzut"
+    },
+    "name": {
+      "api": "API",
+      "backup": "Backup",
+      "email": "E‑mail",
+      "maps": "Hărți",
+      "notifications": "Notificări",
+      "search": "Căutare"
+    },
+    "retry": "Reîncearcă",
+    "title": "Starea sistemului"
   },
   "suspended": {
     "alone": "suspendat",

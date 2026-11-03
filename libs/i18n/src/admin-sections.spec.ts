@@ -16,7 +16,7 @@ const at = (texts: Texts, path: string): unknown =>
     .split('.')
     .reduce<unknown>((node, key) => (node as Texts | undefined)?.[key], texts);
 
-const KEYS = ['numbers', 'verification', 'growth', 'demand', 'log'];
+const KEYS = ['numbers', 'verification', 'system', 'growth', 'demand', 'log'];
 const PATHS = [
   'title',
   'line',
@@ -102,5 +102,25 @@ describe('the admin dashboard customise wording', () => {
     expect(at(bundle('en'), 'panel.sections.line')).toMatch(
       /It is saved in your account\.$/,
     );
+  });
+});
+
+// @traces 1425-FR-001
+describe('the system status section in the customise panel', () => {
+  it.each([
+    ['ro', 'name.system', 'Starea sistemului'],
+    ['en', 'name.system', 'System status'],
+    [
+      'ro',
+      'description.system',
+      'Cele șase servicii ale platformei și efectul unei probleme',
+    ],
+    [
+      'en',
+      'description.system',
+      "The platform's six services and the effect of a problem",
+    ],
+  ] as const)('%s %s reads as the spec gives it', (language, path, text) => {
+    expect(at(bundle(language), `panel.sections.${path}`)).toBe(text);
   });
 });

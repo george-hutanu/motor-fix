@@ -677,6 +677,7 @@
         "growth": "Garages and drivers, month by month",
         "log": "What happened on the platform today",
         "numbers": "Garages, requests, bookings, drivers, reviews",
+        "system": "The platform's six services and the effect of a problem",
         "verification": "Applications waiting for a decision"
       },
       "done": "Done",
@@ -690,6 +691,7 @@
         "growth": "Growth, last 12 months",
         "log": "Log",
         "numbers": "Platform numbers",
+        "system": "System status",
         "verification": "Garages to verify"
       },
       "reset": "Back to the default",
@@ -957,6 +959,24 @@
       "reply": "{garage} · reply to {author}'s review",
       "review": "{garage} · {score} review"
     }
+  },
+  "status": {
+    "failed": "We could not read the system status.",
+    "lamp": {
+      "amber": "degraded",
+      "green": "normal",
+      "red": "down"
+    },
+    "name": {
+      "api": "API",
+      "backup": "Backup",
+      "email": "E‑mail",
+      "maps": "Maps",
+      "notifications": "Notifications",
+      "search": "Search"
+    },
+    "retry": "Retry",
+    "title": "System status"
   },
   "suspended": {
     "alone": "suspended",

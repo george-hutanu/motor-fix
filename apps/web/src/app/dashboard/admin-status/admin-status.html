@@ -1,0 +1,38 @@
+<section
+  [attr.aria-labelledby]="headingId"
+  [attr.aria-busy]="!view || view.isLoading()"
+>
+  <h2 [id]="headingId">{{ 'admin.status.title' | t }}</h2>
+  @if (!view || view.isLoading()) {
+    <ul class="grid" aria-hidden="true">
+      @for (n of skeletons; track n) {
+        <li class="tile skeleton"></li>
+      }
+    </ul>
+  } @else if (view.error() && !view.value()) {
+    <div class="failed">
+      <p role="alert">{{ 'admin.status.failed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="view.reload()">
+        {{ 'admin.status.retry' | t }}
+      </button>
+    </div>
+  } @else {
+    <ul class="grid tiles">
+      @for (tile of tiles(); track tile.key; let i = $index) {
+        <li class="tile" [attr.data-state]="tile.state" [style.--i]="i">
+          <strong class="name">{{ tile.name | t }}</strong>
+          <span class="state">
+            <span class="lamp" aria-hidden="true"></span>
+            <span class="word">{{ tile.word | t }}</span>
+          </span>
+          <span class="short">{{ tile.short }}</span>
+        </li>
+      }
+    </ul>
+    <div class="sentences" aria-live="polite">
+      @for (sentence of sentences(); track $index) {
+        <p class="sentence">{{ sentence }}</p>
+      }
+    </div>
+  }
+</section>
