@@ -622,6 +622,21 @@ describe('an item this admin decided', () => {
     expect(button(el, 'Mai multe')).toBeUndefined();
   });
 
+  it('keeps the decided item as decided when More fails', async () => {
+    answer = queue(25);
+    const el = await open();
+    await remove(el);
+    answer = () => Promise.reject(new HttpErrorResponse({ status: 500 }));
+
+    button(el, 'Mai multe')?.click();
+    await settle();
+
+    expect(decided(el)[0]).toBe(
+      'Ștearsă. Autorul și service‑ul au fost anunțați.',
+    );
+    expect(items(el)[0].querySelector('button.remove')).toBeNull();
+  });
+
   it('keeps every item as it was when the dialog is cancelled', async () => {
     const el = await open();
     items(el)[0].querySelector<HTMLButtonElement>('button.remove')?.click();

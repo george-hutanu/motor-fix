@@ -515,6 +515,9 @@ describe('removing from the item', () => {
 
     expect(buttons(el)).toHaveLength(0);
     expect(text(el.querySelector('.decided'))).toBe('Deja decisă de Ana');
+    // A refusal reads as quiet text, not as the removed status line.
+    expect(el.querySelector('[role="status"]')).toBeNull();
+    expect(el.querySelector('.decided')?.classList).toContain('quiet');
   });
 
   it('says already decided with no name when none came', async () => {
