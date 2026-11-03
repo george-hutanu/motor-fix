@@ -39,6 +39,7 @@ features:
   - 295-service-health-tiles
   - 1425-service-tiles-web
   - 1423-remove-reported-review-web
+  - 1430-status-on-dashboard
 ---
 
 # Capability: Admin dashboard
@@ -829,9 +830,9 @@ _From 003-admin-account-actions._
 
 _From 1263-admin-dashboard-customise._
 
-### 1263-FR-002 — The admin section keys and their default order MUST be `numbers` (the platform numbers, the six tiles), `verification` (Service‑uri de verificat), `growth` (Creștere, ultimele 12 luni), `demand` (Cereri pe marcă, 30 de zile) and `log` (Jurnal): the sections the admin overview draws today, in the brief's order. `performance`, `system` and `reported` MUST be added to the list, in the brief's place (`performance` after `numbers`, `system` after `verification`, `reported` after `demand`), by the story that ships each section, and MUST NOT be accepted before then. The list lives in one place on the server, and its order is the default layout.
+### 1430-FR-001 — The server's admin section list (1263-FR-002) MUST hold `system` after `verification`: `numbers`, `verification`, `system`, `growth`, `demand`, `log`; and the web's own copy of the admin keys (the order drawn after a failed layout read) MUST be the same list. Every test asserting either list MUST assert the new one, the Playwright customise spec (`apps/web-e2e/src/admin-panel-customise.spec.ts`: 6 rows, the six-key order, the `mf-admin-status` region among the drawn sections) included. No other role's list changes.
 
-_From 1263-admin-dashboard-customise._
+_From 1430-status-on-dashboard._
 
 ### 1263-FR-003 — `GET /api/v1/me/dashboard-layouts/:role` MUST answer the caller's layout for that role as `{ role, panels: [{ key, visible }], updatedAt }` (`updatedAt` an ISO 8601 UTC timestamp, or null): with no saved layout, the default (every key visible in the default order, `updatedAt` null); with one, the saved layout merged on read: known keys in the saved order with their saved visibility, then every key of the current list the record lacks appended visible in the list's order, and every key the list no longer holds left out.
 
@@ -1217,6 +1218,30 @@ _From 1423-remove-reported-review-web._
 
 _From 1423-remove-reported-review-web._
 
+### 1430-FR-002 — The admin dashboard (Panou) MUST draw ST-1425's Starea sistemului panel as its `system` section, wherever and only where the layout shows it: hidden, moved up or down and reset exactly as the other sections (1391-FR-004 to 1391-FR-006), listed and counted in "Personalizează panoul" with the name and description ST-1425 added (1425-FR-001), and read only while shown (1391-FR-017). The panel on Setări (1425-FR-002) is unchanged.
+
+_From 1430-status-on-dashboard._
+
+### 1430-FR-003 — A layout saved before this story, which lacks `system`, MUST read back with `system` appended visible after the saved keys by the merge of 1263-FR-003, and a reset MUST answer `system` in its default place: no data migration, no write on read.
+
+_From 1430-status-on-dashboard._
+
+### 1430-FR-004 — The panel on Panou MUST fit 320 px and 390 px phones with no sideways scroll, in light and dark, RO and EN, as ST-1425 draws it in Setări (1425-FR-007); nothing new is added to the panel for the dashboard.
+
+_From 1430-status-on-dashboard._
+
+### 1430-FR-005 — No new route, event, text, metric, panel or alert; the observability inventory is unchanged; no new dependency.
+
+_From 1430-status-on-dashboard._
+
+### 1430-FR-006 — Tests MUST exist before the implementation (Constitution II), colocated Vitest specs: the server's admin list and the web's key list hold `system` third; the merge appends `system` visible to a saved layout lacking it and keeps a saved `system` entry's place and visibility; the dashboard draws the panel when the layout shows `system`, not when hidden, and lists it as a row of the customise panel. A `// @traces` line names the FR ids in each test file.
+
+_From 1430-status-on-dashboard._
+
+### 1430-FR-007 — One Playwright flow (`@seeded`, on the PR QA run): as the seeded admin with Panou open and the Starea sistemului region visible, write `maps` amber since 10:40 at `latency_ms` 1900 into `status_tile` after the admin's live stream has answered (the `/api/v1/live` response), and publish `status_tile.changed` for the admin audience (ST-1425's flow pattern, the row restored afterwards); the Hărți tile reads "degradat" and "lent · 1,9 s" and the maps sentence shows within 5 seconds, with no navigation, and the page does not scroll sideways.
+
+_From 1430-status-on-dashboard._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -1254,3 +1279,4 @@ _From 1423-remove-reported-review-web._
 - `162-FR-009` — superseded by `1391-FR-017` (2026-10-30)
 - `1389-FR-003` — superseded by `1423-FR-001` (2026-11-03)
 - `1389-FR-004` — superseded by `1423-FR-002` (2026-11-03)
+- `1263-FR-002` — superseded by `1430-FR-001` (2026-11-03)

@@ -12,7 +12,7 @@ import { fakeLive, wait } from './garage-requests/garage-requests.testing';
 import { Live } from './live';
 import { Session } from './session';
 
-const KEYS = ['numbers', 'verification', 'growth', 'demand', 'log'];
+const KEYS = ['numbers', 'verification', 'system', 'growth', 'demand', 'log'];
 const all = (
   hidden: readonly string[] = [],
   keys: readonly string[] = KEYS,
@@ -79,6 +79,7 @@ function setup({
 }
 
 // @traces 1391-FR-004 1391-FR-005 1391-FR-009 1391-FR-014
+// @traces 1430-FR-001
 describe('the admin layout given keys it should not act on', () => {
   it('saves nothing for a key the web has no section for', async () => {
     const { api, layout, settle } = setup();
@@ -110,10 +111,10 @@ describe('the admin layout given keys it should not act on', () => {
 
     expect(order(layout)).toEqual(KEYS);
     expect(hidden(layout)).toEqual([]);
-    expect(layout.shown()).toHaveLength(5);
+    expect(layout.shown()).toHaveLength(6);
     expect(
       api.dashboardLayoutsControllerSave.mock.calls.every(
-        ([call]) => call.body.panels.length === 5,
+        ([call]) => call.body.panels.length === 6,
       ),
     ).toBe(true);
   });
@@ -287,7 +288,12 @@ describe('going back to the default', () => {
     void layout.swap('log', 'demand');
     await layout.reset();
     late.resolve(
-      answer(all([], ['numbers', 'verification', 'growth', 'log', 'demand'])),
+      answer(
+        all(
+          [],
+          ['numbers', 'verification', 'system', 'growth', 'log', 'demand'],
+        ),
+      ),
     );
     await settle();
 

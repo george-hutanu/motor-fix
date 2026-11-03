@@ -8,6 +8,7 @@ const ADMIN: readonly string[] = panelKeysOf('admin') ?? [];
 const DEFAULT = ADMIN.map((key) => ({ key, visible: true }));
 
 // @traces 1263-admin-dashboard-customise-FR-006
+// @traces 1430-FR-001
 describe('panelKeysOf on hostile role names', () => {
   it.each([
     '__proto__',
@@ -32,6 +33,7 @@ describe('panelKeysOf on hostile role names', () => {
     expect(panelKeysOf('admin')).toEqual([
       'numbers',
       'verification',
+      'system',
       'growth',
       'demand',
       'log',
@@ -112,6 +114,7 @@ describe('mergeLayout on hostile saved lists', () => {
     expect(ADMIN).toEqual([
       'numbers',
       'verification',
+      'system',
       'growth',
       'demand',
       'log',
@@ -179,8 +182,8 @@ describe('checkPanels on hostile lists', () => {
     ).toBe('unknown_key');
   });
 
-  it('refuses the unshipped sections performance, system and reported', () => {
-    for (const key of ['performance', 'system', 'reported'])
+  it('refuses the unshipped sections performance and reported', () => {
+    for (const key of ['performance', 'reported'])
       expect(checkPanels(ADMIN, [{ key, visible: true }])).toBe('unknown_key');
   });
 
@@ -242,6 +245,22 @@ describe('the garage roles section list', () => {
     expect(panelKeysOf('admin')).not.toContain('kpi');
     expect(
       checkPanels(panelKeysOf('admin') ?? [], [{ key: 'kpi', visible: true }]),
+    ).toBe('unknown_key');
+  });
+});
+
+describe('the system section outside the admin list', () => {
+  // @traces 1430-FR-001
+  it('does not give system to the garage, mechanic, receptionist, driver or an upper-case admin', () => {
+    for (const role of ['garage', 'mechanic', 'receptionist']) {
+      expect(panelKeysOf(role)).not.toContain('system');
+    }
+    expect(panelKeysOf('driver')).toBeUndefined();
+    expect(panelKeysOf('Admin')).toBeUndefined();
+    expect(
+      checkPanels(panelKeysOf('garage') ?? [], [
+        { key: 'system', visible: true },
+      ]),
     ).toBe('unknown_key');
   });
 });

@@ -11,6 +11,7 @@ import { AdminLog } from '../admin-log/admin-log';
 import { AdminOverview } from '../admin-overview';
 import { AdminQueue } from '../admin-queue/admin-queue';
 import { AdminReviews } from '../admin-reviews/admin-reviews';
+import { AdminStatus } from '../admin-status/admin-status';
 import type {
   PanelRow,
   SectionsPanelData,
@@ -72,6 +73,7 @@ const SECTIONS = 'admin.panel.sections';
 const DRAWN = new Set([
   'numbers',
   'verification',
+  'system',
   'growth',
   'demand',
   'reported',
@@ -88,6 +90,7 @@ const DRAWN = new Set([
     AdminLog,
     AdminQueue,
     AdminReviews,
+    AdminStatus,
     HlmButton,
   ],
   selector: 'mf-admin-panel',
