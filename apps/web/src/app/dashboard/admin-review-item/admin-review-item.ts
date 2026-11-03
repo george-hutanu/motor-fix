@@ -74,9 +74,18 @@ export class AdminReviewItem {
       : this.t('decided.already');
   });
 
+  // A second press while the confirmation loads or is open opens nothing.
+  private opening = false;
+
   protected async remove() {
-    const result = await openRemoveReview(this.overlays, this.item());
-    if (result !== 'cancelled') this.decided.emit(result);
+    if (this.opening) return;
+    this.opening = true;
+    try {
+      const result = await openRemoveReview(this.overlays, this.item());
+      if (result !== 'cancelled') this.decided.emit(result);
+    } finally {
+      this.opening = false;
+    }
   }
 
   private facts(language: Language): string[] {

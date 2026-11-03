@@ -158,7 +158,9 @@ export class AdminReviews {
     // A page that brought nothing drops the wish, so a later live re-read
     // that adds an item does not take the focus.
     void this.queue.reload().then(() => {
-      this.decisions.set(new Map());
+      // A failed read keeps the old page, which still lists the decided
+      // items: they keep their outcome until a read leaves them out.
+      if (!this.queue.failed()) this.decisions.set(new Map());
       if (this.focusAt === at && this.items().length <= at)
         this.focusAt = undefined;
     });

@@ -28,12 +28,11 @@
     }
   </ul>&ngsp;
   @if (said(); as line) {
-    <p class="decided" role="status">
-      @if (outcome()?.outcome === 'removed') {
-        <span class="dot" aria-hidden="true"></span>
-      }
-      {{ line }}
-    </p>
+    @if (outcome()?.outcome === 'removed') {
+      <p class="decided" role="status"><span class="dot" aria-hidden="true"></span>{{ line }}</p>
+    } @else {
+      <p class="decided quiet">{{ line }}</p>
+    }
   } @else {
     <div class="actions">
       <button type="button" class="keep" aria-disabled="true" [attr.aria-describedby]="tipId">{{ v.keep }}</button>&ngsp;

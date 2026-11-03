@@ -13,11 +13,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { REVIEW_REPORT_REASONS } from '@motor-fix/contracts/lei-text';
-import {
-  AdminService,
-  type ReportQueueItemDto,
-  type ReviewDecisionResultDto,
-} from '@motor-fix/data-access';
+import { AdminService, type ReportQueueItemDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import {
   injectOverlayTask,
@@ -83,8 +79,7 @@ export class RemoveReviewDialog {
   private readonly changed = toSignal(this.form.events);
 
   protected readonly save = taskSave({
-    done: (_: ReviewDecisionResultDto) =>
-      this.task.close({ outcome: 'removed' }),
+    done: () => this.task.close({ outcome: 'removed' }),
     form: this.form,
     messages: MESSAGES,
     send: () =>
@@ -132,12 +127,11 @@ export class RemoveReviewDialog {
 // The outcome a refusal ends the task with, if it ends it so.
 function outcomeOf(failure: unknown): RemoveReviewResult | undefined {
   if (!(failure instanceof HttpErrorResponse)) return undefined;
-  const { code } = toProblem(failure);
+  const { code, decidedBy } = toProblem(failure);
   if (failure.status === 404 || code === 'no_pending_report')
     return { outcome: 'gone' };
   if (code !== 'already_decided') return undefined;
-  const by: unknown = failure.error?.decidedBy;
-  return typeof by === 'string' && by
-    ? { by, outcome: 'already_decided' }
+  return decidedBy
+    ? { by: decidedBy, outcome: 'already_decided' }
     : { outcome: 'already_decided' };
 }

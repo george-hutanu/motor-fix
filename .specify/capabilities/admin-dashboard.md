@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-11-01
+updated: 2026-11-03
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -37,6 +37,7 @@ features:
   - 106-demand-supply
   - 1416-demand-supply-web
   - 295-service-health-tiles
+  - 1423-remove-reported-review-web
 ---
 
 # Capability: Admin dashboard
@@ -879,13 +880,13 @@ _From 177-reported-reviews._
 
 _From 1389-reported-reviews-admin._
 
-### 1389-FR-003 — (from 177-FR-007) Each review item MUST show the title "{garage} · recenzie de {score}" / "{garage} · {score} review" (score with one decimal in the language's format: "1,0" / "1.0"), a red lamp with the words "Raportată de service: {reason}" / "Reported by the garage: {reason}" for source `garage`, "Raportat de autor: {reason}" / "Reported by the author: {reason}" for `author`, "Raportată automat: {reason}" / "Flagged automatically: {reason}" for `automatic` (the lamp follows the source on either target), the reporter's text after the reason when the reason is `other` and the report has a text (plain text, never markup), the review text (no text block when the review has none), and the four facts as "Lucrare confirmată: {work}, {car} · predată {date}" / "Confirmed job: {work}, {car} · handed over {date}" (the date part omitted when the read carries no handover date) or "Fără lucrare: scrisă din profil (Nu prin MotorFix)" / "No job: written from the profile (Not through MotorFix)", "Cont creat: {date}" / "Account created: {date}" or "Cont șters" / "Account deleted" when the account is gone, "Recenzii identice de la același cont: {n}" / "Identical reviews from the same account: {n}", "Recenzii raportate de service înainte: {n}, păstrate {k}" / "Reviews this garage reported before: {n}, kept {k}"; and the action slots "Păstrează" / "Keep" and "Șterge recenzia" / "Remove the review", drawn disabled with the tip "În curând" / "Coming soon" until #141 and #24 wire them. The reason words are the nine of ST-76 in the admin's language (Insulte, Date personale, Reclamă, Promovarea altui service, În afara subiectului, Ură sau discriminare, Falsă sau în conflict de interese, Amenințări sau acuzații legale, Altceva), held in the admin strings (`admin.reviews.reasons.*`) and kept equal to the shared reason texts by a test, since the browser may not import the contracts barrel and FR-010 leaves the contracts alone. The garage's name comes from the item, so a reporter whose account is gone still names the garage.
+### 1423-FR-001 — (179-FR-013) On a review item of the Recenzii raportate view and panel, "Șterge recenzia" / "Remove the review" MUST be a live button (at least 44 px tall, keyboard-reachable, visible focus) that opens the confirmation of FR-003; "Păstrează" stays the disabled slot with its "în curând" tip until #141.
 
-_From 1389-reported-reviews-admin._
+_From 1423-remove-reported-review-web._
 
-### 1389-FR-004 — (from 177-FR-008) Each reply item MUST show the title "{garage} · răspuns la recenzia lui {author}" / "{garage} · reply to {author}'s review", the reply text, under it the review it answers for context (score in the language's one-decimal format, text, author's public name), who posted the reply (the garage's name) and when, and "editat" / "edited" when it was edited, and a red lamp by the report's source as in FR-003 (for the author's report "Raportat de autor: {reason}" / "Reported by the author: {reason}"; the reporter's text after the reason when the reason is `other` and the report has a text); its action slots are "Păstrează răspunsul" / "Keep the reply" and "Șterge răspunsul" / "Remove the reply", drawn disabled with the tip "În curând" / "Coming soon" until ST-178 and ST-179 wire them.
+### 1423-FR-002 — (179-FR-014) On a reply item, "Șterge răspunsul" / "Remove the reply" MUST be a live button opening the same confirmation with the reply's title; "Păstrează răspunsul" stays the disabled slot.
 
-_From 1389-reported-reviews-admin._
+_From 1423-remove-reported-review-web._
 
 ### 1389-FR-005 — (from 177-FR-009) An item whose report is past its due time MUST show the mark "Peste 48 de ore" / "Over 48 hours" in red, computed from the item's `dueAt` against the time on screen (the read's overdue flag agrees with it at read time) so it appears without a re-read when the item crosses the mark while shown; the same clock serves FR-001's age.
 
@@ -1151,6 +1152,26 @@ _From 295-service-health-tiles._
 
 _From 295-service-health-tiles._
 
+### 1423-FR-003 — (179-FR-015) The confirmation MUST be the shared overlay task in its `dialog` shape (centred from 768 px, a bottom sheet below), loaded on the first press, titled "Ștergi recenzia lui {author}?" / "Remove {author}'s review?" or "Ștergi răspunsul lui {garage}?" / "Remove {garage}'s reply?", with "Regula încălcată" / "Rule broken" over a single-choice list of the eight rules in the report reasons' order, pre-selected with the report's reason when it is one of the eight and none when it is `other`; a "Șterge recenzia" / "Remove the review" (or "Șterge răspunsul" / "Remove the reply") main button, disabled until a rule is selected and busy (`aria-busy`, a second press sends nothing, the rules and "Renunță" disabled) while the request is in flight, and "Renunță" / "Cancel"; Escape, the backdrop and the close control cancel. It sends `POST /api/v1/admin/review-reports/{reviewId}/decision` with `{ decision: 'remove', reason }`. It reads at 320 px with no sideways scroll, in light and dark, each option at least 44 px tall. No PrimeNG.
+
+_From 1423-remove-reported-review-web._
+
+### 1423-FR-004 — (179-FR-016) On 200 the dialog MUST close and the item MUST show, in place of its actions, "Ștearsă. Autorul și service-ul au fost anunțați." / "Removed. The author and the garage were told." for a review and "Șters. Autorul și service-ul au fost anunțați." / "Removed. The author and the garage were told." for a reply, as a status line (role `status`). The item stays in place until the admin leaves the view or loads more, while the view's total and overdue, the oldest-wait line, the panel's "Vezi toate ({n})" link, the side-menu and tab-bar count and the overview tile go down at once.
+
+_From 1423-remove-reported-review-web._
+
+### 1423-FR-005 — (179-FR-017) On 409 `already_decided` the dialog closes and the item shows "Deja decisă de {decidedBy}" / "Already decided by {decidedBy}" (without the name when none is sent) with no actions; on 409 `no_pending_report` and 404 it shows "Raportul nu mai e în așteptare" / "The report is no longer pending" with no actions; on a network error or a 5xx the dialog stays open with its selection and a toast in the admin's language, the main button enabled again.
+
+_From 1423-remove-reported-review-web._
+
+### 1423-FR-006 — (web part of 179-FR-018) Every new text of the dialog, the status lines and the inline errors MUST exist in Romanian and English in the admin language files and follow the admin's language; "Ștergi recenzia lui Andrei M.?", "Ștearsă. Autorul și service-ul au fost anunțați." and "Deja decisă de Ana" are used verbatim.
+
+_From 1423-remove-reported-review-web._
+
+### 1423-FR-007 — (web part of 179-FR-020) Tests MUST be written first and name their requirements in a `// @traces` line: Vitest component tests for the two buttons, the dialog (title, pre-selection, `other`, disabled states, cancel paths), the status and error lines in both languages and the counts after a decision; one Playwright end-to-end flow: a garage reports a review, an admin removes it from the dashboard, the public profile no longer shows it, and the rating that changed at the report stays changed.
+
+_From 1423-remove-reported-review-web._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -1186,3 +1207,5 @@ _From 295-service-health-tiles._
 - `1263-FR-006` — superseded by `011-FR-001` (2026-10-29)
 - `161-FR-004` — superseded by `1389-FR-002` (2026-10-30)
 - `162-FR-009` — superseded by `1391-FR-017` (2026-10-30)
+- `1389-FR-003` — superseded by `1423-FR-001` (2026-11-03)
+- `1389-FR-004` — superseded by `1423-FR-002` (2026-11-03)

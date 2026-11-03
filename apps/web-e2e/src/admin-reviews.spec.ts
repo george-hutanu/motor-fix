@@ -7,7 +7,7 @@ import {
   doneJob,
   holdReviews,
   releaseReviews,
-  removeJob,
+  restoreGarage,
 } from './review-jobs.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
@@ -129,12 +129,7 @@ test.describe('reported reviews on the admin dashboard @seeded', () => {
       expect(reloads).toBe(0);
     } finally {
       await other.close();
-      await removeJob(db, jobId);
-      const [stored] = before.rows;
-      await db.query(
-        'UPDATE garage SET rating = $2::numeric, review_count = $3 WHERE id = $1',
-        [garageId, stored?.rating ?? null, stored?.n ?? 0],
-      );
+      await restoreGarage(db, jobId, garageId, before.rows[0]);
     }
   });
   test('removes a reported review from the dashboard; the profile no longer shows it and the rating stays as at the report', async ({
@@ -209,12 +204,7 @@ test.describe('reported reviews on the admin dashboard @seeded', () => {
       expect(after.rows).toEqual(atReport.rows);
     } finally {
       await other.close();
-      await removeJob(db, jobId);
-      const [stored] = before.rows;
-      await db.query(
-        'UPDATE garage SET rating = $2::numeric, review_count = $3 WHERE id = $1',
-        [garageId, stored?.rating ?? null, stored?.n ?? 0],
-      );
+      await restoreGarage(db, jobId, garageId, before.rows[0]);
     }
   });
 });

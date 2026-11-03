@@ -70,6 +70,21 @@ export async function removeJob(db: Client, jobId: string) {
   );
 }
 
+// The job gone again and the garage's stored rating and count put back as
+// they were read before the test.
+export async function restoreGarage(
+  db: Client,
+  jobId: string,
+  garageId: string,
+  stored: { rating: string | null; n: number } | undefined,
+) {
+  await removeJob(db, jobId);
+  await db.query(
+    'UPDATE garage SET rating = $2::numeric, review_count = $3 WHERE id = $1',
+    [garageId, stored?.rating ?? null, stored?.n ?? 0],
+  );
+}
+
 // garage-reviews.spec.ts and garage-reviews-dashboard.spec.ts post reviews on
 // Atelier Test, read its counts and put its stored figures back: each of
 // their tests holds this lock on its own connection, so one file's review
