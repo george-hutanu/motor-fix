@@ -43,7 +43,12 @@ const planned = (
 
 // Panou's sections in their default order.
 const GARAGE_SECTIONS: readonly GarageSection[] = [
-  planned('kpi', 'profile', 'garage.profile'),
+  {
+    capability: 'garage.profile',
+    key: 'kpi',
+    title: 'garage.home.section.kpi',
+    view: 'profile',
+  },
   planned('now', 'schedule', 'garage.profile', { unreleased: true }),
   {
     capability: 'garage.requests',

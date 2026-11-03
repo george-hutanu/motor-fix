@@ -24,7 +24,13 @@ import { GarageHome } from './garage-home';
 import { staffPage } from '../../garage-reviews/garage-reviews.testing';
 import { Live } from '../../live';
 import { Session } from '../../session';
-import { fakeLive, listOf, requestRow, wait } from '../garage-requests.testing';
+import {
+  fakeLive,
+  listOf,
+  requestRow,
+  todayFigures,
+  wait,
+} from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 
 const NONE: Permissions = {
@@ -78,6 +84,7 @@ async function render(
   } = {},
 ) {
   const weeklyRead = vi.fn(weekly);
+  const todayRead = vi.fn(async () => todayFigures());
   const me = signal(account(role, status, features, permissions));
   const list = vi.fn(({ status: which }: { status: keyof Lists }) =>
     (lists[which] ?? (() => Promise.resolve(listOf([]))))(),
@@ -113,6 +120,7 @@ async function render(
         useValue: {
           // The lift schedule stays loading: its own spec reads it.
           garageSchedule: vi.fn(() => new Promise(() => undefined)),
+          garageTodayFigures: todayRead,
           garageWeeklyFigures: weeklyRead,
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
@@ -136,6 +144,7 @@ async function render(
     list,
     me,
     settle,
+    todayRead,
     weeklyRead,
   };
 }
@@ -174,7 +183,6 @@ describe('the sections of Panou, in their default order', () => {
   });
 
   it.each([
-    ['kpi', 'Cifrele zilei', /^Aici apar cifrele zilei/],
     ['load', 'Încărcarea mecanicilor azi', /^Aici apare încărcarea/],
     ['brands', 'Mărci cerute luna asta', /^Aici apar mărcile/],
   ])(
@@ -193,6 +201,29 @@ describe('the sections of Panou, in their default order', () => {
       expect(text(shown)).not.toMatch(/\d/);
     },
   );
+
+  // @traces 1431-FR-001 1431-FR-006
+  it.each(['garage', 'receptionist'] as Role[])(
+    "draws today's four numbers in the kpi place for the %s",
+    async (role) => {
+      const { element } = await render(role);
+      const shown = section(element, 'kpi') as Element;
+
+      expect(shown.tagName).toBe('MF-DAILY-FIGURES-PANEL');
+      expect(text(shown.querySelector('h2'))).toBe('Cifrele zilei');
+      expect(shown.querySelectorAll('[data-card]')).toHaveLength(4);
+      expect(text(shown)).not.toMatch(/^Aici apar cifrele zilei/);
+    },
+  );
+
+  // @traces 1431-FR-001
+  it("gives a mechanic no kpi section and never reads today's numbers", async () => {
+    const { element, todayRead } = await render('mechanic');
+
+    expect(keys(element)).not.toContain('kpi');
+    expect(element.querySelector('mf-daily-figures-panel')).toBeNull();
+    expect(todayRead).not.toHaveBeenCalled();
+  });
 
   // @traces 151-FR-001
   it('draws the lift schedule in the sched place', async () => {

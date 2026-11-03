@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-31
+updated: 2026-11-03
 features:
   - 079-account-model
   - 082-sign-in
@@ -66,6 +66,7 @@ features:
   - 151-lift-timeline
   - 165-admin-roles
   - 400-receptionist
+  - 1431-daily-numbers-panou
 ---
 
 # Capability: Accounts
@@ -1491,9 +1492,9 @@ _From 1381-mechanic-scope._
 
 _From 1381-mechanic-scope._
 
-### 099-FR-001 — Panou (`/app/garage`) MUST be built from one declared list of sections, each with a key, a title, the dashboard view it opens, the capability it needs, the garage feature switch it needs (if any) and a release mark, in this default order: `kpi` "Cifrele zilei" / "Today's numbers" (the slot for the four numbers of #119), `now` "În lucru acum" / "In work now", `req` "Cereri de ofertă" / "Quote requests", `load` "Încărcarea mecanicilor azi" / "Mechanics' load today", `sched` "Programul de azi, pe elevatoare" / "Today's schedule, by lift", `funnel` "De la profil la cerere, pe săptămâni" / "From profile to request, by week", `brands` "Mărci cerute luna asta" / "Brands requested this month", `reviews` "Recenzii noi" / "New reviews". The list is the one later stories (#119, #133, #20, #131, #132, #190) fill and the one MF-32 stores layouts against; no other order or key is introduced for Panou.
+### 1431-FR-006 — Every text of FR-001, FR-002 and FR-003 MUST come from the garage area's translation files in Romanian and English under `garage.daily.*` (016-FR-002), with comma-below diacritics (ș, ț); the `kpi` section's empty-state key `garage.home.empty.kpi` and its sentence MUST be removed in both languages, and the `kpi` entry of the section list MUST no longer carry an empty-state text (099-FR-004 is already retired; nothing else of 099-FR-001's list moves).
 
-_From 099-overview-sections._
+_From 1431-daily-numbers-panou._
 
 ### 011-FR-002 — Panou MUST read, in the browser, the person's layout for the garage role the session holds (the first of `garage`, `receptionist`, `mechanic` it holds) before it draws its sections, and draw only the sections that are both in the person's list (099-FR-002) and visible in the layout, in the list's order: the hidden step comes after the four of 099-FR-002, so a feature switched off, a missing capability or an unreleased mark leaves a section out whatever the layout says; a section hidden by the layout is absent from Panou and its data is not requested. While the read is in flight Panou shows no section and no count (the strip row's pill and button, the legal-check panel and the first-steps card stay); a failed read draws the default (every section the person may see) (modifies 099-FR-002).
 
@@ -1705,3 +1706,4 @@ _From 165-admin-roles._
 - `011-FR-010` — superseded by `1391-FR-015` (2026-10-30)
 - `393-FR-005` — superseded by `1379-FR-003` (2026-10-30)
 - `099-FR-004` — superseded by `151-FR-001` (2026-10-31)
+- `099-FR-001` — superseded by `1431-FR-006` (2026-11-03)

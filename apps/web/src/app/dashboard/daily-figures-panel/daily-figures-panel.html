@@ -1,0 +1,35 @@
+<section class="panel" [attr.aria-busy]="loading() || null">
+  <mf-section-title [heading]="'garage.home.section.kpi' | t" [view]="view()" />
+  @if (loading()) {
+    <div class="cards" aria-hidden="true">
+      @for (i of skeletons; track i) {
+        <div class="skeleton"></div>
+      }
+    </div>
+  } @else {
+    <div class="cards">
+      @for (card of cards(); track card.key; let i = $index) {
+        <div
+          class="card"
+          role="group"
+          tabindex="-1"
+          [attr.data-card]="card.key"
+          [attr.aria-labelledby]="id + '-' + card.key"
+          [style.--i]="i"
+        >
+          <span class="label" [id]="id + '-' + card.key">{{ card.label }}</span>
+          <span class="value" data-value>{{ card.value }}</span>
+          @if (card.note) {
+            <span class="note" data-note>{{ card.note }}</span>
+          }
+        </div>
+      }
+    </div>
+    @if (failed()) {
+      <p class="error" data-error role="alert">{{ 'garage.daily.error' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" data-retry (click)="retry()">
+        {{ 'garage.daily.retry' | t }}
+      </button>
+    }
+  }
+</section>

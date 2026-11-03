@@ -64,13 +64,13 @@ describe('the sections of Panou', () => {
   it('gives every section not built yet a sentence of its own', () => {
     const empty = homeSections(me('garage')).filter((section) => section.empty);
 
+    // @traces 1431-FR-006
     expect(empty.map((section) => section.key)).toEqual([
-      'kpi',
       'load',
       'sched',
       'brands',
     ]);
-    expect(new Set(empty.map((section) => section.empty)).size).toBe(4);
+    expect(new Set(empty.map((section) => section.empty)).size).toBe(3);
   });
 });
 

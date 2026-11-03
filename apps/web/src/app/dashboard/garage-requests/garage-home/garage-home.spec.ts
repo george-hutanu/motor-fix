@@ -121,6 +121,8 @@ async function render(
         useValue: {
           // The lift schedule has its own spec; here it waits.
           garageSchedule: () => new Promise(() => undefined),
+          // Today's numbers have their own spec; here they wait.
+          garageTodayFigures: () => new Promise(() => undefined),
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
           // The verification page has its own spec; here it waits.
