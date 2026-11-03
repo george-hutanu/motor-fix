@@ -275,6 +275,9 @@ export type { MediaUploadRequestDto } from './models/media-upload-request-dto';
 export type { MediaUploadTargetDto } from './models/media-upload-target-dto';
 export type { MeDto } from './models/me-dto';
 export type { MyConsentsDto } from './models/my-consents-dto';
+export type { MyReviewReplyDto } from './models/my-review-reply-dto';
+export type { MyReviewRowDto } from './models/my-review-row-dto';
+export type { MyReviewsPageDto } from './models/my-reviews-page-dto';
 export type { NewsConsentDto } from './models/news-consent-dto';
 export type { NewsSentDto } from './models/news-sent-dto';
 export type { NewsTextDto } from './models/news-text-dto';
@@ -962,6 +965,8 @@ export type { OwnerDocumentsControllerSubmit$Params as OwnerDocumentsControllerS
 export { ownerDocumentsControllerSubmit as ownerDocumentsControllerSubmit } from './fn/garages/owner-documents-controller-submit';
 export type { GarageReviewsControllerRead$Params as GarageReviewsControllerRead$Params } from './fn/reviews/garage-reviews-controller-read';
 export { garageReviewsControllerRead as garageReviewsControllerRead } from './fn/reviews/garage-reviews-controller-read';
+export type { MyReviewsControllerRead$Params as MyReviewsControllerRead$Params } from './fn/reviews/my-reviews-controller-read';
+export { myReviewsControllerRead as myReviewsControllerRead } from './fn/reviews/my-reviews-controller-read';
 export type { ReviewRepliesControllerPost$Params as ReviewRepliesControllerPost$Params } from './fn/reviews/review-replies-controller-post';
 export { reviewRepliesControllerPost as reviewRepliesControllerPost } from './fn/reviews/review-replies-controller-post';
 export type { ReviewRepliesControllerEdit$Params as ReviewRepliesControllerEdit$Params } from './fn/reviews/review-replies-controller-edit';

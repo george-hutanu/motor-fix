@@ -1,5 +1,8 @@
 import type {
+  JobStatus,
   ReviewReplyStatus,
+  ReviewReportStatus,
+  ReviewReportTarget,
   ReviewStatus,
 } from '../generated/prisma/enums';
 import type { quotesWorld } from '../quotes/quotes.testing';
@@ -177,4 +180,83 @@ export function reviewReply(world: ReturnType<typeof quotesWorld>) {
           },
         }),
       );
+}
+
+// A driver's own repairs as the reviews list reads them: a job of the
+// driver's at a garage, handed over when given, and its review and reports.
+export function myReviews(world: ReturnType<typeof quotesWorld>) {
+  const { prisma } = world;
+
+  async function handedOver(
+    driverId: string,
+    garageId: string,
+    at: Date | null,
+    status: JobStatus = 'done',
+  ) {
+    const { booking, quote, request } = await world.chain(driverId, garageId);
+    const type = await world.jobType(
+      'Kit lanț distribuție',
+      'Timing chain kit',
+    );
+    const asked = await prisma.requestJob.create({
+      data: { jobTypeId: type.id, position: 1, requestId: request.id },
+    });
+    await prisma.quoteJob.create({
+      data: { included: true, quoteId: quote.id, requestJobId: asked.id },
+    });
+    const job = await world.job(booking.id, status);
+    return prisma.job.update({
+      data: { handedOverAt: at },
+      where: { id: job.id },
+    });
+  }
+
+  function review(
+    job: { id: string; driverId: string; garageId: string },
+    options: {
+      status?: ReviewStatus;
+      postedAt?: Date;
+      source?: 'job' | 'profile';
+      text?: string | null;
+    } = {},
+  ) {
+    return prisma.review.create({
+      data: {
+        driverId: job.driverId,
+        garageId: job.garageId,
+        jobId: job.id,
+        postedAt: options.postedAt ?? new Date(),
+        rating: 4,
+        source: options.source ?? 'job',
+        status: options.status ?? 'published',
+        text: options.text === undefined ? 'Treabă curată.' : options.text,
+      },
+    });
+  }
+
+  // A report on the review's reply (or on the review itself) by the account.
+  function replyReport(
+    reviewId: string,
+    reporterId: string,
+    status: ReviewReportStatus = 'pending',
+    target: ReviewReportTarget = 'reply',
+  ) {
+    return prisma.reviewReport.create({
+      data: {
+        dueAt: new Date(),
+        reason: 'insults',
+        reporterId,
+        reviewId,
+        source: 'author',
+        status,
+        target,
+        ...(status === 'decided' && {
+          decidedAt: new Date(),
+          decision: 'kept' as const,
+        }),
+      },
+    });
+  }
+
+  return { handedOver, replyReport, review };
 }

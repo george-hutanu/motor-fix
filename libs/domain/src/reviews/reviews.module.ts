@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { ReviewDecisionsService } from './decision/decision.service';
 import { ReviewEligibility } from './eligibility/eligibility';
 import { GarageReviewsController } from './garage-reviews/garage-reviews.controller';
+import { MyReviewsController } from './my-reviews/my-reviews.controller';
+import { MyReviewsService } from './my-reviews/my-reviews.service';
 import { ReviewRepliesController } from './reply/reply.controller';
 import { ReviewRepliesService } from './reply/reply.service';
 import { ReviewReportsController } from './report/report.controller';
@@ -19,6 +21,7 @@ import { AuditService } from '../audit/audit.service';
 @Module({
   controllers: [
     GarageReviewsController,
+    MyReviewsController,
     ReportQueueController,
     ReviewRepliesController,
     ReviewReportsController,
@@ -26,6 +29,7 @@ import { AuditService } from '../audit/audit.service';
   ],
   providers: [
     ReviewEligibility,
+    MyReviewsService,
     ReviewsService,
     ReviewRepliesService,
     ReviewReportsService,

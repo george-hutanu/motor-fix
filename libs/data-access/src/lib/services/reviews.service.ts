@@ -15,6 +15,9 @@ import { GarageReviewsPageDto } from '../models/garage-reviews-page-dto';
 import { GarageStaffReviewsPageDto } from '../models/garage-staff-reviews-page-dto';
 import { JobReviewContextDto } from '../models/job-review-context-dto';
 import { MechanicReviewsPageDto } from '../models/mechanic-reviews-page-dto';
+import { myReviewsControllerRead } from '../fn/reviews/my-reviews-controller-read';
+import { MyReviewsControllerRead$Params } from '../fn/reviews/my-reviews-controller-read';
+import { MyReviewsPageDto } from '../models/my-reviews-page-dto';
 import { ReviewDto } from '../models/review-dto';
 import { ReviewEligibilityDto } from '../models/review-eligibility-dto';
 import { reviewRepliesControllerEdit } from '../fn/reviews/review-replies-controller-edit';
@@ -73,6 +76,39 @@ export class ReviewsService extends BaseService {
   garageReviewsControllerRead(params: GarageReviewsControllerRead$Params, context?: HttpContext): Promise<GarageStaffReviewsPageDto> {
     const resp = this.garageReviewsControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageStaffReviewsPageDto>): GarageStaffReviewsPageDto => r.body);
+  }
+
+  /** Path part for operation `myReviewsControllerRead()` */
+  static readonly MyReviewsControllerReadPath = '/api/v1/me/reviews';
+
+  /**
+   * The caller’s written reviews and the repairs waiting for one, waiting first, 20 a page, with the counts.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `myReviewsControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  myReviewsControllerRead$Response(params?: MyReviewsControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<MyReviewsPageDto>> {
+    const obs = myReviewsControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The caller’s written reviews and the repairs waiting for one, waiting first, 20 a page, with the counts.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `myReviewsControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  myReviewsControllerRead(params?: MyReviewsControllerRead$Params, context?: HttpContext): Promise<MyReviewsPageDto> {
+    const resp = this.myReviewsControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MyReviewsPageDto>): MyReviewsPageDto => r.body);
   }
 
   /** Path part for operation `reviewRepliesControllerPost()` */
