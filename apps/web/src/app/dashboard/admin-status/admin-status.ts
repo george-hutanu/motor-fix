@@ -4,7 +4,6 @@ import { Component, computed, inject, PLATFORM_ID } from '@angular/core';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
-import { filter } from 'rxjs';
 
 import { liveView } from '../../live/view';
 import { Live } from '../live';
@@ -28,21 +27,15 @@ export class AdminStatus {
   // Read in the browser only: the server render shows the skeletons.
   protected readonly view = isPlatformBrowser(inject(PLATFORM_ID))
     ? liveView(() => this.api.statusControllerRead(), {
-        changes: this.live.events.pipe(
-          filter((m) => m.kind === 'status_tile.changed'),
-        ),
+        changes: this.live.on(['status_tile.changed']),
         goneOn: [],
         resync: this.live.resync,
         retryAfter: 60_000,
       })
     : undefined;
 
-  private readonly language = computed(() =>
-    this.i18n.language() === 'en' ? 'en' : 'ro',
-  );
-
   protected readonly tiles = computed(() => {
-    const language = this.language();
+    const language = this.i18n.language();
     return (this.view?.value()?.tiles ?? []).map((tile) => ({
       key: tile.key,
       name: `admin.status.name.${tile.key}`,
@@ -53,7 +46,7 @@ export class AdminStatus {
   });
 
   protected readonly sentences = computed(
-    () => this.view?.value()?.sentences[this.language()] ?? [],
+    () => this.view?.value()?.sentences[this.i18n.language()] ?? [],
   );
 
   constructor() {

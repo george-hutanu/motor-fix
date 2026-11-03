@@ -56,8 +56,9 @@ h2 {
 [data-state="green"] {
   --lamp: var(--mf-green);
 }
+/* The ink shade keeps the design's amber in dark and reaches 3:1 on the light tile. */
 [data-state="amber"] {
-  --lamp: var(--mf-amber);
+  --lamp: var(--mf-amber-ink);
 }
 [data-state="red"] {
   --lamp: var(--mf-red);
