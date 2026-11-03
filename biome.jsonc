@@ -217,6 +217,7 @@
       "includes": [
         "apps/web/src/app/dashboard/admin-demand/admin-demand.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
+        "apps/web/src/app/dashboard/daily-figures-panel/daily-figures-panel.html",
         "apps/web/src/app/dashboard/frame/frame.html"
       ],
       "linter": {

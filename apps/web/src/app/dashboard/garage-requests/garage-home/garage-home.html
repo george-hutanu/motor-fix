@@ -40,6 +40,9 @@
     }
     @for (section of shown(); track section.key; let at = $index) {
       @switch (section.key) {
+        @case ('kpi') {
+          <mf-daily-figures-panel data-section="kpi" [view]="section.view" />
+        }
         @case ('req') {
           @if (feed.visible()) {
             <mf-garage-requests-panel data-section="req" [limit]="4" />
