@@ -1,3 +1,4 @@
+// @traces 1425-FR-010
 import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -74,6 +75,7 @@ const calm = (): AdminStatusDto => ({
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let reads: number;
+let others: string[];
 let answer: () => Promise<AdminStatusDto>;
 
 async function settle() {
@@ -90,6 +92,7 @@ async function open(
   events = new Subject();
   resync = new Subject();
   reads = 0;
+  others = [];
   TestBed.configureTestingModule({
     providers: [
       { provide: PLATFORM_ID, useValue: platform },
@@ -106,12 +109,25 @@ async function open(
       },
       {
         provide: AdminService,
-        useValue: {
-          statusControllerRead: () => {
-            reads++;
-            return answer();
+        // Any other call is recorded: the panel reads one route and writes nothing.
+        useValue: new Proxy(
+          {
+            statusControllerRead: () => {
+              reads++;
+              return answer();
+            },
+          } as Record<string, unknown>,
+          {
+            get: (target, name) =>
+              typeof name === 'string' && /Controller/.test(name)
+                ? (target[name] ??
+                  (() => {
+                    others.push(name);
+                    return new Promise(() => undefined);
+                  }))
+                : undefined,
           },
-        },
+        ),
       },
     ],
   });
@@ -431,6 +447,19 @@ describe('AdminStatus', () => {
     await settle();
 
     expect(reads).toBe(1);
+  });
+
+  // @traces 1425-FR-008
+  it('calls no admin operation but the status read, through a whole life', async () => {
+    answer = async () => calm();
+    await open();
+    events.next(changed());
+    resync.next();
+    await burst();
+    await settle();
+
+    expect(reads).toBeGreaterThan(1);
+    expect(others).toEqual([]);
   });
 
   // @traces 1425-FR-003
