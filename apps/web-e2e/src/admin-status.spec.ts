@@ -36,11 +36,8 @@ type Row = {
 };
 
 test.describe('the Starea sistemului panel @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'] || !process.env['REDIS_URL'],
-    'writes a tile to PostgreSQL and announces it on Redis, which need DATABASE_URL and REDIS_URL',
-  );
-
+  // Writes a tile to PostgreSQL and announces it on Redis: the e2e job and the
+  // PR QA run set DATABASE_URL and REDIS_URL.
   let db: Client;
   let before: Row | undefined;
 
