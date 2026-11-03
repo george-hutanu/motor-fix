@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 278,
+    "count": 279,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -254,6 +254,15 @@
       "alerts": "none",
       "reason": "counts every free-slot answer, cached ones included, by outcome slots or none_in_horizon, never a garage or a caller; the refusals are the route's 4xx and its FreeSlots warnings; no alert of its own, as a garage with no free time is a real answer",
       "story": "ST-154"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_today_figures_fallbacks_total",
+      "source": "libs/domain/src/insights/garage-figures/daily/daily.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts each daily-figures read answered without its free starts because the free-slot engine failed, never a garage or a caller; each one also logs one DailyFigures warning with the garage and code free_slots_unavailable; no alert of its own, as the engine's own failures already raise the API error and Valkey alerts",
+      "story": "ST-98"
     },
     {
       "kind": "product-counter",
@@ -2832,6 +2841,19 @@
       ],
       "reason": "the owner's eight-week read of profile views, requests and conversion; it writes nothing and counts nothing of its own, so its failures and latency are the route metric alone",
       "story": "ST-144"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-figures-today",
+      "source": "libs/domain/src/insights/garage-figures/garage-figures.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/figures/today",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's and the desk's four numbers of the day, read live and written nowhere; the free starts come from the free-slot engine's cache, and a failure there answers the rest marked freeSlotsUnavailable, counted by motorfix_today_figures_fallbacks_total",
+      "story": "ST-98"
     },
     {
       "kind": "endpoint",

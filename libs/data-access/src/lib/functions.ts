@@ -357,6 +357,8 @@ export type { UpdateTimeBlock$Params as UpdateTimeBlock$Params } from './fn/gara
 export { updateTimeBlock as updateTimeBlock } from './fn/garages/update-time-block';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
+export type { GarageTodayFigures$Params as GarageTodayFigures$Params } from './fn/garages/garage-today-figures';
+export { garageTodayFigures as garageTodayFigures } from './fn/garages/garage-today-figures';
 export type { GarageWeeklyFigures$Params as GarageWeeklyFigures$Params } from './fn/garages/garage-weekly-figures';
 export { garageWeeklyFigures as garageWeeklyFigures } from './fn/garages/garage-weekly-figures';
 export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';

@@ -66,13 +66,18 @@ export class FreeSlotsService {
   ): Promise<FreeSlotsDto> {
     try {
       const key = await this.normalized(actor, garageId, query);
-      const answer = await this.cache.entry(key, () => this.read(key));
+      const answer = await this.answer(key);
       recordFreeSlots(answer.reason ?? 'slots');
       return answer;
     } catch (error) {
       this.refused(error, actor, garageId);
       throw error;
     }
+  }
+
+  // The answer to a question already checked and put together, from the cache.
+  answer(key: FreeSlotsKey): Promise<FreeSlotsDto> {
+    return this.cache.entry(key, () => this.read(key));
   }
 
   private refused(error: unknown, actor: Actor, garageId: string) {

@@ -8675,6 +8675,54 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/figures/today": {
+      "get": {
+        "operationId": "garageTodayFigures",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayFiguresDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a garage id that is not a UUID"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic does not read the garage’s figures"
+          },
+          "404": {
+            "description": "not_found: not this garage’s staff"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Requests today and yesterday, bookings this week, the next free starts, the rating and the month’s estimated work",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/figures/weekly": {
       "get": {
         "operationId": "garageWeeklyFigures",
@@ -24390,6 +24438,90 @@
             ]
           }
         }
+      },
+      "NextFreeSlotsDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "example": "2026-11-06"
+          },
+          "count": {
+            "type": "number",
+            "description": "Starts free that day, at most 10",
+            "example": 4
+          }
+        },
+        "required": [
+          "day",
+          "count"
+        ]
+      },
+      "TodayFiguresDto": {
+        "type": "object",
+        "properties": {
+          "requestsToday": {
+            "type": "number",
+            "description": "Requests that reached the garage today"
+          },
+          "requestsYesterday": {
+            "type": "number",
+            "description": "Requests that reached the garage yesterday"
+          },
+          "bookingsThisWeek": {
+            "type": "number",
+            "description": "Confirmed or completed bookings starting this week"
+          },
+          "bookingsToday": {
+            "type": "number",
+            "description": "The same bookings, starting today"
+          },
+          "nextFreeSlots": {
+            "description": "Null when no start is free before Sunday ends",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NextFreeSlotsDto"
+              }
+            ]
+          },
+          "freeSlotsUnavailable": {
+            "type": "boolean",
+            "description": "True when the free starts could not be read just now"
+          },
+          "rating": {
+            "type": "number",
+            "example": 4.9,
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "example": 212
+          },
+          "estimatedWorkBani": {
+            "type": "number",
+            "description": "Work won this month: final prices, else the middle of the accepted range",
+            "example": 153000
+          },
+          "month": {
+            "type": "string",
+            "description": "The first day of the month",
+            "example": "2026-12-01"
+          }
+        },
+        "required": [
+          "requestsToday",
+          "requestsYesterday",
+          "bookingsThisWeek",
+          "bookingsToday",
+          "nextFreeSlots",
+          "freeSlotsUnavailable",
+          "rating",
+          "reviewCount",
+          "estimatedWorkBani",
+          "month"
+        ]
       },
       "WeeklyFigureDto": {
         "type": "object",
