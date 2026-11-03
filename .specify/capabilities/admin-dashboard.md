@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-11-01
+updated: 2026-11-03
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -37,6 +37,7 @@ features:
   - 106-demand-supply
   - 1416-demand-supply-web
   - 295-service-health-tiles
+  - 1425-service-tiles-web
 ---
 
 # Capability: Admin dashboard
@@ -1150,6 +1151,50 @@ _From 295-service-health-tiles._
 ### 295-FR-008 — Tests MUST exist before the implementation. Jest on real PostgreSQL MUST cover: the six tiles in panel order with their stored state, `since`, `detail` and `checkedAt`; the stale rule at exactly 3 minutes (stale), at 2 minutes 59 seconds (not stale), on a future `checked_at` (not stale), on a missing row (red, stale, nulls) and on a stored red tile (since becomes `checked_at`); the short state and the sentence of every tile and state of **Texts**, in RO and EN, the backup's today / yesterday / older forms and the all-clear sentence; `detail`'s answered keys only those of 294-FR-008, `{}` on a missing row; `pending_state` absent from the answer; the order of `problems` for red before amber, oldest first, a null `since` last and the tie on panel order; an empty `problems` on six greens; the read leaving the rows unchanged; 404 for a driver, a garage owner, a receptionist and a mechanic, 401 without a token, 403 for a suspended admin. A `// @traces` line names the FR ids in each test file. No end-to-end test in this story (the second story runs the Playwright flow).
 
 _From 295-service-health-tiles._
+
+### 1425-FR-001 — The admin bundle MUST hold the customise panel's (Panou's) texts for the section `system` in RO and EN, its name "Starea sistemului" / "System status" and its description "Cele șase servicii ale platformei și efectul unei probleme" / "The platform's six services and the effect of a problem" *(autonomous default)*, and the admin texts test MUST assert them. The key `system` itself (the server's and the web's admin key lists, after `verification`, 1263-FR-002) and the dashboard drawing it are the second story's (`## Split`).
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-002 — One panel component, Starea sistemului, MUST be drawn in the admin block of the Setări view before the platform rules, independent of the layout, and MUST be usable as is by the dashboard's `system` section (the second story). It is a region named by its heading ("Starea sistemului" / "System status").
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-003 — The panel MUST read `GET /api/v1/admin/status` through the generated client in the browser once when it is created, and read it again on every `status_tile.changed` event of the admin's live stream and on every resync (reconnect), a burst of events within 300 ms counting as one re-read. A re-read that fails MUST keep the data shown; an event or resync arriving while a read is out causes exactly one further read once it settles, never a parallel one. A 403 or 404 is an error like any other (no "gone" state). The panel MUST write nothing and MUST not read on the server render.
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-004 — The panel MUST show the answer's six tiles in the order given, each with: the service name (API, Căutare, Hărți, E-mail, Notificări, Backup / API, Search, Maps, E-mail, Notifications, Backup), a lamp coloured by `state` (`green`, `amber`, `red`, the Cockpit lamp colours of the design), the lamp's word beside it (`green` "normal" / "normal", `amber` "degradat" / "degraded", `red` "căzut" / "down" *(autonomous default)*, the brief's "Green is normal, amber is degraded, red is down"), never colour alone, and the tile's `short` in the admin's language, both shown even when they read the same word. The lamp pulses; under `prefers-reduced-motion: reduce` it MUST not animate. A stale tile shows as the answer gives it: red, with its stale `short`.
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-005 — Under the tiles the panel MUST show the answer's `sentences` in the admin's language, one line per sentence, in the answer's order (red before amber, the oldest first, or the one all-clear sentence); the panel composes no sentence or short state of its own. The admin's language is the app's current locale (as every other admin panel's i18n reads it); both languages come from the one answer, so a language change needs no re-read.
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-006 — While the first read is out, the panel MUST show six grey skeleton tiles with no words and mark its region busy. A first read that fails MUST show "Nu am putut citi starea sistemului." / "We could not read the system status." and a "Reîncearcă" / "Retry" button (a native button, reachable and operable by keyboard with a visible focus ring, at least 44 px tall on a phone) that reads again, the skeletons showing and the button not pressable again while that read is out; the error and the data are never shown together. A failed first read (other than 403/404) is read again by itself after 60 s, as every dashboard panel's.
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-007 — The panel MUST fit 320 px and 390 px phones with the tiles in one column and no sideways scroll, and a tablet and a desktop with the tiles in two columns, in light and dark, as the admin dashboard's other panels do; the lamp words and the short states are text, readable by a screen reader in the tile's order (name, lamp word, short state); a short state or sentence longer than its line wraps and is never truncated; text meets 4.5:1 contrast and the lamp 3:1 against the tile in light and dark; the sentences block is a polite live region, so a change is announced once and the first draw is not; the tiles are not focus stops (only Reîncearcă is interactive).
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-008 — No new route, event, metric, panel or alert: the panel reads an existing route and listens to an existing event; the observability inventory is unchanged (ST-295 listed the route, ST-294 the event). No new dependency.
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-009 — The admin's live stream MUST deliver `status_tile.changed` to the panel: the event is written for the admin audience (294-FR-009) and the web's `Live` service already carries every admin event; no change to the stream is expected, and the unit test of FR-010 proves the panel's subscription.
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-010 — Tests MUST exist before the implementation (Constitution II), colocated Vitest specs for the web: the panel shows the answer's short states and sentences in RO and EN (the brief's scenario 1 and 2 data); the lamp word for each of the three states; the stale display (red, the stale `short`); the sentence order as answered; the six skeletons while loading; the error text and Reîncearcă reading again; a `status_tile.changed` event and a resync each cause one re-read, a burst one; a failed re-read keeps the data; the Setări view draws the panel for an admin and not for an owner; the admin texts hold the `system` section's name and description. A `// @traces` line names the FR ids in each test file.
+
+_From 1425-service-tiles-web._
+
+### 1425-FR-011 — One Playwright flow (`@seeded`, on the PR QA run): as the seeded admin with Setări open and the panel visible (the second story adds the dashboard), write `maps` amber since 10:40 at `latency_ms` 1900 into `status_tile` and publish `status_tile.changed` for the admin audience on the live channel (the ST-298 pattern); the Hărți tile reads "lent · 1,9 s" with the word "degradat" and the sentence "Hărțile răspund lent din 10:40. Căutarea după distanță poate întârzia." within 5 seconds, with no navigation, and the page does not scroll sideways; the row is restored afterwards.
+
+_From 1425-service-tiles-web._
 
 ## Retired
 
