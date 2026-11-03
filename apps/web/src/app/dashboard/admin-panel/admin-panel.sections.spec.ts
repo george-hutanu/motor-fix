@@ -19,7 +19,7 @@ import { Live } from '../live';
 @Component({ imports: [AdminPanel], template: '<mf-admin-panel />' })
 class Host {}
 
-const KEYS = ['numbers', 'verification', 'growth', 'demand', 'log'];
+const KEYS = ['numbers', 'verification', 'system', 'growth', 'demand', 'log'];
 const all = (
   hidden: readonly string[] = [],
   keys: readonly string[] = KEYS,
@@ -87,6 +87,14 @@ async function open({
       page: 1,
       pageSize: 20,
       total: 0,
+    })),
+    statusControllerRead: vi.fn(async () => ({
+      problems: [],
+      sentences: {
+        en: ['Every service is running normally.'],
+        ro: ['Toate serviciile funcționează normal.'],
+      },
+      tiles: [],
     })),
     systemLogControllerList: vi.fn(async () => ({ items: [] })),
   };
@@ -168,17 +176,11 @@ afterEach(() => {
 describe('the strip at the top of Panou', () => {
   it('holds the button and the count of the listed sections shown', async () => {
     const { element } = await open({
-      read: async () =>
-        layoutAnswer(
-          all(['growth'], [...KEYS, 'performance']).concat({
-            key: 'system',
-            visible: true,
-          }),
-        ),
+      read: async () => layoutAnswer(all(['growth'], [...KEYS, 'performance'])),
     });
 
     expect(text(customise(element))).toBe('Personalizează panoul');
-    expect(text(count(element))).toBe('4 din 5 secțiuni afișate');
+    expect(text(count(element))).toBe('5 din 6 secțiuni afișate');
     expect(count(element)?.getAttribute('aria-live')).toBe('polite');
   });
 
@@ -186,7 +188,7 @@ describe('the strip at the top of Panou', () => {
     const { element } = await open({ language: 'en' });
 
     expect(text(customise(element))).toBe('Customise the dashboard');
-    expect(text(count(element))).toBe('5 of 5 sections shown');
+    expect(text(count(element))).toBe('6 of 6 sections shown');
   });
 });
 
@@ -207,6 +209,7 @@ describe('waiting for the layout', () => {
       'numbers',
       'observability',
       'queue',
+      'status',
       'growth',
       'reviews',
       'log',
@@ -222,12 +225,13 @@ describe('waiting for the layout', () => {
       'numbers',
       'observability',
       'queue',
+      'status',
       'growth',
       'demand',
       'reviews',
       'log',
     ]);
-    expect(text(count(element))).toBe('5 din 5 secțiuni afișate');
+    expect(text(count(element))).toBe('6 din 6 secțiuni afișate');
     expect(panou(element).querySelector('[role="alert"]')).toBeNull();
   });
 });
@@ -256,10 +260,13 @@ describe('the sections Panou draws', () => {
   it('neither draws nor reads a hidden section', async () => {
     const { admin, element } = await open({
       read: async () =>
-        layoutAnswer(all(['verification', 'growth', 'demand', 'log'])),
+        layoutAnswer(
+          all(['verification', 'system', 'growth', 'demand', 'log']),
+        ),
     });
 
     expect(sections(element)).toEqual(['numbers', 'observability']);
+    expect(admin.statusControllerRead).not.toHaveBeenCalled();
     expect(admin.adminOverviewControllerGrowth).not.toHaveBeenCalled();
     expect(admin.demandControllerDemand).not.toHaveBeenCalled();
     expect(admin.adminOverviewControllerQueue).not.toHaveBeenCalled();
@@ -279,14 +286,14 @@ describe('the sections Panou draws', () => {
 
   it('draws nothing for a key it has no section for', async () => {
     const { element } = await open({
-      read: async () =>
-        layoutAnswer(all([], ['performance', ...KEYS, 'system'])),
+      read: async () => layoutAnswer(all([], ['performance', ...KEYS])),
     });
 
     expect(sections(element)).toEqual([
       'numbers',
       'observability',
       'queue',
+      'status',
       'growth',
       'demand',
       'reviews',
@@ -306,7 +313,7 @@ describe('every section switched off', () => {
     expect(text(element.querySelector('[data-all-hidden]'))).toBe(
       'Ai ascuns toate secțiunile. Pornește cel puțin una din „Personalizează panoul”.',
     );
-    expect(text(count(element))).toBe('0 din 5 secțiuni afișate');
+    expect(text(count(element))).toBe('0 din 6 secțiuni afișate');
   });
 });
 
@@ -357,7 +364,7 @@ describe('the panel "Personalizează panoul" opens', () => {
     customise(element)?.click();
     await settle();
 
-    expect(rows()).toHaveLength(5);
+    expect(rows()).toHaveLength(6);
   });
 
   it('opens nothing when its code cannot be fetched, and tries again on the next press', async () => {
@@ -371,7 +378,7 @@ describe('the panel "Personalizează panoul" opens', () => {
     customise(element)?.click();
     await settle();
     expect(drawer()).toBeNull();
-    expect(sections(element)).toHaveLength(7);
+    expect(sections(element)).toHaveLength(8);
 
     customise(element)?.click();
     await settle();
@@ -398,7 +405,7 @@ describe('a change made in the panel', () => {
       body: { panels: all(['growth', 'log']) },
       role: 'admin',
     });
-    expect(text(count(element))).toBe('3 din 5 secțiuni afișate');
+    expect(text(count(element))).toBe('4 din 6 secțiuni afișate');
 
     press('Ascunde: Creștere, ultimele 12 luni');
     await settle();
@@ -414,10 +421,18 @@ describe('a change made in the panel', () => {
     press('Mută mai sus: Jurnal');
     await settle();
 
-    const moved = ['numbers', 'verification', 'growth', 'log', 'demand'];
+    const moved = [
+      'numbers',
+      'verification',
+      'system',
+      'growth',
+      'log',
+      'demand',
+    ];
     expect(rows()).toEqual([
       'Cifrele platformei',
       'Service‑uri de verificat',
+      'Starea sistemului',
       'Creștere, ultimele 12 luni',
       'Jurnal',
       'Cereri pe marcă, 30 de zile',
@@ -452,12 +467,13 @@ describe('a change made in the panel', () => {
       'numbers',
       'observability',
       'queue',
+      'status',
       'growth',
       'demand',
       'reviews',
       'log',
     ]);
-    expect(text(count(element))).toBe('5 din 5 secțiuni afișate');
+    expect(text(count(element))).toBe('6 din 6 secțiuni afișate');
   });
 });
 
@@ -483,5 +499,87 @@ describe('a change made in another tab', () => {
     expect(sections(element)[0]).toBe('reviews');
     expect(rows()[0]).toBe('Jurnal');
     expect(text(count(element))).toBe('4 din 5 secțiuni afișate');
+  });
+});
+
+// @traces 1430-FR-001
+// @traces 1430-FR-002 1430-FR-006
+describe('the system status on Panou', () => {
+  it('is drawn third by default and read once', async () => {
+    const { admin, element } = await open();
+
+    expect(sections(element).slice(0, 4)).toEqual([
+      'numbers',
+      'observability',
+      'queue',
+      'status',
+    ]);
+    expect(admin.statusControllerRead).toHaveBeenCalledTimes(1);
+    expect(text(panou(element).querySelector('mf-admin-status'))).toContain(
+      'Toate serviciile funcționează normal.',
+    );
+  });
+
+  it('is neither drawn nor read while hidden', async () => {
+    const { admin, element } = await open({
+      read: async () => layoutAnswer(all(['system'])),
+    });
+
+    expect(sections(element)).not.toContain('status');
+    expect(admin.statusControllerRead).not.toHaveBeenCalled();
+  });
+
+  // The name and description are the texts Setări already carries.
+  // @traces 1430-FR-005
+  it('is listed third in the panel with its description', async () => {
+    const { element } = await open();
+
+    customise(element)?.click();
+    await settle();
+
+    expect(rows()[2]).toBe('Starea sistemului');
+    expect(
+      text(drawer()?.querySelector('[data-row]:nth-child(3) .description')),
+    ).toBe('Cele șase servicii ale platformei și efectul unei probleme');
+  });
+
+  it('is hidden from Panou and drawn again when switched back on', async () => {
+    const { admin, element, layout } = await open();
+    customise(element)?.click();
+    await settle();
+
+    press('Ascunde: Starea sistemului');
+    await settle();
+    expect(sections(element)).not.toContain('status');
+    expect(layout.dashboardLayoutsControllerSave).toHaveBeenCalledWith({
+      body: { panels: all(['system']) },
+      role: 'admin',
+    });
+    expect(text(count(element))).toBe('5 din 6 secțiuni afișate');
+
+    press('Ascunde: Starea sistemului');
+    await settle();
+    expect(sections(element)).toContain('status');
+    expect(admin.statusControllerRead).toHaveBeenCalledTimes(2);
+  });
+
+  it('comes back third and visible on a reset after a move', async () => {
+    const { element } = await open({
+      read: async () =>
+        layoutAnswer(
+          all(
+            ['system'],
+            ['system', 'numbers', 'verification', 'growth', 'demand', 'log'],
+          ),
+        ),
+    });
+    customise(element)?.click();
+    await settle();
+
+    press('Revino la varianta implicită');
+    await settle();
+
+    expect(rows()[2]).toBe('Starea sistemului');
+    expect(sections(element)[3]).toBe('status');
   });
 });

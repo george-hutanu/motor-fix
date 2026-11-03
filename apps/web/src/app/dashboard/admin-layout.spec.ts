@@ -12,7 +12,7 @@ import { fakeLive, wait } from './garage-requests/garage-requests.testing';
 import { Live } from './live';
 import { Session } from './session';
 
-const KEYS = ['numbers', 'verification', 'growth', 'demand', 'log'];
+const KEYS = ['numbers', 'verification', 'system', 'growth', 'demand', 'log'];
 const all = (
   hidden: readonly string[] = [],
   keys: readonly string[] = KEYS,
@@ -88,6 +88,7 @@ function setup({
 }
 
 // @traces 1391-FR-010
+// @traces 1430-FR-001
 describe('reading the admin layout', () => {
   it('reads the admin layout once in the browser', async () => {
     const { api, layout, settle } = setup({
@@ -320,7 +321,14 @@ describe('moving a section', () => {
     });
     await settle();
 
-    const moved = ['numbers', 'verification', 'growth', 'log', 'demand'];
+    const moved = [
+      'numbers',
+      'verification',
+      'system',
+      'growth',
+      'log',
+      'demand',
+    ];
     const result = layout.swap('log', 'demand');
     expect(order(layout)).toEqual(moved);
     expect(api.dashboardLayoutsControllerSave).toHaveBeenCalledWith({
@@ -336,7 +344,14 @@ describe('moving a section', () => {
   });
 
   it('keeps a key it does not know in its place', async () => {
-    const keys = ['numbers', 'reported', 'verification', 'growth', 'demand'];
+    const keys = [
+      'numbers',
+      'reported',
+      'verification',
+      'system',
+      'growth',
+      'demand',
+    ];
     const { api, layout, settle } = setup({
       read: async () => answer(all([], keys)),
     });
@@ -348,7 +363,7 @@ describe('moving a section', () => {
       body: {
         panels: all(
           [],
-          ['verification', 'reported', 'numbers', 'growth', 'demand'],
+          ['verification', 'reported', 'numbers', 'system', 'growth', 'demand'],
         ),
       },
       role: 'admin',
@@ -369,13 +384,25 @@ describe('moving a section', () => {
     void layout.swap('log', 'demand');
     await layout.swap('log', 'growth');
 
-    const moved = ['numbers', 'verification', 'log', 'growth', 'demand'];
+    const moved = [
+      'numbers',
+      'verification',
+      'system',
+      'log',
+      'growth',
+      'demand',
+    ];
     expect(api.dashboardLayoutsControllerSave).toHaveBeenLastCalledWith({
       body: { panels: all([], moved) },
       role: 'admin',
     });
     first.resolve(
-      answer(all([], ['numbers', 'verification', 'growth', 'log', 'demand'])),
+      answer(
+        all(
+          [],
+          ['numbers', 'verification', 'system', 'growth', 'log', 'demand'],
+        ),
+      ),
     );
     await settle();
     expect(order(layout)).toEqual(moved);
@@ -412,6 +439,7 @@ describe('moving a section', () => {
     expect(order(layout)).toEqual([
       'numbers',
       'verification',
+      'system',
       'growth',
       'log',
       'demand',
@@ -438,6 +466,7 @@ describe('moving a section', () => {
     expect(order(layout)).toEqual([
       'numbers',
       'verification',
+      'system',
       'growth',
       'log',
       'demand',
@@ -458,13 +487,19 @@ describe('moving a section', () => {
     void layout.swap('log', 'demand');
     await layout.swap('numbers', 'verification');
     first.resolve(
-      answer(all([], ['numbers', 'verification', 'growth', 'log', 'demand'])),
+      answer(
+        all(
+          [],
+          ['numbers', 'verification', 'system', 'growth', 'log', 'demand'],
+        ),
+      ),
     );
     await settle();
 
     expect(order(layout)).toEqual([
       'verification',
       'numbers',
+      'system',
       'growth',
       'log',
       'demand',
@@ -481,7 +516,7 @@ describe('going back to the default', () => {
         answer(
           all(
             ['growth'],
-            ['log', 'numbers', 'verification', 'growth', 'demand'],
+            ['log', 'numbers', 'verification', 'system', 'growth', 'demand'],
           ),
         ),
       reset: () => answered.promise,
@@ -504,7 +539,7 @@ describe('going back to the default', () => {
   it('puts the layout back as it was when the reset fails', async () => {
     const before = all(
       ['growth'],
-      ['log', 'numbers', 'verification', 'growth', 'demand'],
+      ['log', 'numbers', 'verification', 'system', 'growth', 'demand'],
     );
     const { layout, settle } = setup({
       read: async () => answer(before),
@@ -555,7 +590,14 @@ describe('a change made elsewhere', () => {
     await settle();
     expect(api.dashboardLayoutsControllerRead).toHaveBeenCalledTimes(1);
 
-    const moved = ['numbers', 'verification', 'growth', 'log', 'demand'];
+    const moved = [
+      'numbers',
+      'verification',
+      'system',
+      'growth',
+      'log',
+      'demand',
+    ];
     saved.resolve(answer(all([], moved)));
     await result;
     await settle();

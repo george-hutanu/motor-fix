@@ -84,9 +84,14 @@ const events = () =>
 const stored = (accountId: string) =>
   prisma.dashboardLayout.findMany({ where: { accountId } });
 
-const DEFAULT = ['numbers', 'verification', 'growth', 'demand', 'log'].map(
-  (key) => ({ key, visible: true }),
-);
+const DEFAULT = [
+  'numbers',
+  'verification',
+  'system',
+  'growth',
+  'demand',
+  'log',
+].map((key) => ({ key, visible: true }));
 const MINE = [
   { key: 'log', visible: false },
   { key: 'numbers', visible: true },
@@ -94,11 +99,14 @@ const MINE = [
 const MINE_MERGED = [
   ...MINE,
   { key: 'verification', visible: true },
+  { key: 'system', visible: true },
   { key: 'growth', visible: true },
   { key: 'demand', visible: true },
 ];
 
 // @traces 1263-admin-dashboard-customise-FR-003
+// @traces 1430-FR-001
+// @traces 1430-FR-003
 describe('reading a layout', () => {
   it('answers the default with nothing saved', async () => {
     const { auth } = await admin();
@@ -110,6 +118,28 @@ describe('reading a layout', () => {
       role: 'admin',
       updatedAt: null,
     });
+  });
+
+  it('appends the system section, visible, to a layout stored without it', async () => {
+    const { auth, id } = await admin();
+    const before = [
+      { key: 'log', visible: true },
+      { key: 'numbers', visible: false },
+      { key: 'verification', visible: true },
+      { key: 'growth', visible: true },
+      { key: 'demand', visible: false },
+    ];
+    await prisma.dashboardLayout.create({
+      data: { accountId: id, panels: before, role: 'admin' },
+    });
+
+    const res = await read(auth);
+
+    expect(res.body.panels).toEqual([
+      ...before,
+      { key: 'system', visible: true },
+    ]);
+    expect((await stored(id))[0].panels).toEqual(before);
   });
 });
 

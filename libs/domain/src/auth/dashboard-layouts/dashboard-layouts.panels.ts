@@ -15,11 +15,11 @@ const GARAGE_KEYS = [
 ] as const;
 
 // Each served role's section keys in their default order. A section joins
-// its list with the story that ships it (performance after numbers, system
-// after verification, reported after demand); the driver joins with its own
+// its list with the story that ships it (performance after numbers,
+// reported after demand); the driver joins with its own
 // dashboard.
 const PANEL_KEYS = {
-  admin: ['numbers', 'verification', 'growth', 'demand', 'log'],
+  admin: ['numbers', 'verification', 'system', 'growth', 'demand', 'log'],
   garage: GARAGE_KEYS,
   mechanic: GARAGE_KEYS,
   receptionist: GARAGE_KEYS,
