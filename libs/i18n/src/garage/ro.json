@@ -38,6 +38,7 @@
     "error": "Cifrele zilei nu s‑au putut încărca.",
     "label": {
       "bookings": "Programări săptămâna asta",
+      "estimate": "Lucrări estimate",
       "rating": "Nota service‑ului",
       "requests": "Cereri noi azi",
       "work": "Lucrări estimate, {month}"

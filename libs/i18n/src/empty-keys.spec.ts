@@ -84,6 +84,7 @@ describe("the texts of today's numbers on Panou", () => {
   const keys = [
     'garage.daily.error',
     'garage.daily.label.bookings',
+    'garage.daily.label.estimate',
     'garage.daily.label.rating',
     'garage.daily.label.requests',
     'garage.daily.label.work',

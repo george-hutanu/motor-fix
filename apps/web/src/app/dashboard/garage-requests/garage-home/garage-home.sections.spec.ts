@@ -216,7 +216,7 @@ describe('the sections of Panou, in their default order', () => {
     },
   );
 
-  // @traces 1431-FR-007
+  // @traces 1431-FR-001
   it("gives a mechanic no kpi section and never reads today's numbers", async () => {
     const { element, todayRead } = await render('mechanic');
 

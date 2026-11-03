@@ -30,7 +30,7 @@ import { Live } from '../live';
 import { SectionTitle } from '../section-title/section-title';
 import { garageOf, Session } from '../session';
 
-// The events that can move one of the four numbers (FR-004).
+// The events that can move one of the four numbers.
 const KINDS: readonly EventKind[] = [
   'request.created',
   'quote.accepted',
@@ -53,11 +53,6 @@ const KINDS: readonly EventKind[] = [
 const DAY_MS = 86_400_000;
 // A number there is none of, as every format of @motor-fix/i18n writes it.
 const MISSING = '—';
-// The month of a moment, 1 to 12, on Bucharest's calendar.
-const bucharestMonth = new Intl.DateTimeFormat('en', {
-  month: 'numeric',
-  timeZone: 'Europe/Bucharest',
-});
 const KEYS = ['requests', 'bookings', 'rating', 'work'] as const;
 type Key = (typeof KEYS)[number];
 
@@ -179,10 +174,9 @@ export class DailyFiguresPanel {
     language: Language,
   ): string {
     if (key !== 'work') return this.i18n.t(`garage.daily.label.${key}`);
-    // The read's own month; with no read, this month in Bucharest.
-    const index = figures
-      ? Number(figures.month.slice(5, 7))
-      : Number(bucharestMonth.format(new Date()));
+    // The read's own month, never the browser's; with no read, no month.
+    if (!figures) return this.i18n.t('garage.daily.label.estimate');
+    const index = Number(figures.month.slice(5, 7));
     const month = calendarNames(language).months[index - 1] ?? '';
     return this.i18n.t('garage.daily.label.work', { month });
   }
@@ -244,16 +238,16 @@ export class DailyFiguresPanel {
   }
 
   private slots(figures: TodayFiguresDto, language: Language): string {
-    const t = (name: string, params?: Record<string, string>) =>
-      this.note(name, params);
     if (figures.freeSlotsUnavailable)
-      return t('today', { n: formatNum(figures.bookingsToday, language) });
+      return this.note('today', {
+        n: formatNum(figures.bookingsToday, language),
+      });
     const next = figures.nextFreeSlots;
-    if (!next) return t('noSlots');
+    if (!next) return this.note('noSlots');
     const weekday = (new Date(`${next.day}T00:00:00Z`).getUTCDay() + 6) % 7;
     const day = calendarNames(language).days[weekday] ?? '';
     return next.count === 1
-      ? t('slot', { day })
-      : t('slots', { day, n: formatNum(next.count, language) });
+      ? this.note('slot', { day })
+      : this.note('slots', { day, n: formatNum(next.count, language) });
   }
 }

@@ -38,6 +38,7 @@
     "error": "Today's numbers could not be loaded.",
     "label": {
       "bookings": "Bookings this week",
+      "estimate": "Estimated work",
       "rating": "Garage rating",
       "requests": "New requests today",
       "work": "Estimated work, {month}"

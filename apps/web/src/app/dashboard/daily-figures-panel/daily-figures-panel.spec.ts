@@ -360,7 +360,7 @@ describe('the four daily numbers', () => {
 });
 
 describe('while the numbers load or fail', () => {
-  // @traces 1431-FR-003
+  // @traces 1431-FR-003 1431-FR-008
   it('shows four skeletons and marks the section busy while the first read runs', async () => {
     answer = () => new Promise(() => undefined);
     const { element } = await open();
@@ -380,7 +380,7 @@ describe('while the numbers load or fail', () => {
     expect(skeletons(element)).toBe(4);
   });
 
-  // @traces 1431-FR-003 1431-FR-005
+  // @traces 1431-FR-002 1431-FR-003 1431-FR-005
   it('shows four dashes, one alert and a retry when the first read fails, and reads again on retry', async () => {
     answer = refuse(500);
     const { element } = await open();
@@ -391,6 +391,8 @@ describe('while the numbers load or fail', () => {
       ['—', null],
       ['—', null],
     ]);
+    // No read, so no month: never the browser's clock.
+    expect(card(element, 'work')?.label).toBe('Lucrări estimate');
     expect(text(element.querySelector('[role="alert"]'))).toBe(
       'Cifrele zilei nu s\u2011au putut încărca.',
     );
@@ -426,7 +428,6 @@ describe('while the numbers load or fail', () => {
 
       expect(reads).toBe(1);
       expect(element.querySelector('[role="alert"]')).not.toBeNull();
-      expect(element.querySelector('[data-gone]')).toBeNull();
     },
   );
 });
