@@ -6,6 +6,11 @@
 section {
   display: grid;
   gap: var(--mf-space-3);
+  min-width: 0;
+  margin: var(--mf-space-4);
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
 }
 h2 {
   margin: 0;
