@@ -70,6 +70,21 @@ export async function removeJob(db: Client, jobId: string) {
   );
 }
 
+// The job gone again and the garage's stored rating and count put back as
+// they were read before the test.
+export async function restoreGarage(
+  db: Client,
+  jobId: string,
+  garageId: string,
+  stored: { rating: string | null; n: number } | undefined,
+) {
+  await removeJob(db, jobId);
+  await db.query(
+    'UPDATE garage SET rating = $2::numeric, review_count = $3 WHERE id = $1',
+    [garageId, stored?.rating ?? null, stored?.n ?? 0],
+  );
+}
+
 // garage-reviews.spec.ts and garage-reviews-dashboard.spec.ts post reviews on
 // Atelier Test, read its counts and put its stored figures back: each of
 // their tests holds this lock on its own connection, so one file's review
@@ -84,4 +99,43 @@ export async function releaseReviews(db: Client, garageId: string) {
   await db.query("SELECT pg_advisory_unlock(hashtext('reviews:' || $1))", [
     garageId,
   ]);
+}
+
+// The garage's stored rating and count once the worker has caught up: the
+// review-ratings consumer rewrites them from the published reviews after
+// each review event, a moment after the API answers, so a read straight
+// after a post, a report or a decision can see the figures of an earlier
+// event. Every run recounts from the rows, so once the stored figures match
+// the recount, no later run of an event already sent moves them.
+export async function settledFigures(db: Client, garageId: string) {
+  const read = async () => {
+    const { rows } = await db.query<{
+      rating: string | null;
+      n: number;
+      counted: string | null;
+      countedN: number;
+    }>(
+      `SELECT g.rating::text AS rating, g.review_count AS n,
+              (SELECT round(avg(r.rating), 1)::text FROM review r
+                WHERE r.garage_id = g.id AND r.status = 'published') AS counted,
+              (SELECT count(*)::int FROM review r
+                WHERE r.garage_id = g.id AND r.status = 'published') AS "countedN"
+       FROM garage g WHERE g.id = $1`,
+      [garageId],
+    );
+    const [row] = rows;
+    if (!row) throw new Error(`garage ${garageId} is gone`);
+    return row;
+  };
+  let row = await read();
+  for (const started = Date.now(); Date.now() - started < 15_000; ) {
+    if (row.rating === row.counted && row.n === row.countedN) {
+      return { n: row.n, rating: row.rating };
+    }
+    await new Promise((settle) => setTimeout(settle, 250));
+    row = await read();
+  }
+  throw new Error(
+    `the stored rating ${row.rating} (${row.n}) never matched the published reviews' ${row.counted} (${row.countedN})`,
+  );
 }
