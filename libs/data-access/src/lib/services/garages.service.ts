@@ -72,6 +72,8 @@ import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-sett
 import { GarageSettingsDto } from '../models/garage-settings-dto';
 import { garageTimeBlocks } from '../fn/garages/garage-time-blocks';
 import { GarageTimeBlocks$Params } from '../fn/garages/garage-time-blocks';
+import { garageTodayFigures } from '../fn/garages/garage-today-figures';
+import { GarageTodayFigures$Params } from '../fn/garages/garage-today-figures';
 import { garageWeeklyFigures } from '../fn/garages/garage-weekly-figures';
 import { GarageWeeklyFigures$Params } from '../fn/garages/garage-weekly-figures';
 import { getImageVariant } from '../fn/garages/get-image-variant';
@@ -133,6 +135,7 @@ import { timeBlockOptions } from '../fn/garages/time-block-options';
 import { TimeBlockOptions$Params } from '../fn/garages/time-block-options';
 import { TimeBlockOptionsDto } from '../models/time-block-options-dto';
 import { TimeBlocksDto } from '../models/time-blocks-dto';
+import { TodayFiguresDto } from '../models/today-figures-dto';
 import { updateTimeBlock } from '../fn/garages/update-time-block';
 import { UpdateTimeBlock$Params } from '../fn/garages/update-time-block';
 import { verificationStatusControllerRead } from '../fn/garages/verification-status-controller-read';
@@ -400,6 +403,39 @@ export class GaragesService extends BaseService {
   profileViewsControllerRecord(params: ProfileViewsControllerRecord$Params, context?: HttpContext): Promise<void> {
     const resp = this.profileViewsControllerRecord$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `garageTodayFigures()` */
+  static readonly GarageTodayFiguresPath = '/api/v1/garages/{garageId}/figures/today';
+
+  /**
+   * Requests today and yesterday, bookings this week, the next free starts, the rating and the month’s estimated work.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageTodayFigures()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageTodayFigures$Response(params: GarageTodayFigures$Params, context?: HttpContext): Promise<StrictHttpResponse<TodayFiguresDto>> {
+    const obs = garageTodayFigures(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Requests today and yesterday, bookings this week, the next free starts, the rating and the month’s estimated work.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageTodayFigures$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageTodayFigures(params: GarageTodayFigures$Params, context?: HttpContext): Promise<TodayFiguresDto> {
+    const resp = this.garageTodayFigures$Response(params, context);
+    return resp.then((r: StrictHttpResponse<TodayFiguresDto>): TodayFiguresDto => r.body);
   }
 
   /** Path part for operation `garageWeeklyFigures()` */

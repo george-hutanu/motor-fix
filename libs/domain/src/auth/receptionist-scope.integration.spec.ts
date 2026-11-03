@@ -1,4 +1,5 @@
 // @traces 400-FR-007
+// @traces 098-FR-002
 import { randomUUID } from 'node:crypto';
 
 import { codeForStatus, todayInBucharest } from '@motor-fix/contracts';
@@ -185,6 +186,11 @@ const allowed = (g: Garage): Row[] => [
     method: 'get',
     name: 'garage figures',
     path: `/garages/${g.garage.id}/figures/weekly`,
+  },
+  {
+    method: 'get',
+    name: 'daily figures',
+    path: `/garages/${g.garage.id}/figures/today`,
   },
   {
     method: 'get',

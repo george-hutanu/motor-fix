@@ -35,7 +35,7 @@ import { AuditService } from '../audit/audit.service';
     MechanicDayController,
     TimeBlocksController,
   ],
-  exports: [ScheduleService],
+  exports: [FreeSlotsService, ScheduleService],
   providers: [
     ActiveRequestService,
     FreeSlotsCache,

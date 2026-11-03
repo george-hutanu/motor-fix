@@ -1,6 +1,7 @@
 import type { WeeklyFiguresDto } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
+import { estimatedWork } from './daily/daily';
 import { figureWeeks, weeklyFigures } from './weekly/weekly';
 import {
   type Actor,
@@ -168,11 +169,29 @@ function median(values: number[]): number | null {
 // quoted and won, what it worked on and how fast it answered.
 // A mechanic of the garage is told no; one with no garage is told there is
 // nothing here.
-function refuseMechanic(actor: Actor) {
+export function refuseMechanic(actor: Actor) {
   if (actor.role !== 'mechanic') return;
   if (actor.garageId)
     throw forbidden("A mechanic does not read the garage's figures");
   throw new NotFoundException();
+}
+
+// The quotes the garage won in the span, with what their bookings became.
+export function wonQuotes(
+  prisma: PrismaClient,
+  garageId: string,
+  acceptedAt: { gte: Date; lt: Date },
+) {
+  return prisma.quote.findMany({
+    select: {
+      booking: {
+        select: { job: { select: { finalPriceBani: true } }, status: true },
+      },
+      fromBani: true,
+      toBani: true,
+    },
+    where: { acceptedAt, garageId },
+  });
 }
 
 @Injectable()
@@ -269,16 +288,7 @@ export class GarageFiguresService {
         where: { createdAt: within, garageId },
       }),
       this.prisma.quote.count({ where: { garageId, sentAt: within } }),
-      this.prisma.quote.findMany({
-        select: {
-          booking: {
-            select: { job: { select: { finalPriceBani: true } }, status: true },
-          },
-          fromBani: true,
-          toBani: true,
-        },
-        where: { acceptedAt: within, garageId },
-      }),
+      wonQuotes(this.prisma, garageId, within),
       this.prisma.booking.count({
         where: {
           garageId,
@@ -291,22 +301,9 @@ export class GarageFiguresService {
         where: { answeredAt: within, garageId },
       }),
     ]);
-    const estimatedWorkBani = won
-      .filter(
-        (q) =>
-          !q.booking ||
-          !['lapsed', 'cancelled', 'no_show'].includes(q.booking.status),
-      )
-      .reduce(
-        (sum, q) =>
-          sum +
-          (q.booking?.job?.finalPriceBani ??
-            Math.round((q.fromBani + q.toBani) / 2)),
-        0,
-      );
     return {
       bookings,
-      estimatedWorkBani,
+      estimatedWorkBani: estimatedWork(won),
       quotesSent,
       quotesWon: won.length,
       requests,
