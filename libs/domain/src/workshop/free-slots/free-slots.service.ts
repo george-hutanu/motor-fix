@@ -11,7 +11,7 @@ import {
   Logger,
 } from '@nestjs/common';
 
-import { type FreeSlotsInput, freeSlots } from './free-slots';
+import { earliestStart, type FreeSlotsInput, freeSlots } from './free-slots';
 import { FreeSlotsCache, type FreeSlotsKey } from './free-slots.cache';
 import { recordFreeSlots } from './free-slots.metrics';
 import { notFound, refusal } from '../../auth/http-refusal';
@@ -23,8 +23,6 @@ import type { GarageCalendar } from '../../garages/mechanic-hours';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
 const MINUTE = 60_000;
-const STEP = 30 * MINUTE;
-const LEAD = 60 * MINUTE;
 const STAFF = ['garage', 'receptionist', 'mechanic'];
 
 const dayOf = (date: Date) => date.toISOString().slice(0, 10);
@@ -144,7 +142,7 @@ export class FreeSlotsService {
     query: FreeSlotsQueryDto,
   ): Promise<FreeSlotsKey> {
     const now = Date.now();
-    const asked = query.earliest ? Date.parse(query.earliest) : now + LEAD;
+    const asked = query.earliest ? Date.parse(query.earliest) : undefined;
     const { mechanicId, excludeBookingId } = query;
     if (mechanicId) await this.assertMechanic(garageId, mechanicId);
     if (excludeBookingId) {
@@ -153,7 +151,7 @@ export class FreeSlotsService {
     return {
       count: query.count,
       duration: query.duration,
-      earliest: new Date(Math.ceil(Math.max(asked, now) / STEP) * STEP),
+      earliest: earliestStart(now, asked),
       excludeBookingId,
       garageId,
       horizonDays: query.horizonDays,

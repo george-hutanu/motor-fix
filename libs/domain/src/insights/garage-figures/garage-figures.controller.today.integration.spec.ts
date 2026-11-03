@@ -182,8 +182,7 @@ describe('the numbers of the day', () => {
 
     expect(today.freeSlotsUnavailable).toBe(false);
     expect(today.nextFreeSlots?.day).toBe('2026-12-11');
-    expect(today.nextFreeSlots?.count).toBeGreaterThanOrEqual(1);
-    expect(today.nextFreeSlots?.count).toBeLessThanOrEqual(10);
+    expect(today.nextFreeSlots?.count).toBe(10);
   });
 
   it('answers zeros and no rating for a new garage', async () => {
@@ -325,7 +324,10 @@ describe('GET /garages/:garageId/figures/today', () => {
     const bad = await get(path('not-a-garage'), bearer(t.owner, 'garage'));
     expect(bad.status).toBe(400);
     const visitor = await get(path(t.garage.id));
-    expect(visitor.status).toBe(401);
+    expect([visitor.status, visitor.body.code]).toEqual([
+      401,
+      'sign_in_required',
+    ]);
   });
 });
 

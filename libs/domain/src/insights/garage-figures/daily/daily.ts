@@ -9,15 +9,13 @@ import {
   monthStart,
   weekStart,
 } from '../../../bucharest';
+import { earliestStart } from '../../../workshop/free-slots/free-slots';
 import type { FreeSlotsKey } from '../../../workshop/free-slots/free-slots.cache';
 
 // The four numbers of the day, worked out from what the reads return: pure,
 // so the Bucharest edges, the rounding and the week's free-slot question are
 // tested alone.
 
-const MINUTE = 60_000;
-const STEP = 30 * MINUTE;
-const LEAD = 60 * MINUTE;
 const SLOTS = 10;
 
 // Bookings in these states will not bring the garage any work.
@@ -75,7 +73,7 @@ export function freeSlotsKey(
   now: Date,
   sunday: string,
 ): FreeSlotsKey | undefined {
-  const earliest = new Date(Math.ceil((now.getTime() + LEAD) / STEP) * STEP);
+  const earliest = earliestStart(now.getTime());
   const first = localDay(earliest);
   if (first > sunday) return undefined;
   return {
