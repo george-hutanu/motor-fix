@@ -19,7 +19,7 @@ import { Session } from '../session';
 @Component({ imports: [AdminPanel], template: '<mf-admin-panel />' })
 class Host {}
 
-const KEYS = ['numbers', 'verification', 'growth', 'demand', 'log'];
+const KEYS = ['numbers', 'verification', 'system', 'growth', 'demand', 'log'];
 const all = (
   hidden: readonly string[] = [],
   keys: readonly string[] = KEYS,
@@ -75,6 +75,11 @@ async function open({
       page: 1,
       pageSize: 20,
       total: 0,
+    })),
+    statusControllerRead: vi.fn(async () => ({
+      problems: [],
+      sentences: { en: [], ro: [] },
+      tiles: [],
     })),
     systemLogControllerList: vi.fn(async () => ({ items: [] })),
   };
@@ -143,6 +148,7 @@ afterEach(() => {
 });
 
 // @traces 1391-FR-003 1391-FR-007 1391-FR-014
+// @traces 1430-status-on-dashboard-FR-001
 describe('keys in the server list that name nothing on the web', () => {
   it('neither lists, counts nor draws keys that are names of object members', async () => {
     const { element } = await open({
@@ -164,8 +170,8 @@ describe('keys in the server list that name nothing on the web', () => {
     customise(element)?.click();
     await settle();
 
-    expect(rows()).toHaveLength(5);
-    expect(text(count(element))).toBe('5 din 5 secțiuni afișate');
+    expect(rows()).toHaveLength(6);
+    expect(text(count(element))).toBe('6 din 6 secțiuni afișate');
     expect(element.querySelector('img')).toBeNull();
   });
 
@@ -234,7 +240,7 @@ describe('the arrows in the panel', () => {
     customise(element)?.click();
     await settle();
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       press('Mută mai sus: Jurnal');
       await settle();
     }
@@ -286,9 +292,9 @@ describe('a save that fails in the panel', () => {
     press('Ascunde: Jurnal');
     await settle();
 
-    expect(text(count(element))).toBe('5 din 5 secțiuni afișate');
+    expect(text(count(element))).toBe('6 din 6 secțiuni afișate');
     expect(admin.systemLogControllerList).toHaveBeenCalled();
-    expect(rows()).toHaveLength(5);
+    expect(rows()).toHaveLength(6);
   });
 });
 
@@ -343,6 +349,6 @@ describe('the reset when every section is off', () => {
     await settle();
 
     expect(element.querySelector('[data-all-hidden]')).toBeNull();
-    expect(text(count(element))).toBe('5 din 5 secțiuni afișate');
+    expect(text(count(element))).toBe('6 din 6 secțiuni afișate');
   });
 });

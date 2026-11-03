@@ -9,11 +9,13 @@ const all = (keys: readonly string[]) =>
   keys.map((key) => ({ key, visible: true }));
 
 // @traces 1263-admin-dashboard-customise-FR-002
+// @traces 1430-status-on-dashboard-FR-001
 describe('the admin section list', () => {
   it('is the sections the admin overview draws today, in the brief order', () => {
     expect(ADMIN).toEqual([
       'numbers',
       'verification',
+      'system',
       'growth',
       'demand',
       'log',
@@ -29,6 +31,7 @@ describe('the admin section list', () => {
 
 // @traces 1263-admin-dashboard-customise-FR-003
 // @traces 1263-admin-dashboard-customise-FR-009
+// @traces 1430-status-on-dashboard-FR-003
 describe('the merge on read', () => {
   it('answers the default with nothing saved', () => {
     expect(mergeLayout(ADMIN, null)).toEqual(all(ADMIN));
@@ -43,6 +46,7 @@ describe('the merge on read', () => {
       { key: 'log', visible: false },
       { key: 'demand', visible: true },
       { key: 'growth', visible: false },
+      { key: 'system', visible: false },
       { key: 'verification', visible: true },
       { key: 'numbers', visible: true },
     ];
@@ -60,6 +64,7 @@ describe('the merge on read', () => {
       { key: 'log', visible: false },
       { key: 'numbers', visible: false },
       { key: 'verification', visible: true },
+      { key: 'system', visible: true },
       { key: 'growth', visible: true },
       { key: 'demand', visible: true },
     ]);
@@ -75,9 +80,37 @@ describe('the merge on read', () => {
       'log',
       'numbers',
       'verification',
+      'system',
       'growth',
       'demand',
     ]);
+  });
+
+  it('appends the system section, visible, to a layout saved without it', () => {
+    const saved = [
+      { key: 'log', visible: true },
+      { key: 'demand', visible: false },
+      { key: 'growth', visible: true },
+      { key: 'verification', visible: false },
+      { key: 'numbers', visible: true },
+    ];
+
+    expect(mergeLayout(ADMIN, saved)).toEqual([
+      ...saved,
+      { key: 'system', visible: true },
+    ]);
+  });
+
+  it('keeps a saved system section in its place and visibility', () => {
+    const saved = [
+      { key: 'system', visible: false },
+      ...ADMIN.filter((key) => key !== 'system').map((key) => ({
+        key,
+        visible: true,
+      })),
+    ];
+
+    expect(mergeLayout(ADMIN, saved)).toEqual(saved);
   });
 
   it('ignores a malformed stored entry', () => {

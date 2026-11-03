@@ -90,7 +90,9 @@ test.describe('customising the admin Panou @seeded @database', () => {
   const drawn = (page: Page) =>
     page
       .locator('mf-admin-panel')
-      .locator('mf-admin-queue, mf-admin-growth, mf-admin-demand, mf-admin-log')
+      .locator(
+        'mf-admin-queue, mf-admin-status, mf-admin-growth, mf-admin-demand, mf-admin-log',
+      )
       .evaluateAll((all) => all.map((el) => el.tagName.toLowerCase()));
   const sideways = (page: Page) =>
     page.evaluate(
@@ -98,12 +100,13 @@ test.describe('customising the admin Panou @seeded @database', () => {
     );
 
   // @traces 1391-FR-013 1391-FR-011 1391-FR-006
+  // @traces 1430-status-on-dashboard-FR-001
   test('the admin hides and moves sections, keeps them everywhere and goes back to the default', async ({
     browser,
     page,
   }) => {
     await signedIn(page);
-    await expect(page.getByText('5 din 5 secțiuni afișate')).toBeVisible();
+    await expect(page.getByText('6 din 6 secțiuni afișate')).toBeVisible();
     const other = await secondPage(browser);
 
     await open(page);
@@ -117,23 +120,36 @@ test.describe('customising the admin Panou @seeded @database', () => {
       .click();
     await expect
       .poll(() => rows(page))
-      .toEqual(['numbers', 'verification', 'growth', 'log', 'demand']);
-    await expect(page.getByText('4 din 5 secțiuni afișate')).toBeVisible();
+      .toEqual([
+        'numbers',
+        'verification',
+        'system',
+        'growth',
+        'log',
+        'demand',
+      ]);
+    await expect(page.getByText('5 din 6 secțiuni afișate')).toBeVisible();
 
     // The other page follows within five seconds, without a reload.
-    await expect(other.page.getByText('4 din 5 secțiuni afișate')).toBeVisible({
+    await expect(other.page.getByText('5 din 6 secțiuni afișate')).toBeVisible({
       timeout: 5_000,
     });
     await expect
       .poll(() => drawn(other.page), { timeout: 5_000 })
-      .toEqual(['mf-admin-queue', 'mf-admin-log', 'mf-admin-demand']);
+      .toEqual([
+        'mf-admin-queue',
+        'mf-admin-status',
+        'mf-admin-log',
+        'mf-admin-demand',
+      ]);
 
     await panel(page).getByRole('button', { name: 'Gata' }).click();
     await expect(panel(page)).toHaveCount(0);
     await page.reload();
-    await expect(page.getByText('4 din 5 secțiuni afișate')).toBeVisible();
+    await expect(page.getByText('5 din 6 secțiuni afișate')).toBeVisible();
     expect(await drawn(page)).toEqual([
       'mf-admin-queue',
+      'mf-admin-status',
       'mf-admin-log',
       'mf-admin-demand',
     ]);
@@ -142,11 +158,18 @@ test.describe('customising the admin Panou @seeded @database', () => {
     await panel(page)
       .getByRole('button', { name: 'Revino la varianta implicită' })
       .click();
-    await expect(page.getByText('5 din 5 secțiuni afișate')).toBeVisible();
+    await expect(page.getByText('6 din 6 secțiuni afișate')).toBeVisible();
     await expect
       .poll(() => rows(page))
-      .toEqual(['numbers', 'verification', 'growth', 'demand', 'log']);
-    await expect(other.page.getByText('5 din 5 secțiuni afișate')).toBeVisible({
+      .toEqual([
+        'numbers',
+        'verification',
+        'system',
+        'growth',
+        'demand',
+        'log',
+      ]);
+    await expect(other.page.getByText('6 din 6 secțiuni afișate')).toBeVisible({
       timeout: 5_000,
     });
   });
@@ -188,7 +211,7 @@ test.describe('customising the admin Panou @seeded @database', () => {
   const scan = async (page: Page) => {
     await settled(page);
     const widths = await roomy(page);
-    expect(widths.length).toBe(5);
+    expect(widths.length).toBe(6);
     for (const width of widths) expect(width).toBeGreaterThanOrEqual(144);
     for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme });

@@ -24,6 +24,7 @@ import { Session } from './session';
 export const ADMIN_KEYS: readonly string[] = [
   'numbers',
   'verification',
+  'system',
   'growth',
   'demand',
   'log',

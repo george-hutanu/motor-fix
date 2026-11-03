@@ -19,7 +19,7 @@ const GARAGE_KEYS = [
 // after verification, reported after demand); the driver joins with its own
 // dashboard.
 const PANEL_KEYS = {
-  admin: ['numbers', 'verification', 'growth', 'demand', 'log'],
+  admin: ['numbers', 'verification', 'system', 'growth', 'demand', 'log'],
   garage: GARAGE_KEYS,
   mechanic: GARAGE_KEYS,
   receptionist: GARAGE_KEYS,
