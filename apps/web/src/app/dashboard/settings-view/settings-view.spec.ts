@@ -5,6 +5,9 @@ import type { MeDto } from '@motor-fix/data-access';
 import { SettingsView } from './settings-view';
 import { Session } from '../session';
 
+@Component({ selector: 'mf-admin-status', template: '' })
+class AdminStatusStub {}
+
 @Component({ selector: 'mf-platform-rules', template: '' })
 class PlatformRulesStub {}
 
@@ -39,6 +42,7 @@ async function render(me: MeDto | null) {
   TestBed.overrideComponent(SettingsView, {
     set: {
       imports: [
+        AdminStatusStub,
         CopyVoicesStub,
         DeleteAccountStub,
         FeatureSwitchesStub,
@@ -82,10 +86,12 @@ describe('SettingsView', () => {
     expect(await fixture.getDeferBlocks()).toHaveLength(0);
   });
 
-  it('shows the platform rules first to an admin', async () => {
+  // @traces 1425-FR-002
+  it('shows the system status first to an admin, then the platform rules', async () => {
     const element = await rendered(account(['admin.settings']));
 
-    expect(element.firstElementChild?.tagName).toBe('MF-PLATFORM-RULES');
+    expect(element.firstElementChild?.tagName).toBe('MF-ADMIN-STATUS');
+    expect(element.children[1]?.tagName).toBe('MF-PLATFORM-RULES');
     expect(element.querySelector('mf-push-panel')).not.toBeNull();
   });
 
@@ -93,12 +99,14 @@ describe('SettingsView', () => {
   it('shows the copy voices right after the platform rules to an admin', async () => {
     const element = await rendered(account(['admin.settings']));
 
-    expect(element.children[1]?.tagName).toBe('MF-COPY-VOICES');
+    expect(element.children[2]?.tagName).toBe('MF-COPY-VOICES');
   });
 
-  it('shows no platform rules to a garage session', async () => {
+  // @traces 1425-FR-002
+  it('shows no system status and no platform rules to a garage session', async () => {
     const element = await rendered(account(['garage.settings']));
 
+    expect(element.querySelector('mf-admin-status')).toBeNull();
     expect(element.querySelector('mf-platform-rules')).toBeNull();
     expect(element.querySelector('mf-copy-voices')).toBeNull();
     expect(element.querySelector('mf-notification-settings')).not.toBeNull();
