@@ -100,7 +100,7 @@ test.describe('customising the admin Panou @seeded @database', () => {
     );
 
   // @traces 1391-FR-013 1391-FR-011 1391-FR-006
-  // @traces 1430-status-on-dashboard-FR-001
+  // @traces 1430-FR-001
   test('the admin hides and moves sections, keeps them everywhere and goes back to the default', async ({
     browser,
     page,

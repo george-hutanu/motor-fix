@@ -148,7 +148,7 @@ afterEach(() => {
 });
 
 // @traces 1391-FR-003 1391-FR-007 1391-FR-014
-// @traces 1430-status-on-dashboard-FR-001
+// @traces 1430-FR-001
 describe('keys in the server list that name nothing on the web', () => {
   it('neither lists, counts nor draws keys that are names of object members', async () => {
     const { element } = await open({
@@ -350,5 +350,70 @@ describe('the reset when every section is off', () => {
 
     expect(element.querySelector('[data-all-hidden]')).toBeNull();
     expect(text(count(element))).toBe('6 din 6 secțiuni afișate');
+  });
+});
+
+describe('the system status on Panou under unusual layouts', () => {
+  const statuses = (element: HTMLElement) =>
+    element.querySelectorAll('mf-admin-status');
+
+  // @traces 1430-FR-002
+  it('draws the status panel last when system is saved last', async () => {
+    const { element } = await open({
+      read: async () =>
+        layoutAnswer(
+          all(
+            [],
+            ['numbers', 'verification', 'growth', 'demand', 'log', 'system'],
+          ),
+        ),
+    });
+
+    const last = element.querySelector('mf-admin-status');
+    expect(last).not.toBeNull();
+    expect(last?.nextElementSibling).toBeNull();
+  });
+
+  // @traces 1430-FR-002
+  it('does not read the status while system is hidden and the others are moved', async () => {
+    const { admin, element } = await open({
+      read: async () => layoutAnswer(all(['system'])),
+    });
+    customise(element)?.click();
+    await settle();
+
+    press('Mută mai sus: Creștere, ultimele 12 luni');
+    await settle();
+
+    expect(statuses(element)).toHaveLength(0);
+    expect(admin.statusControllerRead).not.toHaveBeenCalled();
+  });
+
+  // @traces 1430-FR-003
+  it('draws no status panel for a layout answered without system and saves nothing on read', async () => {
+    const { admin, element, layout } = await open({
+      read: async () =>
+        layoutAnswer(all([], ['numbers', 'verification', 'growth'])),
+    });
+
+    expect(statuses(element)).toHaveLength(0);
+    expect(admin.statusControllerRead).not.toHaveBeenCalled();
+    expect(layout.dashboardLayoutsControllerSave).not.toHaveBeenCalled();
+  });
+
+  // @traces 1430-FR-002
+  it('draws the status panel again after a reset brings back a hidden system', async () => {
+    const { admin, element, layout } = await open({
+      read: async () => layoutAnswer(all(['system'])),
+    });
+    customise(element)?.click();
+    await settle();
+
+    press('Revino la varianta implicită');
+    await settle();
+
+    expect(layout.dashboardLayoutsControllerReset).toHaveBeenCalledTimes(1);
+    expect(statuses(element)).toHaveLength(1);
+    expect(admin.statusControllerRead).toHaveBeenCalledTimes(1);
   });
 });

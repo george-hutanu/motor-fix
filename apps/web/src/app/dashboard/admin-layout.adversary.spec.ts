@@ -79,7 +79,7 @@ function setup({
 }
 
 // @traces 1391-FR-004 1391-FR-005 1391-FR-009 1391-FR-014
-// @traces 1430-status-on-dashboard-FR-001
+// @traces 1430-FR-001
 describe('the admin layout given keys it should not act on', () => {
   it('saves nothing for a key the web has no section for', async () => {
     const { api, layout, settle } = setup();

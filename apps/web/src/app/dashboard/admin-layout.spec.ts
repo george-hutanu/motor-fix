@@ -88,7 +88,7 @@ function setup({
 }
 
 // @traces 1391-FR-010
-// @traces 1430-status-on-dashboard-FR-001
+// @traces 1430-FR-001
 describe('reading the admin layout', () => {
   it('reads the admin layout once in the browser', async () => {
     const { api, layout, settle } = setup({

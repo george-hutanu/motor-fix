@@ -9,7 +9,7 @@ const all = (keys: readonly string[]) =>
   keys.map((key) => ({ key, visible: true }));
 
 // @traces 1263-admin-dashboard-customise-FR-002
-// @traces 1430-status-on-dashboard-FR-001
+// @traces 1430-FR-001
 describe('the admin section list', () => {
   it('is the sections the admin overview draws today, in the brief order', () => {
     expect(ADMIN).toEqual([
@@ -31,7 +31,7 @@ describe('the admin section list', () => {
 
 // @traces 1263-admin-dashboard-customise-FR-003
 // @traces 1263-admin-dashboard-customise-FR-009
-// @traces 1430-status-on-dashboard-FR-003
+// @traces 1430-FR-003 1430-FR-006
 describe('the merge on read', () => {
   it('answers the default with nothing saved', () => {
     expect(mergeLayout(ADMIN, null)).toEqual(all(ADMIN));

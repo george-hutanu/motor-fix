@@ -8,7 +8,7 @@ const ADMIN: readonly string[] = panelKeysOf('admin') ?? [];
 const DEFAULT = ADMIN.map((key) => ({ key, visible: true }));
 
 // @traces 1263-admin-dashboard-customise-FR-006
-// @traces 1430-status-on-dashboard-FR-001
+// @traces 1430-FR-001
 describe('panelKeysOf on hostile role names', () => {
   it.each([
     '__proto__',
@@ -245,6 +245,70 @@ describe('the garage roles section list', () => {
     expect(panelKeysOf('admin')).not.toContain('kpi');
     expect(
       checkPanels(panelKeysOf('admin') ?? [], [{ key: 'kpi', visible: true }]),
+    ).toBe('unknown_key');
+  });
+});
+
+describe('the system section in saved admin layouts', () => {
+  // @traces 1430-FR-003
+  it('keeps the first of system saved twice, hidden then visible', () => {
+    const merged = mergeLayout(ADMIN, [
+      { key: 'system', visible: false },
+      { key: 'system', visible: true },
+    ]);
+
+    expect(merged.filter((panel) => panel.key === 'system')).toEqual([
+      { key: 'system', visible: false },
+    ]);
+    expect(merged).toHaveLength(6);
+  });
+
+  // @traces 1430-FR-003
+  it('answers system for an empty saved list and for null in third place', () => {
+    expect(mergeLayout(ADMIN, []).map((p) => p.key)).toEqual([
+      'numbers',
+      'verification',
+      'system',
+      'growth',
+      'demand',
+      'log',
+    ]);
+    expect(mergeLayout(ADMIN, null)).toEqual(DEFAULT);
+  });
+
+  // @traces 1430-FR-003
+  it('treats a system entry with a string visible flag as missing and appends it visible', () => {
+    const merged = mergeLayout(ADMIN, [{ key: 'system', visible: 'false' }]);
+
+    expect(merged.at(0)).toEqual({ key: 'numbers', visible: true });
+    expect(merged.find((p) => p.key === 'system')).toEqual({
+      key: 'system',
+      visible: true,
+    });
+  });
+
+  // @traces 1430-FR-001
+  it('refuses system twice in a save and accepts it once anywhere', () => {
+    expect(
+      checkPanels(ADMIN, [
+        { key: 'system', visible: true },
+        { key: 'system', visible: false },
+      ]),
+    ).toBe('duplicate_key');
+    expect(checkPanels(ADMIN, [{ key: 'system', visible: false }])).toBeNull();
+  });
+
+  // @traces 1430-FR-001
+  it('does not give system to the garage, mechanic, receptionist, driver or an upper-case admin', () => {
+    for (const role of ['garage', 'mechanic', 'receptionist']) {
+      expect(panelKeysOf(role)).not.toContain('system');
+    }
+    expect(panelKeysOf('driver')).toBeUndefined();
+    expect(panelKeysOf('Admin')).toBeUndefined();
+    expect(
+      checkPanels(panelKeysOf('garage') ?? [], [
+        { key: 'system', visible: true },
+      ]),
     ).toBe('unknown_key');
   });
 });

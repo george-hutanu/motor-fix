@@ -105,8 +105,8 @@ const MINE_MERGED = [
 ];
 
 // @traces 1263-admin-dashboard-customise-FR-003
-// @traces 1430-status-on-dashboard-FR-001
-// @traces 1430-status-on-dashboard-FR-003
+// @traces 1430-FR-001
+// @traces 1430-FR-003
 describe('reading a layout', () => {
   it('answers the default with nothing saved', async () => {
     const { auth } = await admin();

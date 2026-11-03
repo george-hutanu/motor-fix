@@ -502,8 +502,8 @@ describe('a change made in another tab', () => {
   });
 });
 
-// @traces 1430-status-on-dashboard-FR-001
-// @traces 1430-status-on-dashboard-FR-002
+// @traces 1430-FR-001
+// @traces 1430-FR-002 1430-FR-006
 describe('the system status on Panou', () => {
   it('is drawn third by default and read once', async () => {
     const { admin, element } = await open();
@@ -529,6 +529,8 @@ describe('the system status on Panou', () => {
     expect(admin.statusControllerRead).not.toHaveBeenCalled();
   });
 
+  // The name and description are the texts Setări already carries.
+  // @traces 1430-FR-005
   it('is listed third in the panel with its description', async () => {
     const { element } = await open();
 
