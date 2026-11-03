@@ -8,6 +8,7 @@ import {
   holdReviews,
   releaseReviews,
   restoreGarage,
+  settledFigures,
 } from './review-jobs.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
@@ -151,6 +152,7 @@ test.describe('reported reviews on the admin dashboard @seeded', () => {
       });
       expect(posted.status(), await posted.text()).toBe(201);
       const { id: reviewId } = (await posted.json()) as { id: string };
+      const withReview = await settledFigures(db, garageId);
       const reported = await other.request.post(
         `/api/v1/reviews/${reviewId}/reports`,
         {
@@ -159,10 +161,8 @@ test.describe('reported reviews on the admin dashboard @seeded', () => {
         },
       );
       expect(reported.status(), await reported.text()).toBe(201);
-      const atReport = await db.query<{ rating: string | null; n: number }>(
-        'SELECT rating::text AS rating, review_count AS n FROM garage WHERE id = $1',
-        [garageId],
-      );
+      const atReport = await settledFigures(db, garageId);
+      expect(atReport).not.toEqual(withReview);
 
       await keepSeededLanguage(page);
       await ready(page, '/ro');
@@ -197,11 +197,8 @@ test.describe('reported reviews on the admin dashboard @seeded', () => {
       await page.goto('/ro/garages/atelier-test');
       await expect(page.locator('article.review').first()).toBeVisible();
       await expect(page.getByText(text)).toHaveCount(0);
-      const after = await db.query<{ rating: string | null; n: number }>(
-        'SELECT rating::text AS rating, review_count AS n FROM garage WHERE id = $1',
-        [garageId],
-      );
-      expect(after.rows).toEqual(atReport.rows);
+      const after = await settledFigures(db, garageId);
+      expect(after).toEqual(atReport);
     } finally {
       await other.close();
       await restoreGarage(db, jobId, garageId, before.rows[0]);
