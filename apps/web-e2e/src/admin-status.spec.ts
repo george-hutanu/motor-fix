@@ -92,6 +92,11 @@ type Row = {
 };
 
 test.describe('the Starea sistemului panel @seeded @database', () => {
+  // Both flows write the one maps row and announce it to every admin, and each
+  // restores the row after itself: run side by side, one's restore and event
+  // land in the other's wait. One worker, one after the other.
+  test.describe.configure({ mode: 'default' });
+
   // Writes a tile to PostgreSQL and announces it on Redis: the e2e job and the
   // PR QA run set DATABASE_URL and REDIS_URL.
   let db: Client;
