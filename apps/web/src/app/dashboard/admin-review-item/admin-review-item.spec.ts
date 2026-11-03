@@ -7,9 +7,11 @@ import { TestBed } from '@angular/core/testing';
 import { REVIEW_REPORT_REASON_TEXTS } from '@motor-fix/contracts';
 import type { ReportQueueItemDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 
 import { AdminReviewItem } from './admin-review-item';
 import { spoken } from '../../spoken.testing';
+import type { RemoveReviewResult } from '../remove-review-dialog/remove-review-dialog';
 
 // @traces 1389-FR-003 1389-FR-004 1389-FR-005 1389-FR-007 1389-FR-008 1389-FR-009
 
@@ -245,7 +247,7 @@ describe('a reported review', () => {
     ]);
   });
 
-  it('offers Keep and Remove the review, disabled, in the tab order, with the tip as description', async () => {
+  it('offers Keep as the disabled slot with the tip, and Remove the review live', async () => {
     const { el } = await render(item());
 
     const [keep, remove] = buttons(el);
@@ -253,34 +255,34 @@ describe('a reported review', () => {
       'Păstrează',
       'Șterge recenzia',
     ]);
-    for (const button of [keep, remove]) {
-      expect(button.getAttribute('aria-disabled')).toBe('true');
-      expect(button.disabled).toBe(false);
-      const tip = el.querySelector(
-        `#${button.getAttribute('aria-describedby')}`,
-      );
-      expect(text(tip)).toBe('În curând');
-    }
+    expect(keep.getAttribute('aria-disabled')).toBe('true');
+    expect(keep.disabled).toBe(false);
+    expect(
+      text(el.querySelector(`#${keep.getAttribute('aria-describedby')}`)),
+    ).toBe('În curând');
+    expect(remove.hasAttribute('aria-disabled')).toBe(false);
+    expect(remove.disabled).toBe(false);
+    expect(remove.hasAttribute('aria-describedby')).toBe(false);
   });
 
-  it('does nothing when a disabled slot is pressed', async () => {
+  it('does nothing when the disabled Keep slot is pressed', async () => {
     const { el, fixture } = await render(item());
     const before = el.innerHTML;
 
-    buttons(el)[1].click();
+    buttons(el)[0].click();
     fixture.detectChanges();
 
     expect(el.innerHTML).toBe(before);
   });
 
   // @traces 1389-FR-010
-  it('sends nothing when either slot is pressed', async () => {
+  it('sends nothing when the Keep slot is pressed', async () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     const { el, fixture } = await render(item());
 
-    for (const button of buttons(el)) button.click();
+    buttons(el)[0].click();
     fixture.detectChanges();
 
     TestBed.inject(HttpTestingController).verify();
@@ -361,16 +363,16 @@ describe('a reported reply', () => {
     expect(text(el.querySelector('.posted'))).toMatch(/ · edited$/);
   });
 
-  it('offers Keep the reply and Remove the reply, disabled', async () => {
+  it('offers Keep the reply disabled and Remove the reply live', async () => {
     const { el } = await render(reply());
 
     expect(buttons(el).map((b) => text(b))).toEqual([
       'Păstrează răspunsul',
       'Șterge răspunsul',
     ]);
-    expect(
-      buttons(el).every((b) => b.getAttribute('aria-disabled') === 'true'),
-    ).toBe(true);
+    const [keep, remove] = buttons(el);
+    expect(keep.getAttribute('aria-disabled')).toBe('true');
+    expect(remove.hasAttribute('aria-disabled')).toBe(false);
   });
 
   it('labels the slots in English', async () => {
@@ -413,5 +415,128 @@ describe('the 48-hour mark', () => {
     });
 
     expect(text(el.querySelector('.overdue'))).toBe('Over 48 hours');
+  });
+});
+
+// @traces 1423-FR-001 1423-FR-002 1423-FR-004 1423-FR-005 1423-FR-006
+
+describe('removing from the item', () => {
+  let opened: ReturnType<typeof vi.fn>;
+
+  const withOverlay = (answer: RemoveReviewResult | 'cancelled') => {
+    opened = vi.fn(async () => answer);
+    TestBed.configureTestingModule({
+      providers: [{ provide: Overlays, useValue: { open: opened } }],
+    });
+  };
+
+  const settle = async () => {
+    for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r));
+  };
+
+  it("opens the confirmation titled with the author's name and reports the outcome", async () => {
+    withOverlay({ outcome: 'removed' });
+    const { el, fixture } = await render(item());
+    const decided: unknown[] = [];
+    fixture.componentInstance.decided.subscribe((v) => decided.push(v));
+
+    buttons(el)[1].click();
+    await settle();
+
+    expect(opened).toHaveBeenCalledTimes(1);
+    const [, options] = opened.mock.calls[0];
+    expect(options).toMatchObject({
+      data: { item: item() },
+      shape: 'dialog',
+      title: 'admin.reviews.remove.title.review',
+      titleParams: { name: 'Andrei P.' },
+    });
+    expect(decided).toEqual([{ outcome: 'removed' }]);
+  });
+
+  it("titles a reply's confirmation with the garage's name", async () => {
+    withOverlay('cancelled');
+    const { el, fixture } = await render(reply());
+    const decided: unknown[] = [];
+    fixture.componentInstance.decided.subscribe((v) => decided.push(v));
+
+    buttons(el)[1].click();
+    await settle();
+
+    expect(opened.mock.calls[0][1]).toMatchObject({
+      title: 'admin.reviews.remove.title.reply',
+      titleParams: { name: 'Atelier Test' },
+    });
+    expect(decided).toEqual([]);
+  });
+
+  const decidedAs = async (
+    value: ReportQueueItemDto,
+    outcome: RemoveReviewResult,
+    language: 'ro' | 'en' = 'ro',
+  ) => {
+    const { el, fixture } = await render(value, { language });
+    fixture.componentRef.setInput('outcome', outcome);
+    fixture.detectChanges();
+    return el;
+  };
+
+  it('replaces the actions with the removed status line', async () => {
+    const el = await decidedAs(item(), { outcome: 'removed' });
+
+    expect(buttons(el)).toHaveLength(0);
+    const status = el.querySelector('[role="status"]');
+    expect(text(status)).toBe(
+      'Ștearsă. Autorul și service‑ul au fost anunțați.',
+    );
+  });
+
+  it('says a reply was removed in its own words', async () => {
+    const el = await decidedAs(reply(), { outcome: 'removed' });
+
+    expect(text(el.querySelector('[role="status"]'))).toBe(
+      'Șters. Autorul și service‑ul au fost anunțați.',
+    );
+  });
+
+  it('says removed in English', async () => {
+    const el = await decidedAs(item(), { outcome: 'removed' }, 'en');
+
+    expect(text(el.querySelector('[role="status"]'))).toBe(
+      'Removed. The author and the garage were told.',
+    );
+  });
+
+  it('names the admin who decided first, with no actions', async () => {
+    const el = await decidedAs(item(), {
+      by: 'Ana',
+      outcome: 'already_decided',
+    });
+
+    expect(buttons(el)).toHaveLength(0);
+    expect(text(el.querySelector('.decided'))).toBe('Deja decisă de Ana');
+    // A refusal reads as quiet text, not as the removed status line.
+    expect(el.querySelector('[role="status"]')).toBeNull();
+    expect(el.querySelector('.decided')?.classList).toContain('quiet');
+  });
+
+  it('says already decided with no name when none came', async () => {
+    const el = await decidedAs(item(), { outcome: 'already_decided' }, 'en');
+
+    expect(text(el.querySelector('.decided'))).toBe('Already decided');
+  });
+
+  it('says the report is no longer pending, in both languages', async () => {
+    const ro = await decidedAs(item(), { outcome: 'gone' });
+    expect(buttons(ro)).toHaveLength(0);
+    expect(text(ro.querySelector('.decided'))).toBe(
+      'Raportul nu mai e în așteptare',
+    );
+    TestBed.resetTestingModule();
+
+    const en = await decidedAs(item(), { outcome: 'gone' }, 'en');
+    expect(text(en.querySelector('.decided'))).toBe(
+      'The report is no longer pending',
+    );
   });
 });

@@ -12,7 +12,11 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AdminService, type ReportQueueDto } from '@motor-fix/data-access';
+import {
+  AdminService,
+  type ReportQueueDto,
+  type ReportQueueItemDto,
+} from '@motor-fix/data-access';
 import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { reportAge } from '@motor-fix/i18n/report-age';
 import { Panel } from '@motor-fix/ui-cockpit';
@@ -20,6 +24,7 @@ import { Panel } from '@motor-fix/ui-cockpit';
 import { AdminReviewItem } from '../admin-review-item/admin-review-item';
 import { liveResource, REVIEW_QUEUE_KINDS } from '../live';
 import { LiveChange } from '../live-in-place/live-in-place';
+import type { RemoveReviewResult } from '../remove-review-dialog/remove-review-dialog';
 
 const SKELETON_ROWS = [0, 1, 2];
 const PANEL_ITEMS = 5;
@@ -27,6 +32,13 @@ const LIST = '/app/admin/reviews';
 // How often a page left open reads the clock again, so the oldest report's
 // age moves with no new read.
 const TICK_MS = 60_000;
+
+// An item this admin decided, kept where it was until "Mai multe" or leaving.
+interface Decided {
+  at: number;
+  item: ReportQueueItemDto;
+  outcome: RemoveReviewResult;
+}
 
 // "Recenzii raportate": the reports waiting for an admin, oldest first. On
 // the overview it shows the five oldest and links to the whole list; the
@@ -56,15 +68,48 @@ export class AdminReviews {
     return this.queue.failed() ? 'failed' : 'loading';
   });
 
+  private readonly decisions = signal<ReadonlyMap<string, Decided>>(new Map());
+
+  // The read's items, those this admin decided put back where they were when
+  // a later read no longer lists them.
+  private readonly shown = computed(() => {
+    const items = [...(this.queue.value()?.items ?? [])];
+    const listed = new Set(items.map((i) => i.report.id));
+    const back = [...this.decisions()]
+      .filter(([id]) => !listed.has(id))
+      .sort(([, a], [, b]) => a.at - b.at);
+    for (const [, { at, item }] of back)
+      items.splice(Math.min(at, items.length), 0, item);
+    return items;
+  });
+
   protected readonly items = computed(() => {
-    const items = this.queue.value()?.items ?? [];
+    const items = this.shown();
     return this.overview ? items.slice(0, PANEL_ITEMS) : items;
   });
 
-  private readonly total = computed(() => this.queue.value()?.total ?? 0);
+  protected outcome(id: string) {
+    return this.decisions().get(id)?.outcome;
+  }
+
+  // The decided items the read still lists, which its counts still hold.
+  private readonly stale = computed(() =>
+    (this.queue.value()?.items ?? []).filter((i) =>
+      this.decisions().has(i.report.id),
+    ),
+  );
+
+  private readonly total = computed(() =>
+    Math.max(0, (this.queue.value()?.total ?? 0) - this.stale().length),
+  );
 
   protected readonly oldest = computed(() => {
-    const oldest = this.queue.value()?.oldestCreatedAt;
+    const oldest = this.stale().length
+      ? this.shown()
+          .filter((i) => !this.decisions().has(i.report.id))
+          .map((i) => i.report.createdAt)
+          .sort()[0]
+      : this.queue.value()?.oldestCreatedAt;
     if (this.overview || !oldest) return undefined;
     return this.t('oldest', {
       age: reportAge(oldest, this.i18n.language(), this.now()),
@@ -72,7 +117,9 @@ export class AdminReviews {
   });
 
   protected readonly more = computed(
-    () => !this.overview && this.items().length < this.total(),
+    () =>
+      !this.overview &&
+      this.items().length - this.decisions().size < this.total(),
   );
   protected readonly all = computed(() =>
     this.overview && this.total() > PANEL_ITEMS
@@ -80,7 +127,9 @@ export class AdminReviews {
       : undefined,
   );
 
-  protected readonly pending = computed(() => this.queue.value()?.total);
+  protected readonly pending = computed(() =>
+    this.queue.value() ? this.total() : undefined,
+  );
   protected readonly announcement = computed(() => {
     const n = this.pending() ?? 0;
     return this.t('announce', {
@@ -92,13 +141,26 @@ export class AdminReviews {
   // The place of the first item "Mai multe" asked for, focused once it shows.
   private focusAt?: number;
 
+  // An item this admin decided keeps its place and says how it ended.
+  decide(item: ReportQueueItemDto, outcome: RemoveReviewResult) {
+    const at = this.shown().findIndex((i) => i.report.id === item.report.id);
+    this.decisions.update((map) =>
+      new Map(map).set(item.report.id, { at, item, outcome }),
+    );
+  }
+
   showMore() {
-    const at = this.items().length;
+    // The decided items leave once the next read is in, so the first new
+    // item sits where the undecided ones end.
+    const at = this.items().length - this.decisions().size;
     this.focusAt = at;
     this.pages.update((n) => n + 1);
     // A page that brought nothing drops the wish, so a later live re-read
     // that adds an item does not take the focus.
     void this.queue.reload().then(() => {
+      // A failed read keeps the old page, which still lists the decided
+      // items: they keep their outcome until a read leaves them out.
+      if (!this.queue.failed()) this.decisions.set(new Map());
       if (this.focusAt === at && this.items().length <= at)
         this.focusAt = undefined;
     });

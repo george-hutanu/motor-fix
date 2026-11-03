@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import type { ReportQueueItemDto } from '@motor-fix/data-access';
 import {
   formatDay,
@@ -7,13 +7,17 @@ import {
   type Language,
   TranslatePipe,
 } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { Lamp } from '@motor-fix/ui-cockpit';
+
+import { openRemoveReview } from '../remove-review-dialog/open-remove-review';
+import type { RemoveReviewResult } from '../remove-review-dialog/remove-review-dialog';
 
 let next = 0;
 
 // One reported review or reply as the admin judges it: what was written, why
-// it was reported, and the facts beside it. The actions are slots until the
-// keep and remove stories wire them.
+// it was reported, and the facts beside it. Remove opens its confirmation;
+// keep stays a slot until its story wires it. Once decided, a line says how.
 @Component({
   imports: [Lamp, TranslatePipe],
   selector: 'mf-admin-review-item',
@@ -26,6 +30,10 @@ export class AdminReviewItem {
   // The time on screen, from the list's clock, so the 48-hour mark appears
   // with no new read.
   readonly now = input.required<Date>();
+  // How this admin's decision ended, kept by the list while it is shown.
+  readonly outcome = input<RemoveReviewResult>();
+  readonly decided = output<RemoveReviewResult>();
+  private readonly overlays = inject(Overlays);
 
   protected readonly tipId = `mf-admin-review-soon-${next++}`;
 
@@ -52,6 +60,33 @@ export class AdminReviewItem {
         : this.t('title.review', { garage: garage.name, score }),
     };
   });
+
+  protected readonly said = computed(() => {
+    const outcome = this.outcome();
+    if (!outcome) return undefined;
+    if (outcome.outcome === 'removed')
+      return this.t(
+        this.item().reply ? 'decided.removedReply' : 'decided.removedReview',
+      );
+    if (outcome.outcome === 'gone') return this.t('decided.gone');
+    return outcome.by
+      ? this.t('decided.alreadyBy', { name: outcome.by })
+      : this.t('decided.already');
+  });
+
+  // A second press while the confirmation loads or is open opens nothing.
+  private opening = false;
+
+  protected async remove() {
+    if (this.opening) return;
+    this.opening = true;
+    try {
+      const result = await openRemoveReview(this.overlays, this.item());
+      if (result !== 'cancelled') this.decided.emit(result);
+    } finally {
+      this.opening = false;
+    }
+  }
 
   private facts(language: Language): string[] {
     const { account, garageReports, identicalReviews, job } = this.item().facts;

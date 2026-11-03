@@ -7,13 +7,15 @@ import {
   doneJob,
   holdReviews,
   releaseReviews,
-  removeJob,
+  restoreGarage,
+  settledFigures,
 } from './review-jobs.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
 // @traces 1389-FR-001
 // @traces 1389-FR-003
 // @traces 1389-FR-006
+// @traces 1423-FR-007
 
 const waiting = async (page: Page) => {
   const name =
@@ -128,12 +130,78 @@ test.describe('reported reviews on the admin dashboard @seeded', () => {
       expect(reloads).toBe(0);
     } finally {
       await other.close();
-      await removeJob(db, jobId);
-      const [stored] = before.rows;
-      await db.query(
-        'UPDATE garage SET rating = $2::numeric, review_count = $3 WHERE id = $1',
-        [garageId, stored?.rating ?? null, stored?.n ?? 0],
+      await restoreGarage(db, jobId, garageId, before.rows[0]);
+    }
+  });
+  test('removes a reported review from the dashboard; the profile no longer shows it and the rating stays as at the report', async ({
+    browser,
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width: 1440 });
+    const jobId = await doneJob(db, garageId);
+    const before = await db.query<{ rating: string | null; n: number }>(
+      'SELECT rating::text AS rating, review_count AS n FROM garage WHERE id = $1',
+      [garageId],
+    );
+    const other = await browser.newContext();
+    try {
+      const text = `Nu mai calc pe aici (${Date.now().toString(36)}).`;
+      const posted = await other.request.post('/api/v1/reviews', {
+        data: { jobId, rating: 1, text },
+        headers: await headers(other.request, ACCOUNTS.otherDriver),
+      });
+      expect(posted.status(), await posted.text()).toBe(201);
+      const { id: reviewId } = (await posted.json()) as { id: string };
+      const withReview = await settledFigures(db, garageId);
+      const reported = await other.request.post(
+        `/api/v1/reviews/${reviewId}/reports`,
+        {
+          data: { reason: 'insults' },
+          headers: await headers(other.request, ACCOUNTS.garage),
+        },
       );
+      expect(reported.status(), await reported.text()).toBe(201);
+      const atReport = await settledFigures(db, garageId);
+      expect(atReport).not.toEqual(withReview);
+
+      await keepSeededLanguage(page);
+      await ready(page, '/ro');
+      await openSignIn(page);
+      await signIn(page, ACCOUNTS.admin);
+      await expect(page).toHaveURL('/app/admin');
+      await page.goto('/app/admin/reviews');
+      const view = page.locator('mf-admin-reviews');
+      const ours = view
+        .getByRole('article', { name: 'Atelier Test · recenzie de 1,0' })
+        .filter({ hasText: text });
+      await expect(ours).toBeVisible();
+
+      await ours.getByRole('button', { name: 'Șterge recenzia' }).click();
+      const dialog = page.getByRole('dialog', {
+        name: /^Ștergi recenzia lui /,
+      });
+      await expect(dialog).toBeVisible();
+      await expect(
+        dialog.getByRole('radio', { name: 'Insulte' }),
+      ).toBeChecked();
+      await dialog.getByRole('button', { name: 'Șterge recenzia' }).click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(ours.getByRole('status')).toHaveText(
+        'Ștearsă. Autorul și service‑ul au fost anunțați.',
+      );
+      await expect(
+        ours.getByRole('button', { name: 'Șterge recenzia' }),
+      ).toHaveCount(0);
+
+      await page.goto('/ro/garages/atelier-test');
+      await expect(page.locator('article.review').first()).toBeVisible();
+      await expect(page.getByText(text)).toHaveCount(0);
+      const after = await settledFigures(db, garageId);
+      expect(after).toEqual(atReport);
+    } finally {
+      await other.close();
+      await restoreGarage(db, jobId, garageId, before.rows[0]);
     }
   });
 });
