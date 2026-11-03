@@ -6,7 +6,7 @@ import { Client } from 'pg';
 import { ACCOUNTS, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
 
-async function signInAsAdmin(page: Page) {
+async function openAsAdmin(page: Page, path: string) {
   await ready(page, '/ro/garages');
   if ((page.viewportSize()?.width ?? 1280) < 768) {
     await page
@@ -21,11 +21,8 @@ async function signInAsAdmin(page: Page) {
   }
   await signIn(page, ACCOUNTS.admin);
   await expect(page).toHaveURL('/app/admin');
-}
-
-// Loaded afresh so the live stream's answer is the one awaited: an event
-// published before the stream opens is never seen.
-async function openWithLive(page: Page, path: string) {
+  // Loaded afresh so the live stream's answer is the one awaited: an event
+  // published before the stream opens is never seen.
   const live = page.waitForResponse((r) => r.url().endsWith('/api/v1/live'));
   await page.goto(path);
   expect((await live).status()).toBe(200);
@@ -139,8 +136,7 @@ test.describe('the Starea sistemului panel @seeded @database', () => {
   test('a slow Maps tile turns amber with its sentence, without a reload', async ({
     page,
   }) => {
-    await signInAsAdmin(page);
-    await openWithLive(page, '/app/admin/settings');
+    await openAsAdmin(page, '/app/admin/settings');
     const panel = page.getByRole('region', {
       exact: true,
       name: 'Starea sistemului',
@@ -154,8 +150,7 @@ test.describe('the Starea sistemului panel @seeded @database', () => {
   test('the same tile turns amber on Panou, without a reload', async ({
     page,
   }) => {
-    await signInAsAdmin(page);
-    await openWithLive(page, '/app/admin');
+    await openAsAdmin(page, '/app/admin');
     const panel = page.locator('mf-admin-panel').getByRole('region', {
       exact: true,
       name: 'Starea sistemului',

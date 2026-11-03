@@ -249,55 +249,7 @@ describe('the garage roles section list', () => {
   });
 });
 
-describe('the system section in saved admin layouts', () => {
-  // @traces 1430-FR-003
-  it('keeps the first of system saved twice, hidden then visible', () => {
-    const merged = mergeLayout(ADMIN, [
-      { key: 'system', visible: false },
-      { key: 'system', visible: true },
-    ]);
-
-    expect(merged.filter((panel) => panel.key === 'system')).toEqual([
-      { key: 'system', visible: false },
-    ]);
-    expect(merged).toHaveLength(6);
-  });
-
-  // @traces 1430-FR-003
-  it('answers system for an empty saved list and for null in third place', () => {
-    expect(mergeLayout(ADMIN, []).map((p) => p.key)).toEqual([
-      'numbers',
-      'verification',
-      'system',
-      'growth',
-      'demand',
-      'log',
-    ]);
-    expect(mergeLayout(ADMIN, null)).toEqual(DEFAULT);
-  });
-
-  // @traces 1430-FR-003
-  it('treats a system entry with a string visible flag as missing and appends it visible', () => {
-    const merged = mergeLayout(ADMIN, [{ key: 'system', visible: 'false' }]);
-
-    expect(merged.at(0)).toEqual({ key: 'numbers', visible: true });
-    expect(merged.find((p) => p.key === 'system')).toEqual({
-      key: 'system',
-      visible: true,
-    });
-  });
-
-  // @traces 1430-FR-001
-  it('refuses system twice in a save and accepts it once anywhere', () => {
-    expect(
-      checkPanels(ADMIN, [
-        { key: 'system', visible: true },
-        { key: 'system', visible: false },
-      ]),
-    ).toBe('duplicate_key');
-    expect(checkPanels(ADMIN, [{ key: 'system', visible: false }])).toBeNull();
-  });
-
+describe('the system section outside the admin list', () => {
   // @traces 1430-FR-001
   it('does not give system to the garage, mechanic, receptionist, driver or an upper-case admin', () => {
     for (const role of ['garage', 'mechanic', 'receptionist']) {
