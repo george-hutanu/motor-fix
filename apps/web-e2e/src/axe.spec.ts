@@ -1,6 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 import { violations } from './axe.js';
+import { test } from './fixtures.js';
 
 // A card still rising in (mf-rise, from opacity 0) blends its text into the
 // background: axe must measure the settled page, not a frame of the entry.
