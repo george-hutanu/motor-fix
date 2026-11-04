@@ -149,6 +149,11 @@ test.describe('the sections of Panou @seeded @database', () => {
       await expect(
         page.getByRole('heading').getByRole('link', { exact: true, name }),
       ).toHaveAttribute('href', href);
+    // The daily cards arrive after their figures load and rise in staggered;
+    // scan them in place, not the skeleton before them.
+    await expect(
+      page.locator('[data-section="kpi"] [data-card="work"]'),
+    ).toBeVisible();
     expect(
       await violations(page, {}, { include: [['mf-garage-home']] }),
     ).toEqual([]);
