@@ -6036,6 +6036,50 @@
         ]
       }
     },
+    "/api/v1/me/reviews": {
+      "get": {
+        "operationId": "MyReviewsController_read",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyReviewsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a page not a whole number from 1"
+          },
+          "401": {
+            "description": "sign_in_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller’s written reviews and the repairs waiting for one, waiting first, 20 a page, with the counts",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/admin/review-reports": {
       "get": {
         "operationId": "ReportQueueController_list",
@@ -21781,6 +21825,181 @@
           "page",
           "pageSize",
           "total",
+          "items"
+        ]
+      },
+      "MyReviewReplyDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported"
+            ]
+          },
+          "reportedByMe": {
+            "type": "boolean",
+            "description": "The reader’s own report on it is pending"
+          }
+        },
+        "required": [
+          "text",
+          "postedAt",
+          "editedAt",
+          "status",
+          "reportedByMe"
+        ]
+      },
+      "MyReviewRowDto": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarSnapshotDto"
+          },
+          "date": {
+            "type": "string",
+            "description": "The handover, or the review’s posting while there is none",
+            "format": "date-time"
+          },
+          "handedOverAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "published",
+              "reported",
+              "removed"
+            ]
+          },
+          "reviewId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1,
+            "nullable": true
+          },
+          "firstLine": {
+            "type": "string",
+            "nullable": true
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canWrite": {
+            "type": "boolean"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "canAppeal": {
+            "type": "boolean"
+          },
+          "canReportReply": {
+            "type": "boolean"
+          },
+          "reply": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MyReviewReplyDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "jobId",
+          "garage",
+          "jobs",
+          "car",
+          "date",
+          "handedOverAt",
+          "state",
+          "reviewId",
+          "rating",
+          "firstLine",
+          "postedAt",
+          "editedAt",
+          "canWrite",
+          "canEdit",
+          "canAppeal",
+          "canReportReply",
+          "reply"
+        ]
+      },
+      "MyReviewsPageDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number",
+            "description": "written + waiting"
+          },
+          "written": {
+            "type": "number"
+          },
+          "waiting": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyReviewRowDto"
+            }
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "total",
+          "written",
+          "waiting",
           "items"
         ]
       },

@@ -811,3 +811,114 @@ export class ReportQueueDto {
   @ApiProperty({ enum: [REVIEW_REPORT_QUEUE_PAGE], type: 'integer' })
   pageSize!: number;
 }
+
+// The driver's own list, 20 a page: a done job waits for a review this many
+// days from its handover, and a published review may be edited this many days.
+export const MY_REVIEWS_PAGE = MECHANIC_REVIEWS_PAGE;
+export const MY_REVIEWS_WAITING_DAYS = 60;
+export const MY_REVIEWS_EDIT_DAYS = 14;
+
+const MY_REVIEW_STATES = [
+  'waiting',
+  'published',
+  'reported',
+  'removed',
+] as const;
+type MyReviewState = (typeof MY_REVIEW_STATES)[number];
+
+const MY_REVIEW_REPLY_STATUSES = ['published', 'reported'] as const;
+
+// The garage's reply as its review's author reads it.
+export class MyReviewReplyDto {
+  @ApiProperty()
+  text!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  postedAt!: string;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  editedAt!: string | null;
+
+  @ApiProperty({ enum: MY_REVIEW_REPLY_STATUSES })
+  status!: (typeof MY_REVIEW_REPLY_STATUSES)[number];
+
+  @ApiProperty({ description: 'The reader’s own report on it is pending' })
+  reportedByMe!: boolean;
+}
+
+// One of the driver's finished jobs: still waiting for a review, or reviewed.
+export class MyReviewRowDto {
+  @ApiProperty({ format: 'uuid' })
+  jobId!: string;
+
+  @ApiProperty({ type: GarageRefDto })
+  garage!: GarageRefDto;
+
+  @ApiProperty({ type: [RequestJobDto] })
+  jobs!: RequestJobDto[];
+
+  @ApiProperty({ type: CarSnapshotDto })
+  car!: CarSnapshotDto;
+
+  @ApiProperty({
+    description: 'The handover, or the review’s posting while there is none',
+    format: 'date-time',
+  })
+  date!: string;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  handedOverAt!: string | null;
+
+  @ApiProperty({ enum: MY_REVIEW_STATES })
+  state!: MyReviewState;
+
+  @ApiProperty({ format: 'uuid', nullable: true, type: String })
+  reviewId!: string | null;
+
+  @ApiProperty({ maximum: 5, minimum: 1, nullable: true, type: Number })
+  rating!: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  firstLine!: string | null;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  postedAt!: string | null;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  editedAt!: string | null;
+
+  @ApiProperty()
+  canWrite!: boolean;
+
+  @ApiProperty()
+  canEdit!: boolean;
+
+  @ApiProperty()
+  canAppeal!: boolean;
+
+  @ApiProperty()
+  canReportReply!: boolean;
+
+  @ApiProperty({ nullable: true, type: MyReviewReplyDto })
+  reply!: MyReviewReplyDto | null;
+}
+
+export class MyReviewsPageDto {
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
+
+  @ApiProperty({ description: 'written + waiting' })
+  total!: number;
+
+  @ApiProperty()
+  written!: number;
+
+  @ApiProperty()
+  waiting!: number;
+
+  @ApiProperty({ type: [MyReviewRowDto] })
+  items!: MyReviewRowDto[];
+}

@@ -24,10 +24,14 @@ const AXE = readFileSync(
   'utf8',
 );
 
-// Runs axe on the page as it is now: `context` is what to scan (the whole
-// document when left out, or axe's own `{ include, exclude }`), `options` are
-// axe's run options (`runOnly`, `rules`, `resultTypes`). The scanner is added
-// to the page the first time.
+// Runs axe on the page once its entry animations have ended: `context` is what
+// to scan (the whole document when left out, or axe's own `{ include,
+// exclude }`), `options` are axe's run options (`runOnly`, `rules`,
+// `resultTypes`). The scanner is added to the page the first time. A card
+// still rising in (mf-rise starts at opacity 0) blends its text into the
+// background, so axe would measure a contrast the settled page never shows;
+// every finite running animation is let finish first (an endless one, such as
+// a spinner, is not waited for).
 export async function violations(
   page: Page,
   options: Record<string, unknown> = {},
@@ -38,6 +42,16 @@ export async function violations(
   return page.evaluate(
     async ([options, context]) => {
       const axe = (globalThis as unknown as { axe: Axe }).axe;
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter(
+            (a) =>
+              a.playState === 'running' &&
+              Number.isFinite(Number(a.effect?.getComputedTiming().endTime)),
+          )
+          .map((a) => a.finished.catch(() => undefined)),
+      );
       const result = await axe.run(context ?? document, options);
       return result.violations.map(({ id, impact, nodes }) => ({
         id,

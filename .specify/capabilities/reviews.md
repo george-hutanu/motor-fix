@@ -1,6 +1,6 @@
 ---
 capability: reviews
-updated: 2026-10-31
+updated: 2026-11-03
 features:
   - 022-review-drawer
   - 023-review-confirmed-job
@@ -17,6 +17,7 @@ features:
   - 1382-report-review-button
   - 1387-review-reply-web
   - 179-remove-reported-review
+  - 117-my-reviews
 ---
 
 # Capability: Reviews
@@ -604,6 +605,30 @@ _From 179-remove-reported-review._
 ### 179-FR-020 — Tests MUST be written first and name their requirements in a `// @traces` line: Jest on real PostgreSQL and Redis for the operation (the admin's 200 with every row written for a review with a reply, without a reply and with a removed reply; the reply path with the review untouched; the audit entries and the event in one transaction and the rollback of all when one write fails; 400 for `other`, a wrong decision and an extra member; 404 for a driver, an owner and an unknown review; 401 for a visitor (FR-002); 409 for a decided and a closed report; two concurrent decisions; the ratings staying on a real event; the three existing refusals on removed rows; the fan-out's two messages per decision, their language and the skipped deleted author; the queue counts after the decision), Jest component tests for the two buttons, the dialog (title, pre-selection, `other`, disabled states, cancel paths, 320 px), the status and error lines in both languages, and the counts after a decision; one Playwright end-to-end flow: a garage reports a review, an admin removes it, the public profile no longer shows it or its reply, and the rating that changed at the report stays changed.
 
 _From 179-remove-reported-review._
+
+### 117-FR-001 — The system MUST expose one read of the signed-in driver's reviews list, `GET /api/v1/me/reviews?page=`, answering 20 rows a page (`page` an integer of 1 or more, default 1; `0`, a negative or a non-integer value refused 400 `validation_failed`; a page past the last answers an empty `items` with the same totals), with `page`, `pageSize`, `total`, `written` (the count of written rows) and `waiting` (the count of waiting rows) beside `items`; `total` = `written` + `waiting`, and all three count the caller's whole list, whatever `page` is asked. It MUST take no parameter that names another account and MUST answer only rows of the caller: a caller with no driver rows (another role included) gets an empty list; no session 401 `sign_in_required`.
+
+_From 117-my-reviews._
+
+### 117-FR-002 — A row MUST be one of: (a) a waiting row, for each of the caller's jobs that is `done`, has no review in `published`, `reported` or `removed`, and whose handover time is set and at most 60 days before the read; (b) a written row, for each of the caller's jobs that is `done` and has a review by the caller in `published`, `reported` or `removed`, whatever its age. Profile reviews (source `profile`) are not listed: OD-32 leaves release 1 without a profile-review path (ST-1240). A review in `deleted_by_author` MUST count as no review. A repair the driver logged by hand MUST never appear, and a job in any status but `done` MUST not appear.
+
+_From 117-my-reviews._
+
+### 117-FR-003 — The order MUST be: waiting rows first, newest handover first; then written rows, newest first by each row's date (the job's handover time, or the review's `postedAt` while the job has none); ties by job id, so a page boundary never repeats or skips a row.
+
+_From 117-my-reviews._
+
+### 117-FR-004 — Each row MUST carry: the garage's name; the job's id as `jobId`, the job's name (the accepted quote's work names in the reader's language, joined with " · "), the car (brand and model from the request's snapshot) and the handover date; `reviewId` (null on a waiting row), `state` (`waiting`, or the review's `published`, `reported` or `removed`), the rating, the text's first line (the text up to its first line break, trimmed; null when the review has no text), `postedAt`, `editedAt`; the flags `canWrite` (true on a waiting row only), `canEdit` (a `published` review posted at most 14 days before the read), `canAppeal` (a `removed` review), `canReportReply` (a reply in `published` with no pending report by the caller on it: a `ReviewReport` with `target = reply`, `reporterId = caller`, `status = pending`); and the reply when the reply is `published` or `reported`: its text, `postedAt`, `editedAt`, `status` and `reportedByMe` (true when such a pending report by the caller exists). A `removed` reply MUST be answered as null. Nothing in a row MUST name a plate, a phone, an e-mail or another account's id.
+
+_From 117-my-reviews._
+
+### 117-FR-012 — The new read MUST ship with its observability: request metrics by route template, its logs (ids, counts and outcomes only: no review or reply text, no names), a dashboard panel and an alert (the existing `api-error-rate` and `api-latency` rules through its metrics, as the other review reads), each listed in `infra/observability/inventory.json` in the same change.
+
+_From 117-my-reviews._
+
+### 117-FR-013 — Tests MUST be written first and name their requirement ids in one whole-line `// @traces` comment: Vitest on real PostgreSQL for the read (row selection: a hand-logged repair never, a job not `done` never, a `deleted_by_author` review as a waiting row within 60 days and nothing past 60 days, a written row at any age, a written row on a job not yet handed over; the order and the page boundary; `total`, `written` and `waiting`; the reply carried for `published` and `reported` and null for `removed`; `reportedByMe` and `canReportReply` per state; `canEdit` at 14 days and after; only the caller's rows, an empty list for another role, 401 without a session, 400 for a bad `page`); colocated web specs for the view (the count line's forms in both languages, the row in each state, "Fără comentariu", "Editată", the reply block with its marks and without one, the empty state, "Mai multe", the skeleton, the error with retry, the re-read on each kind); and Playwright: Andrei opens Recenziile mele and sees his rows and a reply; the garage replies and the reply appears without a reload beside the bell's item. The flow in which Andrei reports a reply is carried to ST-1245 with its dialog.
+
+_From 117-my-reviews._
 
 ## Retired
 

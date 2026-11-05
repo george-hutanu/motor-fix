@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 279,
+    "count": 280,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -3127,6 +3127,19 @@
       ],
       "reason": "the admins' queue of pending review reports with the facts, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page or a 404 for a non-admin is the rule working; the API error-rate and latency rules cover the route; no outside call",
       "story": "ST-177"
+    },
+    {
+      "kind": "endpoint",
+      "name": "my-reviews",
+      "source": "libs/domain/src/reviews/my-reviews/my-reviews.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/reviews",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the caller’s own written reviews and the done repairs waiting for one, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page is the rule working; the API error-rate and latency rules cover the route; no outside call",
+      "story": "ST-117"
     },
     {
       "kind": "endpoint",
