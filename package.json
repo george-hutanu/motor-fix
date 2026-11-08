@@ -74,7 +74,7 @@
     "@nestjs/testing": "12.1.2",
     "@nx/angular": "23.3.0",
     "@nx/devkit": "23.3.0",
-    "@nx/esbuild": "23.3.0",
+    "@nx/esbuild": "24.0.4",
     "@nx/jest": "23.3.0",
     "@nx/js": "23.3.0",
     "@nx/playwright": "23.3.0",
